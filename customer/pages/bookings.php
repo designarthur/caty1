@@ -20,6 +20,24 @@ $requested_booking_id = filter_input(INPUT_GET, 'booking_id', FILTER_VALIDATE_IN
 // Set a default timezone to ensure consistent date calculations
 date_default_timezone_set('UTC');
 
+// --- Pagination & Filter Variables ---
+$items_per_page_options = [10, 25, 50, 100];
+$items_per_page = filter_input(INPUT_GET, 'per_page', FILTER_VALIDATE_INT);
+if (!in_array($items_per_page, $items_per_page_options)) {
+    $items_per_page = 25; // Default items per page
+}
+
+$current_page = filter_input(INPUT_GET, 'page', FILTER_VALIDATE_INT);
+if (!$current_page || $current_page < 1) {
+    $current_page = 1;
+}
+$offset = ($current_page - 1) * $items_per_page;
+
+$filter_status = $_GET['status'] ?? 'all'; // Default filter status
+$search_query = trim($_GET['search'] ?? ''); // Search query
+$start_date_filter = $_GET['start_date'] ?? '';
+$end_date_filter = $_GET['end_date'] ?? '';
+
 
 if ($requested_booking_id) {
     // --- ENHANCED DATA FETCHING FOR DETAIL VIEW ---
@@ -108,8 +126,60 @@ if ($requested_booking_id) {
     }
 } else {
     // --- Fetch Data for List View ---
-    $stmt = $conn->prepare("SELECT id, booking_number, service_type, start_date, status FROM bookings WHERE user_id = ? ORDER BY created_at DESC");
-    $stmt->bind_param("i", $user_id);
+    $base_query = "FROM bookings b WHERE b.user_id = ?";
+    $params = [$user_id];
+    $types = "i";
+
+    // Status Filter
+    if ($filter_status !== 'all') {
+        $base_query .= " AND b.status = ?";
+        $params[] = $filter_status;
+        $types .= "s";
+    }
+
+    // Search Query (Booking Number or Location)
+    if (!empty($search_query)) {
+        $search_term = '%' . $search_query . '%';
+        $base_query .= " AND (b.booking_number LIKE ? OR b.delivery_location LIKE ?)";
+        $params[] = $search_term;
+        $params[] = $search_term;
+        $types .= "ss";
+    }
+
+    // Date Range Filter
+    if (!empty($start_date_filter)) {
+        $base_query .= " AND DATE(b.start_date) >= ?";
+        $params[] = $start_date_filter;
+        $types .= "s";
+    }
+    if (!empty($end_date_filter)) {
+        $base_query .= " AND DATE(b.start_date) <= ?";
+        $params[] = $end_date_filter;
+        $types .= "s";
+    }
+
+    // Get total count for pagination
+    $stmt_count = $conn->prepare("SELECT COUNT(*) " . $base_query);
+    if (!empty($params)) {
+        $stmt_count->bind_param($types, ...$params);
+    }
+    $stmt_count->execute();
+    $total_bookings_count = $stmt_count->get_result()->fetch_assoc()['COUNT(*)'];
+    $stmt_count->close();
+
+    $total_pages = ceil($total_bookings_count / $items_per_page);
+
+    // Main query for bookings list
+    $list_query = "SELECT id, booking_number, service_type, start_date, status " . $base_query . " ORDER BY created_at DESC LIMIT ? OFFSET ?";
+
+    $params[] = $items_per_page;
+    $params[] = $offset;
+    $types .= "ii"; // Add types for LIMIT and OFFSET
+
+    $stmt = $conn->prepare($list_query);
+    if (!empty($params)) {
+        $stmt->bind_param($types, ...$params);
+    }
     $stmt->execute();
     $result = $stmt->get_result();
     while ($row = $result->fetch_assoc()) {
@@ -176,13 +246,64 @@ function getTimelineIconClass($status) {
 <div id="booking-list-view" class="<?php echo $requested_booking_id ? 'hidden' : ''; ?>">
     <h1 class="text-3xl font-bold text-gray-800 mb-8">My Bookings</h1>
     <div class="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+        <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-3">
+            <h2 class="text-xl font-semibold text-gray-700 flex-grow"><i class="fas fa-book-open mr-2 text-blue-600"></i>All Your Bookings</h2>
+            
+            <div class="flex items-center gap-2 w-full sm:w-auto">
+                <label for="status-filter" class="text-sm font-medium text-gray-700">Status:</label>
+                <select id="status-filter" onchange="applyFilters()"
+                        class="p-2 border border-gray-300 rounded-md text-sm flex-grow">
+                    <option value="all" <?php echo $filter_status === 'all' ? 'selected' : ''; ?>>All</option>
+                    <option value="pending" <?php echo $filter_status === 'pending' ? 'selected' : ''; ?>>Pending</option>
+                    <option value="scheduled" <?php echo $filter_status === 'scheduled' ? 'selected' : ''; ?>>Scheduled</option>
+                    <option value="assigned" <?php echo $filter_status === 'assigned' ? 'selected' : ''; ?>>Assigned</option>
+                    <option value="out_for_delivery" <?php echo $filter_status === 'out_for_delivery' ? 'selected' : ''; ?>>Out for Delivery</option>
+                    <option value="delivered" <?php echo $filter_status === 'delivered' ? 'selected' : ''; ?>>Delivered</option>
+                    <option value="in_use" <?php echo $filter_status === 'in_use' ? 'selected' : ''; ?>>In Use</option>
+                    <option value="awaiting_pickup" <?php echo $filter_status === 'awaiting_pickup' ? 'selected' : ''; ?>>Awaiting Pickup</option>
+                    <option value="completed" <?php echo $filter_status === 'completed' ? 'selected' : ''; ?>>Completed</option>
+                    <option value="cancelled" <?php echo $filter_status === 'cancelled' ? 'selected' : ''; ?>>Cancelled</option>
+                    <option value="relocation_requested" <?php echo $filter_status === 'relocation_requested' ? 'selected' : ''; ?>>Relocation Requested</option>
+                    <option value="swap_requested" <?php echo $filter_status === 'swap_requested' ? 'selected' : ''; ?>>Swap Requested</option>
+                    <option value="relocated" <?php echo $filter_status === 'relocated' ? 'selected' : ''; ?>>Relocated</option>
+                    <option value="swapped" <?php echo $filter_status === 'swapped' ? 'selected' : ''; ?>>Swapped</option>
+                    <option value="extended" <?php echo $filter_status === 'extended' ? 'selected' : ''; ?>>Extended</option>
+                </select>
+            </div>
+            <div class="flex items-center gap-2 w-full sm:w-auto">
+                <label for="start-date-filter" class="text-sm font-medium text-gray-700">From:</label>
+                <input type="date" id="start-date-filter" value="<?php echo htmlspecialchars($start_date_filter); ?>"
+                       class="p-2 border border-gray-300 rounded-md text-sm flex-grow" onchange="applyFilters()">
+                <label for="end-date-filter" class="text-sm font-medium text-gray-700">To:</label>
+                <input type="date" id="end-date-filter" value="<?php echo htmlspecialchars($end_date_filter); ?>"
+                       class="p-2 border border-gray-300 rounded-md text-sm flex-grow" onchange="applyFilters()">
+            </div>
+            <div class="flex-grow w-full sm:w-auto">
+                <input type="text" id="search-input" placeholder="Search booking # or address..."
+                       class="p-2 border border-gray-300 rounded-md w-full text-sm"
+                       value="<?php echo htmlspecialchars($search_query); ?>"
+                       onkeydown="if(event.key === 'Enter') applyFilters()">
+            </div>
+            <button onclick="applyFilters()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-md text-sm w-full sm:w-auto">
+                Apply Filters
+            </button>
+        </div>
+        <div class="flex justify-end mb-4">
+             <button id="bulk-delete-bookings-btn" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200 shadow-md hidden">
+                <i class="fas fa-trash-alt mr-2"></i>Delete Selected
+            </button>
+        </div>
+
         <?php if (empty($bookings_list)): ?>
-            <p class="text-center text-gray-500 py-4">You have no bookings yet.</p>
+            <p class="text-center text-gray-500 py-4">No bookings found for the selected filters or search query.</p>
         <?php else: ?>
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">
                      <thead class="bg-blue-50">
                         <tr>
+                            <th class="px-6 py-3 text-left">
+                                <input type="checkbox" id="select-all-bookings" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                            </th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Booking #</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Service</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
@@ -193,6 +314,9 @@ function getTimelineIconClass($status) {
                     <tbody class="bg-white divide-y divide-gray-200">
                         <?php foreach ($bookings_list as $booking): ?>
                             <tr>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <input type="checkbox" class="booking-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" value="<?php echo htmlspecialchars($booking['id']); ?>">
+                                </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900"><?php echo htmlspecialchars($booking['booking_number']); ?></td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600"><?php echo htmlspecialchars(ucwords(str_replace('_', ' ', $booking['service_type']))); ?></td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600"><?php echo htmlspecialchars($booking['start_date']); ?></td>
@@ -205,6 +329,48 @@ function getTimelineIconClass($status) {
                     </tbody>
                 </table>
             </div>
+            <nav class="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div>
+                    <p class="text-sm text-gray-700">
+                        Showing <span class="font-medium"><?php echo $offset + 1; ?></span> to <span class="font-medium"><?php echo min($offset + $items_per_page, $total_bookings_count); ?></span> of <span class="font-medium"><?php echo $total_bookings_count; ?></span> results
+                    </p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-sm font-medium text-gray-700">Bookings per page:</span>
+                    <select id="items-per-page-select" onchange="applyFilters({page: 1, per_page: this.value})"
+                            class="p-2 border border-gray-300 rounded-md text-sm">
+                        <?php foreach ($items_per_page_options as $option): ?>
+                            <option value="<?php echo $option; ?>" <?php echo $items_per_page == $option ? 'selected' : ''; ?>>
+                                <?php echo $option; ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div>
+                    <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                        <button onclick="applyFilters({page: <?php echo max(1, $current_page - 1); ?>})"
+                                class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                            <span class="sr-only">Previous</span>
+                            <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                        <?php for ($i = 1; $i <= $total_pages; $i++): ?>
+                            <button onclick="applyFilters({page: <?php echo $i; ?>})"
+                                    class="<?php echo $i == $current_page ? 'z-10 bg-blue-50 border-blue-500 text-blue-600' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'; ?> relative inline-flex items-center px-4 py-2 border text-sm font-medium">
+                                <?php echo $i; ?>
+                            </button>
+                        <?php endfor; ?>
+                        <button onclick="applyFilters({page: <?php echo min($total_pages, $current_page + 1); ?>})"
+                                class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                            <span class="sr-only">Next</span>
+                            <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </nav>
+                </div>
+            </nav>
         <?php endif; ?>
     </div>
 </div>
@@ -399,7 +565,6 @@ function getTimelineIconClass($status) {
 <div id="relocation-request-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
     <div class="bg-white p-6 rounded-lg shadow-xl w-11/12 max-w-md text-gray-800">
         <h3 class="text-xl font-bold mb-4">Request Relocation</h3>
-        <!-- Added unique ID to the paragraph for safer targeting -->
         <p id="relocation-charge-text" class="mb-4">A one-time charge for this service will be applied: <span class="font-bold text-blue-600" id="relocation-charge-display">$0.00</span></p>
         <form id="relocation-form">
             <input type="hidden" name="action" value="request_relocation">
@@ -420,7 +585,6 @@ function getTimelineIconClass($status) {
 <div id="swap-request-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
     <div class="bg-white p-6 rounded-lg shadow-xl w-11/12 max-w-md text-gray-800">
         <h3 class="text-xl font-bold mb-4">Request Swap</h3>
-        <!-- Added unique ID to the paragraph for safer targeting -->
         <p id="swap-charge-text" class="mb-6">A one-time charge of <span class="font-bold text-purple-600" id="swap-charge-display">$0.00</span> will be applied to swap your equipment. Are you sure you want to proceed?</p>
         <form id="swap-form">
             <input type="hidden" name="action" value="request_swap">
@@ -463,31 +627,88 @@ function getTimelineIconClass($status) {
     const contentArea = document.getElementById('content-area');
     if (!contentArea) return;
 
-    const handleNavigation = (bookingId) => {
-        window.loadCustomerSection('bookings', bookingId ? { booking_id: bookingId } : {});
+    // Helper function to get safe filter values
+    const getSafeFilterValues = () => {
+        const statusEl = document.getElementById('status-filter');
+        const searchEl = document.getElementById('search-input');
+        const startDateEl = document.getElementById('start-date-filter');
+        const endDateEl = document.getElementById('end-date-filter');
+        const perPageEl = document.getElementById('items-per-page-select');
+
+        // Use the current PHP value as the default to maintain state
+        const defaultPerPage = <?php echo json_encode($items_per_page); ?>;
+
+        return {
+            status: statusEl ? statusEl.value : 'all',
+            search: searchEl ? searchEl.value : '',
+            start_date: startDateEl ? startDateEl.value : '',
+            end_date: endDateEl ? endDateEl.value : '',
+            per_page: perPageEl ? perPageEl.value : defaultPerPage
+        };
     };
+
+    window.loadCustomerBookings = function(params = {}) {
+        const filters = getSafeFilterValues();
+        const newParams = {
+            page: filters.page, // Keep current page from filter values
+            per_page: filters.per_page,
+            status: filters.status,
+            search: filters.search,
+            start_date: filters.start_date,
+            end_date: filters.end_date,
+            ...params // Override with any new parameters passed directly
+        };
+        window.loadCustomerSection('bookings', newParams);
+    };
+
+    window.applyFilters = function(params = {}) {
+        // Reset to page 1 when applying new filters, unless a specific page is requested
+        const currentPage = params.page || 1;
+        const filters = getSafeFilterValues();
+        window.loadCustomerBookings({
+            page: currentPage,
+            status: filters.status,
+            search: filters.search,
+            start_date: filters.start_date,
+            end_date: filters.end_date,
+            per_page: filters.per_page // Ensure per_page is also passed
+        });
+    };
+
+    function showBookingDetails(bookingId) {
+        window.loadCustomerBookings({ booking_id: bookingId });
+    }
+
+    function hideBookingDetails() {
+        window.loadCustomerBookings({ booking_id: '' }); // Clear booking_id to show list
+    }
 
     const callBookingApi = async (form) => {
         const formData = new FormData(form);
         const actionText = (formData.get('action') || 'action').replace(/_/g, ' ');
-        showToast(`Submitting ${actionText}...`, 'info');
+        window.showToast(`Submitting ${actionText}...`, 'info');
 
         try {
             const response = await fetch('/api/customer/bookings.php', { method: 'POST', body: formData });
             const result = await response.json();
             
             if (result.success) {
-                showToast(result.message, 'success');
+                window.showToast(result.message, 'success');
                 // For extension requests, we now wait for admin approval, so we just reload the booking detail view.
-                handleNavigation(formData.get('booking_id'));
+                hideModal('extension-request-modal');
+                hideModal('relocation-request-modal');
+                hideModal('swap-request-modal');
+                hideModal('pickup-request-modal');
+                window.loadCustomerBookings({ booking_id: formData.get('booking_id') }); // Reload to show updated details/status
             } else {
-                showToast(result.message || `Failed to submit ${actionText}.`, 'error');
+                window.showToast(result.message || `Failed to submit ${actionText}.`, 'error');
             }
         } catch (error) {
             console.error('API Error:', error);
-            showToast('An unexpected error occurred.', 'error');
+            window.showToast('An unexpected error occurred.', 'error');
         } finally {
-            ['relocation-request-modal', 'swap-request-modal', 'pickup-request-modal', 'extension-request-modal'].forEach(id => hideModal(id));
+            // Ensure all modals are hidden regardless of success/failure
+            ['extension-request-modal', 'relocation-request-modal', 'swap-request-modal', 'pickup-request-modal'].forEach(id => hideModal(id));
         }
     };
 
@@ -528,35 +749,109 @@ function getTimelineIconClass($status) {
         reviewForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             const formData = new FormData(this);
+            formData.append('csrf_token', '<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>'); // Add CSRF token
             if (!formData.get('rating')) {
-                showToast('Please select a star rating.', 'error');
+                window.showToast('Please select a star rating.', 'error');
                 return;
             }
-            showToast('Submitting your review...', 'info');
+            window.showToast('Submitting your review...', 'info');
             try {
                 const response = await fetch('/api/customer/reviews.php', { method: 'POST', body: formData });
                 const result = await response.json();
                 if(result.success) {
-                    showToast(result.message, 'success');
-                    handleNavigation(formData.get('booking_id')); // Reload to show thank you message
+                    window.showToast(result.message, 'success');
+                    window.loadCustomerBookings({ booking_id: formData.get('booking_id') }); // Reload to show thank you message
                 } else {
-                     showToast(result.message, 'error');
+                     window.showToast(result.message, 'error');
                 }
             } catch (error) {
-                 showToast('An error occurred while submitting your review.', 'error');
+                 window.showToast('An error occurred while submitting your review.', 'error');
             }
         });
     }
+
+    // --- Bulk Delete Functionality ---
+    const selectAllBookingsCheckbox = document.getElementById('select-all-bookings');
+    const bulkDeleteBookingsBtn = document.getElementById('bulk-delete-bookings-btn');
+
+    function toggleBulkDeleteButtonVisibility() {
+        const anyChecked = document.querySelectorAll('.booking-checkbox:checked').length > 0;
+        if (bulkDeleteBookingsBtn) {
+            bulkDeleteBookingsBtn.classList.toggle('hidden', !anyChecked);
+        }
+    }
+
+    if (selectAllBookingsCheckbox) {
+        selectAllBookingsCheckbox.addEventListener('change', function() {
+            document.querySelectorAll('.booking-checkbox').forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+            toggleBulkDeleteButtonVisibility();
+        });
+    }
+
+    document.body.addEventListener('change', function(event) {
+        if (event.target.classList.contains('booking-checkbox')) {
+            if (selectAllBookingsCheckbox && !event.target.checked) {
+                selectAllBookingsCheckbox.checked = false;
+            }
+            toggleBulkDeleteButtonVisibility();
+        }
+    });
+
+    if (bulkDeleteBookingsBtn) {
+        bulkDeleteBookingsBtn.addEventListener('click', function() {
+            const selectedIds = Array.from(document.querySelectorAll('.booking-checkbox:checked')).map(cb => cb.value);
+            if (selectedIds.length === 0) {
+                window.showToast('Please select at least one booking to delete.', 'warning');
+                return;
+            }
+
+            window.showConfirmationModal(
+                'Delete Selected Bookings',
+                `Are you sure you want to delete ${selectedIds.length} selected booking(s)? This action cannot be undone and will delete associated data.`,
+                async (confirmed) => {
+                    if (confirmed) {
+                        window.showToast('Deleting bookings...', 'info');
+                        const formData = new FormData();
+                        formData.append('action', 'delete_bulk'); // Action handled by api/customer/bookings.php
+                        formData.append('csrf_token', '<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>'); // Add CSRF token
+                        selectedIds.forEach(id => formData.append('booking_ids[]', id));
+
+                        try {
+                            const response = await fetch('/api/customer/bookings.php', {
+                                method: 'POST',
+                                body: formData
+                            });
+                            const result = await response.json();
+                            if (result.success) {
+                                window.showToast(result.message, 'success');
+                                window.loadCustomerBookings(); // Reload list after deletion
+                            } else {
+                                window.showToast('Error: ' + result.message, 'error');
+                            }
+                        } catch (error) {
+                            window.showToast('An unexpected error occurred during bulk delete.', 'error');
+                            console.error('Bulk delete bookings API Error:', error);
+                        }
+                    }
+                },
+                'Delete Selected',
+                'bg-red-600'
+            );
+        });
+    }
+
 
     contentArea.addEventListener('click', function(event) {
         const target = event.target.closest('button');
         if (!target) return;
 
         if (target.classList.contains('view-details-btn')) {
-            handleNavigation(target.dataset.bookingId);
+            showBookingDetails(target.dataset.bookingId);
         }
         if (target.classList.contains('back-to-list-btn')) {
-            handleNavigation(null);
+            hideBookingDetails();
         }
         
         const bookingId = target.dataset.bookingId;
@@ -583,7 +878,7 @@ function getTimelineIconClass($status) {
                 submitButton.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
             }
 
-            showModal('relocation-request-modal');
+            window.showModal('relocation-request-modal');
         }
         if (target.classList.contains('request-swap-btn')) {
             const isIncluded = target.dataset.isIncluded === 'true';
@@ -607,16 +902,19 @@ function getTimelineIconClass($status) {
                 submitButton.classList.add('bg-purple-600', 'hover:bg-purple-700');
             }
 
-            showModal('swap-request-modal');
+            window.showModal('swap-request-modal');
         }
         if (target.classList.contains('schedule-pickup-btn')) {
             document.getElementById('pickup-booking-id').value = bookingId;
-            showModal('pickup-request-modal');
+            // Set min date for pickup-date input
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('pickup-date').min = today;
+            window.showModal('pickup-request-modal');
         }
         if (target.classList.contains('request-extension-btn')) {
             const dailyRate = parseFloat(target.dataset.dailyRate || '0');
             if(dailyRate <= 0){
-                showToast('Extension is not available for this item as a daily rate is not set. Please contact support.', 'error');
+                window.showToast('Extension is not available for this item as a daily rate is not set. Please contact support.', 'error');
                 return;
             }
             document.getElementById('extension-booking-id').value = bookingId;
@@ -624,7 +922,7 @@ function getTimelineIconClass($status) {
             const extensionDaysInput = document.getElementById('extension-days');
             extensionDaysInput.value = 1; // Default to 1 day
             document.getElementById('extension-cost-display').textContent = `$${dailyRate.toFixed(2)}`;
-            showModal('extension-request-modal');
+            window.showModal('extension-request-modal');
         }
     });
 
@@ -640,10 +938,22 @@ function getTimelineIconClass($status) {
         });
     }
 
-    // Pass the form element directly to callBookingApi
-    document.getElementById('extension-form')?.addEventListener('submit', function(e) { e.preventDefault(); callBookingApi(this); });
-    document.getElementById('relocation-form')?.addEventListener('submit', function(e) { e.preventDefault(); callBookingApi(this); });
-    document.getElementById('swap-form')?.addEventListener('submit', function(e) { e.preventDefault(); callBookingApi(this); });
-    document.getElementById('pickup-form')?.addEventListener('submit', function(e) { e.preventDefault(); callBookingApi(this); });
+    // Attach form submission listeners using delegation or direct attachment after content load
+    const extensionForm = document.getElementById('extension-form');
+    if(extensionForm) extensionForm.addEventListener('submit', function(e) { e.preventDefault(); callBookingApi(this); });
+    
+    const relocationForm = document.getElementById('relocation-form');
+    if(relocationForm) relocationForm.addEventListener('submit', function(e) { e.preventDefault(); callBookingApi(this); });
+    
+    const swapForm = document.getElementById('swap-form');
+    if(swapForm) swapForm.addEventListener('submit', function(e) { e.preventDefault(); callBookingApi(this); });
+    
+    const pickupForm = document.getElementById('pickup-form');
+    if(pickupForm) pickupForm.addEventListener('submit', function(e) { e.preventDefault(); callBookingApi(this); });
+
+    // Initial check for bulk delete button visibility on page load
+    document.addEventListener('DOMContentLoaded', toggleBulkDeleteButtonVisibility);
+
 
 })();
+</script>
