@@ -19,7 +19,7 @@ $csrf_token = $_SESSION['csrf_token'];
 
 $user_id = $_SESSION['user_id'];
 $junk_removal_requests = [];
-$junk_detail_view_data = null; 
+$junk_detail_view_data = null;
 
 // --- Fetch User Data for Autopopulation ---
 $stmt_user = $conn->prepare("SELECT first_name, last_name, email, phone_number FROM users WHERE id = ?");
@@ -946,14 +946,34 @@ function getStatusBadgeClass($status) {
             const files = event.target.files;
             if (files.length === 0) return;
 
-            showToast('Uploading and analyzing images/videos...', 'info');
-
+            window.showToast('Uploading and analyzing media...', 'info');
             const formData = new FormData();
             formData.append('action', 'analyze_media');
+
+            // Process all selected files
             for (const file of files) {
-                formData.append('media_files[]', file);
+                if (file.type.startsWith('video/')) {
+                    try {
+                        // Call the frame extractor for video files
+                        const frames = await window.extractFramesFromVideo(file, 10); // Extracts 10 frames
+                        frames.forEach((frameDataUrl, index) => {
+                            const blob = window.dataURLtoBlob(frameDataUrl);
+                            // Append each frame as a uniquely named JPEG file
+                            formData.append('media_files[]', blob, `frame_${index}_${file.name}.jpeg`);
+                        });
+                        window.showToast(`Extracted ${frames.length} frames from video.`, 'success');
+                    } catch (error) {
+                        console.error('Frame extraction failed:', error);
+                        window.showToast('Failed to process video. Please try again.', 'error');
+                        return; // Stop if frame extraction fails
+                    }
+                } else {
+                    // If it's an image, append it directly
+                    formData.append('media_files[]', file);
+                }
             }
 
+            // Now, send the formData (containing images or extracted frames) to the backend
             try {
                 const response = await fetch('/api/openai_chat.php', {
                     method: 'POST',
@@ -967,21 +987,21 @@ function getStatusBadgeClass($status) {
                     result.items.forEach(item => {
                         const row = document.createElement('tr');
                         row.innerHTML = `
-                            <td class="p-2"><input type="text" class="w-full p-2 border rounded junk-item-name" value="${item.item}"></td>
-                            <td class="p-2"><input type="number" class="w-full p-2 border rounded junk-item-quantity" value="1" min="1"></td>
-                            <td class="p-2"><input type="text" class="w-full p-2 border rounded junk-item-dims" value="${item.estDimensions}"></td>
-                            <td class="p-2"><input type="text" class="w-full p-2 border rounded junk-item-weight" value="${item.estWeight}"></td>
-                            <td class="p-2 text-center"><button type="button" class="text-red-500 hover:text-red-700" onclick="this.closest('tr').remove()">&times;</button></td>
-                        `;
+                                <td class="p-2"><input type="text" class="w-full p-2 border rounded junk-item-name" value="${item.item || ''}"></td>
+                                <td class="p-2"><input type="number" class="w-full p-2 border rounded junk-item-quantity" value="1" min="1"></td>
+                                <td class="p-2"><input type="text" class="w-full p-2 border rounded junk-item-dims" value="${item.estDimensions || ''}"></td>
+                                <td class="p-2"><input type="text" class="w-full p-2 border rounded junk-item-weight" value="${item.estWeight || ''}"></td>
+                                <td class="p-2 text-center"><button type="button" class="text-red-500 hover:text-red-700" onclick="this.closest('tr').remove()">&times;</button></td>
+                            `;
                         tbody.appendChild(row);
                     });
-                    showToast('Items detected and added to the list!', 'success');
+                    window.showToast('Items detected and added to the list!', 'success');
                 } else {
-                    showToast(result.message || 'Could not detect items from the upload.', 'error');
+                    window.showToast(result.message || 'Could not detect items from the upload.', 'error');
                 }
             } catch (error) {
                 console.error('AI Vision API Error:', error);
-                showToast('An error occurred during AI analysis.', 'error');
+                window.showToast('An error occurred during AI analysis.', 'error');
             }
         });
 
