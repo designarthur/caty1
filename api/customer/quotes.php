@@ -23,7 +23,6 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 // --- CSRF Token Validation ---
-// This is the crucial step to prevent CSRF attacks.
 try {
     validate_csrf_token();
 } catch (Exception $e) {
