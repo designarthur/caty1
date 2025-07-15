@@ -6,6 +6,7 @@
     <title>Support Center - Catdump: We're Here to Help!</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -462,6 +463,29 @@
             line-height: 1.6;
             color: #4a5568;
         }
+        /* Floating Chat Bubble for service pages */
+        #floating-chat-trigger {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 60px;
+            height: 60px;
+            background-color: #1a73e8;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            cursor: pointer;
+            z-index: 999;
+            transform: scale(1); /* Always visible on service pages */
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        #floating-chat-trigger svg {
+            color: white;
+            width: 32px;
+            height: 32px;
+        }
     </style>
 </head>
 <body class="antialiased">
@@ -623,185 +647,98 @@
    <?php include '../includes/public_footer.php'; ?>
 
     <script>
-        // IIFE for header JS to ensure it runs immediately
-        (function() {
-            const mobileMenuButton = document.getElementById('mobile-menu-button');
-            const closeMobileMenuButton = document.getElementById('close-mobile-menu');
-            const mobileMenuDrawer = document.getElementById('mobile-menu-drawer');
-            const mobileServicesDropdownButton = document.getElementById('mobile-services-dropdown-button');
-            const mobileServicesPanel = document.getElementById('mobile-services-panel');
-            const mobileCompanyDropdownButton = document.getElementById('mobile-company-dropdown-button');
-            const mobileCompanyPanel = document.getElementById('mobile-company-panel');
-            const mobileResourcesDropdownButton = document.getElementById('mobile-resources-dropdown-button');
-            const mobileResourcesPanel = document.getElementById('mobile-resources-panel');
-            const mainHeader = document.getElementById('main-header');
-
-            // Timeout variables for hover delays
-            let servicesTimeout;
-            let companyTimeout;
-            let resourcesTimeout;
-            const hoverDelay = 100; // Milliseconds to wait before hiding dropdown
-
-            // Function to show a desktop flyout menu
-            function showDesktopFlyout(button, menu) {
-                clearTimeout(servicesTimeout);
-                clearTimeout(companyTimeout);
-                clearTimeout(resourcesTimeout); // Clear any pending hide for all menus
-                
-                // Hide all other menus
-                document.querySelectorAll('.desktop-flyout-menu.visible').forEach(openMenu => {
-                    openMenu.classList.remove('visible');
-                });
-                document.querySelectorAll('[aria-expanded="true"]').forEach(expandedButton => {
-                    expandedButton.setAttribute('aria-expanded', 'false');
-                    expandedButton.querySelector('svg')?.classList.remove('rotate-180');
-                });
-
-                menu.classList.add('visible');
-                button.setAttribute('aria-expanded', 'true');
-                button.querySelector('svg')?.classList.add('rotate-180');
-            }
-
-            // Function to hide a desktop flyout menu with a delay
-            function hideDesktopFlyout(button, menu, timeoutRef) {
-                // Use the passed timeoutRef to assign the timeout ID
-                timeoutRef = setTimeout(() => {
-                    menu.classList.remove('visible');
-                    button.setAttribute('aria-expanded', 'false');
-                    button.querySelector('svg')?.classList.remove('rotate-180');
-                }, hoverDelay);
-                return timeoutRef; // Return the new timeout ID
-            }
-
-
-            // --- Mobile Menu Drawer Logic ---
-            if (mobileMenuButton) {
-                mobileMenuButton.addEventListener('click', () => {
-                    mobileMenuDrawer.classList.remove('hidden');
-                    document.body.style.overflow = 'hidden'; // Prevent scrolling body when drawer is open
-                });
-            }
-
-            if (closeMobileMenuButton) {
-                closeMobileMenuButton.addEventListener('click', () => {
-                    mobileMenuDrawer.classList.add('hidden');
-                    document.body.style.overflow = ''; // Restore body scrolling
-                });
-            }
-
-            // Close mobile menu when a link is clicked inside it
-            if (mobileMenuDrawer) {
-                mobileMenuDrawer.querySelectorAll('a').forEach(link => {
-                    link.addEventListener('click', () => {
-                        mobileMenuDrawer.classList.add('hidden');
-                        document.body.style.overflow = '';
-                    });
-                });
-            }
-
-            // --- Mobile Services Dropdown (Accordion style) ---
-            if (mobileServicesDropdownButton) {
-                mobileServicesDropdownButton.addEventListener('click', () => {
-                    const isExpanded = mobileServicesDropdownButton.getAttribute('aria-expanded') === 'true';
-                    mobileServicesDropdownButton.setAttribute('aria-expanded', !isExpanded);
-                    mobileServicesPanel.classList.toggle('hidden');
-                    // Toggle the rotate class for the SVG icon
-                    mobileServicesDropdownButton.querySelector('svg').classList.toggle('rotate-180', !isExpanded);
-
-                    // Close other mobile dropdowns if open
-                    if (mobileCompanyPanel && !mobileCompanyPanel.classList.contains('hidden') && mobileServicesDropdownButton.id !== mobileCompanyDropdownButton.id) {
-                        mobileCompanyPanel.classList.add('hidden');
-                        mobileCompanyDropdownButton.setAttribute('aria-expanded', 'false');
-                        mobileCompanyDropdownButton.querySelector('svg').classList.remove('rotate-180');
-                    }
-                    if (mobileResourcesPanel && !mobileResourcesPanel.classList.contains('hidden') && mobileServicesDropdownButton.id !== mobileResourcesDropdownButton.id) {
-                        mobileResourcesPanel.classList.add('hidden');
-                        mobileResourcesDropdownButton.setAttribute('aria-expanded', 'false');
-                        mobileResourcesDropdownButton.querySelector('svg').classList.remove('rotate-180');
+        document.addEventListener('DOMContentLoaded', function() {
+            const animateOnScrollElements = document.querySelectorAll('.animate-on-scroll');
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        // Apply delay if specified, otherwise add immediately
+                        const delay = parseFloat(getComputedStyle(entry.target).transitionDelay || 0);
+                        if (delay > 0) {
+                            setTimeout(() => {
+                                entry.target.classList.add('is-visible');
+                            }, delay * 1000); // Convert seconds to milliseconds
+                        } else {
+                            entry.target.classList.add('is-visible');
+                        }
+                        observer.unobserve(entry.target); // Stop observing once visible
                     }
                 });
-            }
+            }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
 
-            // --- Mobile Company Dropdown (Accordion style) ---
-            if (mobileCompanyDropdownButton) {
-                mobileCompanyDropdownButton.addEventListener('click', () => {
-                    const isExpanded = mobileCompanyDropdownButton.getAttribute('aria-expanded') === 'true';
-                    mobileCompanyDropdownButton.setAttribute('aria-expanded', !isExpanded);
-                    mobileCompanyPanel.classList.toggle('hidden');
-                    // Toggle the rotate class for the SVG icon
-                    mobileCompanyDropdownButton.querySelector('svg').classList.toggle('rotate-180', !isExpanded);
+            animateOnScrollElements.forEach(element => {
+                observer.observe(element);
+            });
 
-                    // Close other mobile dropdowns if open
-                    if (mobileServicesPanel && !mobileServicesPanel.classList.contains('hidden') && mobileCompanyDropdownButton.id !== mobileServicesDropdownButton.id) {
-                        mobileServicesPanel.classList.add('hidden');
-                        mobileServicesDropdownButton.setAttribute('aria-expanded', 'false');
-                        mobileServicesDropdownButton.querySelector('svg').classList.remove('rotate-180');
-                    }
-                    if (mobileResourcesPanel && !mobileResourcesPanel.classList.contains('hidden') && mobileCompanyDropdownButton.id !== mobileResourcesDropdownButton.id) {
-                        mobileResourcesPanel.classList.add('hidden');
-                        mobileResourcesDropdownButton.setAttribute('aria-expanded', 'false');
-                        mobileResourcesDropdownButton.querySelector('svg').classList.remove('rotate-180');
-                    }
-                });
-            }
-
-            // --- Mobile Resources Dropdown (Accordion style) ---
-            if (mobileResourcesDropdownButton) {
-                mobileResourcesDropdownButton.addEventListener('click', () => {
-                    const isExpanded = mobileResourcesDropdownButton.getAttribute('aria-expanded') === 'true';
-                    mobileResourcesDropdownButton.setAttribute('aria-expanded', !isExpanded);
-                    mobileResourcesPanel.classList.toggle('hidden');
-                    // Toggle the rotate class for the SVG icon
-                    mobileResourcesDropdownButton.querySelector('svg').classList.toggle('rotate-180', !isExpanded);
-
-                    // Close other mobile dropdowns if open
-                    if (mobileServicesPanel && !mobileServicesPanel.classList.contains('hidden') && mobileResourcesDropdownButton.id !== mobileServicesDropdownButton.id) {
-                        mobileServicesPanel.classList.add('hidden');
-                        mobileServicesDropdownButton.setAttribute('aria-expanded', 'false');
-                        mobileServicesDropdownButton.querySelector('svg').classList.remove('rotate-180');
-                    }
-                    if (mobileCompanyPanel && !mobileCompanyPanel.classList.contains('hidden') && mobileResourcesDropdownButton.id !== mobileCompanyDropdownButton.id) {
-                        mobileCompanyPanel.classList.add('hidden');
-                        mobileCompanyDropdownButton.setAttribute('aria-expanded', 'false');
-                        mobileCompanyDropdownButton.querySelector('svg').classList.remove('rotate-180');
-                    }
-                });
-            }
-
-
-            // --- Desktop Services Flyout Menu (Hover to toggle with JS for smoothness) ---
-            const servicesMenuDesktop = document.getElementById('services-menu-desktop');
-            if (servicesMenuDesktop) {
-                servicesMenuDesktop.addEventListener('mouseenter', () => showDesktopFlyout(servicesDropdownButton, servicesFlyoutMenu));
-                servicesMenuDesktop.addEventListener('mouseleave', () => { servicesTimeout = hideDesktopFlyout(servicesDropdownButton, servicesFlyoutMenu, servicesTimeout); });
-            }
-
-            // --- Desktop Company Flyout Menu (Hover to toggle with JS for smoothness) ---
-            const companyMenuDesktop = document.getElementById('company-menu-desktop');
-            if (companyMenuDesktop) {
-                companyMenuDesktop.addEventListener('mouseenter', () => showDesktopFlyout(companyDropdownButton, companyFlyoutMenu));
-                companyMenuDesktop.addEventListener('mouseleave', () => { companyTimeout = hideDesktopFlyout(companyDropdownButton, companyFlyoutMenu, companyTimeout); });
-            }
-
-            // --- Desktop Resources Flyout Menu (Hover to toggle with JS for smoothness) ---
-            const resourcesMenuDesktop = document.getElementById('resources-menu-desktop');
-            if (resourcesMenuDesktop) {
-                resourcesMenuDesktop.addEventListener('mouseenter', () => showDesktopFlyout(resourcesDropdownButton, resourcesFlyoutMenu));
-                resourcesMenuDesktop.addEventListener('mouseleave', () => { resourcesTimeout = hideDesktopFlyout(resourcesDropdownButton, resourcesFlyoutMenu, resourcesTimeout); });
-            }
-
-
-            // --- Header Scroll Effect (Sticky header background change) ---
-            if (mainHeader) {
+            const heroSection = document.getElementById('hero-section');
+            if (heroSection) {
                 window.addEventListener('scroll', () => {
-                    if (window.pageYOffset > 50) { // Adjust scroll threshold as needed
-                        mainHeader.classList.add('header-scrolled');
-                    } else {
-                        mainHeader.classList.remove('header-scrolled');
-                    }
+                    const scrollPosition = window.pageYOffset;
+                    heroSection.style.backgroundPositionY = -scrollPosition * 0.3 + 'px';
                 });
             }
-        })(); // Immediately invoked function expression
+            
+            // Accordion functionality for FAQs and Quick Solutions
+            document.querySelectorAll('.accordion-header').forEach(header => {
+                header.addEventListener('click', () => {
+                    const content = document.getElementById(header.dataset.accordionToggle);
+                    const isActive = header.classList.contains('active');
+
+                    // Close all open accordions first (within the same section to prevent unintended closing)
+                    // This logic assumes you only want one accordion open at a time within its immediate parent group
+                    const parentSection = header.closest('.faq-category-section') || header.closest('.section-box') || header.closest('.section-box-alt');
+                    parentSection.querySelectorAll('.accordion-header.active').forEach(activeHeader => {
+                        if (activeHeader !== header) { // Don't close the currently clicked one
+                            activeHeader.classList.remove('active');
+                            document.getElementById(activeHeader.dataset.accordionToggle).classList.remove('open');
+                        }
+                    });
+
+                    // Toggle the clicked accordion
+                    if (!isActive) {
+                        header.classList.add('active');
+                        content.classList.add('open');
+                    }
+                });
+            });
+
+            // Counter animation for stats section (if applicable)
+            const counterObserver = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const target = entry.target;
+                        const endValue = parseFloat(target.dataset.target); // Use parseFloat for percentages
+                        const duration = 2000;
+                        let startTimestamp = null;
+
+                        const step = (timestamp) => {
+                            if (!startTimestamp) startTimestamp = timestamp;
+                            const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                            let currentValue;
+                            let textSuffix = '';
+
+                            if (target.dataset.target.includes('%')) {
+                                currentValue = Math.floor(progress * endValue);
+                                textSuffix = '%';
+                            } else {
+                                currentValue = Math.floor(progress * endValue);
+                            }
+                            target.textContent = currentValue.toLocaleString() + textSuffix;
+
+                            if (progress < 1) {
+                                window.requestAnimationFrame(step);
+                            }
+                        };
+                        window.requestAnimationFrame(step);
+                        observer.unobserve(target);
+                    }
+                });
+            }, { threshold: 0.5 });
+
+            document.querySelectorAll('[data-target]').forEach(counter => {
+                counterObserver.observe(counter);
+            });
+        });
     </script>
 </body>
 </html>
