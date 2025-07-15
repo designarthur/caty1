@@ -21,19 +21,57 @@ $user_id = $_SESSION['user_id'];
 $quotes = [];
 $expanded_quote_id = $_GET['quote_id'] ?? null;
 
-// The main query remains the same as it fetches the parent quote record
+// --- Pagination & Filter Variables ---
+$items_per_page_options = [10, 25, 50, 100];
+$items_per_page = filter_input(INPUT_GET, 'per_page', FILTER_VALIDATE_INT);
+if (!in_array($items_per_page, $items_per_page_options)) {
+    $items_per_page = 25; // Default items per page
+}
+
+$current_page = filter_input(INPUT_GET, 'page', FILTER_VALIDATE_INT);
+if (!$current_page || $current_page < 1) {
+    $current_page = 1;
+}
+$offset = ($current_page - 1) * $items_per_page;
+
+$search_query = trim($_GET['search'] ?? ''); // Search query
+
+// Build the query with search and pagination
+$base_query = "FROM quotes q WHERE q.user_id = ?";
+$params = [$user_id];
+$types = "i";
+
+if (!empty($search_query)) {
+    $search_term = '%' . $search_query . '%';
+    $base_query .= " AND (CAST(q.id AS CHAR) LIKE ? OR q.location LIKE ?)";
+    $params[] = $search_term;
+    $params[] = $search_term;
+    $types .= "ss";
+}
+
+// Get total count for pagination
+$stmt_count = $conn->prepare("SELECT COUNT(*) " . $base_query);
+$stmt_count->bind_param($types, ...$params);
+$stmt_count->execute();
+$total_quotes = $stmt_count->get_result()->fetch_row()[0];
+$stmt_count->close();
+$total_pages = ceil($total_quotes / $items_per_page);
+
+
 $query = "SELECT
             q.id, q.service_type, q.status, q.created_at, q.location, q.quoted_price, q.admin_notes, q.customer_type,
             q.delivery_date, q.delivery_time, q.removal_date, q.removal_time, q.live_load_needed, q.is_urgent, q.driver_instructions,
             q.daily_rate, q.swap_charge, q.relocation_charge, q.discount, q.tax, q.is_swap_included, q.is_relocation_included
-          FROM
-            quotes q
-          WHERE
-            q.user_id = ?
-          ORDER BY q.created_at DESC";
+          " . $base_query . "
+          ORDER BY q.created_at DESC
+          LIMIT ? OFFSET ?";
+
+$params[] = $items_per_page;
+$params[] = $offset;
+$types .= "ii";
 
 $stmt = $conn->prepare($query);
-$stmt->bind_param("i", $user_id);
+$stmt->bind_param($types, ...$params);
 $stmt->execute();
 $result = $stmt->get_result();
 
@@ -94,7 +132,18 @@ function getCustomerStatusBadgeClass($status) {
 <h1 class="text-3xl font-bold text-gray-800 mb-8">My Quotes</h1>
 
 <div class="bg-white p-6 rounded-lg shadow-md border border-blue-200">
-    <h2 class="text-xl font-semibold text-gray-700 mb-4 flex items-center"><i class="fas fa-file-invoice mr-2 text-blue-600"></i>Your Quote Requests</h2>
+    <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
+        <h2 class="text-xl font-semibold text-gray-700"><i class="fas fa-file-invoice mr-2 text-blue-600"></i>Your Quote Requests</h2>
+        <div class="flex items-center gap-2">
+             <input type="text" id="search-input" placeholder="Search by ID or Location..." class="p-2 border border-gray-300 rounded-md w-full md:w-auto text-sm" value="<?php echo htmlspecialchars($search_query); ?>" onkeydown="if(event.key === 'Enter') applyFilters()">
+            <button onclick="applyFilters()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"><i class="fas fa-search"></i></button>
+        </div>
+    </div>
+     <div class="flex justify-start mb-4">
+        <button id="bulk-delete-quotes-btn" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 hidden">
+            <i class="fas fa-trash-alt mr-2"></i>Delete Selected
+        </button>
+    </div>
 
     <?php if (empty($quotes)): ?>
         <p class="text-gray-600 text-center p-4">You have not submitted any quote requests yet.</p>
@@ -103,6 +152,7 @@ function getCustomerStatusBadgeClass($status) {
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-blue-50">
                     <tr>
+                        <th class="px-6 py-3"><input type="checkbox" id="select-all-quotes" class="h-4 w-4 text-blue-600 border-gray-300 rounded"></th>
                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Quote ID</th>
                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Service Type</th>
                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Location</th>
@@ -114,6 +164,7 @@ function getCustomerStatusBadgeClass($status) {
                 <tbody class="bg-white divide-y divide-gray-200">
                     <?php foreach ($quotes as $quote): ?>
                         <tr class="quote-row">
+                             <td class="px-6 py-4"><input type="checkbox" class="quote-checkbox h-4 w-4" value="<?php echo $quote['id']; ?>"></td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">#Q<?php echo htmlspecialchars($quote['id']); ?></td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><?php echo htmlspecialchars(ucwords(str_replace('_', ' ', $quote['service_type']))); ?></td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><?php echo htmlspecialchars($quote['location']); ?></td>
@@ -130,7 +181,7 @@ function getCustomerStatusBadgeClass($status) {
                             </td>
                         </tr>
                         <tr id="quote-details-<?php echo htmlspecialchars($quote['id']); ?>" class="quote-details-row bg-gray-50 hidden">
-                            <td colspan="6" class="px-6 py-4">
+                            <td colspan="7" class="px-6 py-4">
                                 <div class="p-4 border border-gray-200 rounded-lg shadow-sm">
                                     <h3 class="text-lg font-bold text-gray-800 mb-4">Details for Quote #Q<?php echo htmlspecialchars($quote['id']); ?></h3>
 
@@ -295,6 +346,30 @@ function getCustomerStatusBadgeClass($status) {
                 </tbody>
             </table>
         </div>
+        <nav class="mt-4 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div>
+                <p class="text-sm text-gray-700">
+                    Showing <span class="font-medium"><?php echo $offset + 1; ?></span> to <span class="font-medium"><?php echo min($offset + $items_per_page, $total_quotes); ?></span> of <span class="font-medium"><?php echo $total_quotes; ?></span> results
+                </p>
+            </div>
+             <div class="flex items-center gap-2">
+                <span class="text-sm font-medium text-gray-700">Per Page:</span>
+                 <select onchange="loadCustomerSection('quotes', {page: 1, per_page: this.value, search: '<?php echo htmlspecialchars($search_query); ?>'})" class="p-2 border border-gray-300 rounded-md text-sm">
+                    <?php foreach ($items_per_page_options as $option): ?>
+                        <option value="<?php echo $option; ?>" <?php echo $items_per_page == $option ? 'selected' : ''; ?>><?php echo $option; ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div>
+                 <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                    <?php for ($i = 1; $i <= $total_pages; $i++): ?>
+                        <button onclick="loadCustomerSection('quotes', {page: <?php echo $i; ?>, per_page: <?php echo $items_per_page; ?>, search: '<?php echo htmlspecialchars($search_query); ?>'})" class="<?php echo $i == $current_page ? 'z-10 bg-blue-50 border-blue-500 text-blue-600' : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'; ?> relative inline-flex items-center px-4 py-2 border text-sm font-medium">
+                            <?php echo $i; ?>
+                        </button>
+                    <?php endfor; ?>
+                </nav>
+            </div>
+        </nav>
     <?php endif; ?>
 </div>
 
@@ -376,5 +451,61 @@ function getCustomerStatusBadgeClass($status) {
                 }, title, confirmColor);
             });
         });
+
+        const selectAllCheckbox = document.getElementById('select-all-quotes');
+        const bulkDeleteBtn = document.getElementById('bulk-delete-quotes-btn');
+        const quoteCheckboxes = document.querySelectorAll('.quote-checkbox');
+
+        function toggleBulkDeleteBtn() {
+            const anyChecked = document.querySelectorAll('.quote-checkbox:checked').length > 0;
+            bulkDeleteBtn.classList.toggle('hidden', !anyChecked);
+        }
+
+        if(selectAllCheckbox) {
+            selectAllCheckbox.addEventListener('change', (e) => {
+                quoteCheckboxes.forEach(cb => cb.checked = e.target.checked);
+                toggleBulkDeleteBtn();
+            });
+        }
+
+        quoteCheckboxes.forEach(cb => {
+            cb.addEventListener('change', toggleBulkDeleteBtn);
+        });
+
+        if(bulkDeleteBtn) {
+            bulkDeleteBtn.addEventListener('click', () => {
+                const selectedIds = Array.from(document.querySelectorAll('.quote-checkbox:checked')).map(cb => cb.value);
+                if (selectedIds.length === 0) return;
+                
+                window.showConfirmationModal('Delete Quotes', `Are you sure you want to delete ${selectedIds.length} quote(s)?`, async (confirmed) => {
+                    if (confirmed) {
+                        const formData = new FormData();
+                        formData.append('action', 'delete_bulk');
+                        formData.append('csrf_token', csrfToken);
+                        selectedIds.forEach(id => formData.append('quote_ids[]', id));
+
+                        try {
+                            const response = await fetch('/api/customer/quotes.php', { method: 'POST', body: formData });
+                            const result = await response.json();
+                            if(result.success) {
+                                window.showToast(result.message, 'success');
+                                window.loadCustomerSection('quotes');
+                            } else {
+                                window.showToast(result.message, 'error');
+                            }
+                        } catch (error) {
+                            window.showToast('An error occurred.', 'error');
+                        }
+                    }
+                }, 'Delete', 'bg-red-600');
+            });
+        }
+
     })();
+
+    function applyFilters() {
+        const search = document.getElementById('search-input').value;
+        const per_page = document.querySelector('select[onchange^="loadCustomerSection"]').value;
+        loadCustomerSection('quotes', { search, per_page, page: 1 });
+    }
 </script>
