@@ -206,9 +206,9 @@ function getStatusBadgeClass($status) {
         <div class="flex justify-between items-center mb-4">
             <h2 class="text-xl font-semibold text-gray-700">New Junk Removal Quote</h2>
             <div>
-                <label for="ai-vision-upload" class="py-2 px-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 shadow-md cursor-pointer">
+                <button type="button" id="ai-vision-trigger-btn" class="py-2 px-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 shadow-md cursor-pointer">
                     <i class="fas fa-camera-retro mr-2"></i>Upload for AI Vision
-                </label>
+                </button>
                 <input type="file" id="ai-vision-upload" class="hidden" multiple accept="image/*,video/*">
                 <p class="text-xs text-gray-500 mt-1">Our AI will automatically detect items and add them to the table below.</p>
             </div>
@@ -566,6 +566,25 @@ function getStatusBadgeClass($status) {
     <img id="image-modal-content" src="" class="max-w-full max-h-[90%] object-contain">
 </div>
 
+<div id="camera-options-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+    <div class="bg-white p-6 rounded-lg shadow-xl w-11/12 max-w-md text-gray-800">
+        <h3 class="text-xl font-bold mb-4">Choose Media Source</h3>
+        <div class="flex flex-col space-y-4">
+            <button type="button" id="option-upload-gallery" class="py-3 px-6 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                <i class="fas fa-upload mr-2"></i>Upload Photo/Video from Gallery
+            </button>
+            <button type="button" id="option-take-photo" class="py-3 px-6 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                <i class="fas fa-camera mr-2"></i>Take a Photo
+            </button>
+            <button type="button" id="option-take-video" class="py-3 px-6 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+                <i class="fas fa-video mr-2"></i>Take a Video
+            </button>
+            <button type="button" class="py-2 px-4 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400" onclick="window.hideModal('camera-options-modal')">Cancel</button>
+        </div>
+    </div>
+</div>
+
+
 <script>
     // Encapsulate JavaScript in an IIFE to prevent global variable conflicts
     (function() {
@@ -823,6 +842,31 @@ function getStatusBadgeClass($status) {
                     'bg-blue-600'
                 );
             }
+            // Handle AI Vision trigger button
+            else if (event.target.id === 'ai-vision-trigger-btn') {
+                if (isMobileDevice()) {
+                    window.showModal('camera-options-modal');
+                } else {
+                    document.getElementById('ai-vision-upload').click();
+                }
+            }
+            // Handle modal options for camera/gallery
+            else if (event.target.id === 'option-upload-gallery') {
+                document.getElementById('ai-vision-upload').removeAttribute('capture');
+                document.getElementById('ai-vision-upload').setAttribute('accept', 'image/*,video/*');
+                document.getElementById('ai-vision-upload').click();
+                window.hideModal('camera-options-modal');
+            } else if (event.target.id === 'option-take-photo') {
+                document.getElementById('ai-vision-upload').setAttribute('capture', 'camera');
+                document.getElementById('ai-vision-upload').setAttribute('accept', 'image/*');
+                document.getElementById('ai-vision-upload').click();
+                window.hideModal('camera-options-modal');
+            } else if (event.target.id === 'option-take-video') {
+                document.getElementById('ai-vision-upload').setAttribute('capture', 'camcorder');
+                document.getElementById('ai-vision-upload').setAttribute('accept', 'video/*');
+                document.getElementById('ai-vision-upload').click();
+                window.hideModal('camera-options-modal');
+            }
         });
 
         // Event delegation for general checkbox changes (for bulk delete button visibility)
@@ -980,6 +1024,11 @@ function getStatusBadgeClass($status) {
 
         document.getElementById('save-draft-btn').addEventListener('click', () => handleFormSubmission('draft'));
         document.getElementById('submit-for-pricing-btn').addEventListener('click', () => handleFormSubmission('submit'));
+
+        // --- Mobile Device Detection ---
+        function isMobileDevice() {
+            return /Mobi|Android|iPhone|iPad|iPod|Windows Phone|BlackBerry/i.test(navigator.userAgent);
+        }
 
     })(); // End of IIFE
 </script>
