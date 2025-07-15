@@ -77,7 +77,7 @@ $supportPhone = '+1 (555) 123-4567';
             <div class="border-t border-gray-700 mt-8 pt-8 text-center text-gray-500 text-sm">
                 <p>&copy; <?php echo date("Y"); ?> <?php echo htmlspecialchars($companyName); ?>. All rights reserved.</p>
                 <p class="mt-2">
-                    <a href="/PrivacyPolicy.html" class="hover:text-blue-custom transition duration-200">Privacy Policy</a> | 
+                    <a href="/PrivacyPolicy.html" class="hover:text-blue-custom transition duration-200">Privacy Policy</a> |
                     <a href="/Terms and Conditions.html" class="hover:text-blue-custom transition duration-200">Terms & Conditions</a>
                 </p>
             </div>
@@ -139,56 +139,86 @@ $supportPhone = '+1 (555) 123-4567';
         }
 
         // Helper functions for video frame extraction (needed for junk removal chat)
-        // These need to be globally available for the AI chat widget
-        window.extractFramesFromVideo = function(videoFile, numFrames = 1) {
+        /**
+         * Extracts a specified number of frames from a video file.
+         * The frames are evenly spaced throughout the video's duration.
+         *
+         * @param {File} videoFile The video file to process.
+         * @param {number} numFrames The number of frames to extract (default is 10).
+         * @returns {Promise<string[]>} A promise that resolves with an array of base64-encoded image data URLs (JPEG format).
+         */
+        function extractFramesFromVideo(videoFile, numFrames = 10) {
             return new Promise((resolve, reject) => {
                 const video = document.getElementById('hiddenVideo');
                 const canvas = document.getElementById('hiddenCanvas');
-                const ctx = canvas.getContext('2d');
 
+                // Ensure the required hidden elements exist in the DOM
+                if (!video || !canvas) {
+                    return reject(new Error("Required hidden video/canvas elements are not found in the DOM."));
+                }
+
+                const context = canvas.getContext('2d');
+                const frames = [];
+                let framesExtracted = 0;
+
+                video.preload = 'metadata';
+                video.muted = true;
                 video.src = URL.createObjectURL(videoFile);
-                video.load();
 
-                video.onloadeddata = () => {
-                    const frames = [];
-                    const interval = video.duration / (numFrames + 1); // Distribute frames evenly
+                const captureFrame = () => {
+                    // Stop if we have enough frames
+                    if (framesExtracted >= numFrames) {
+                        if (video.src) URL.revokeObjectURL(video.src); // Clean up blob URL
+                        resolve(frames);
+                        return;
+                    }
 
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
+                    try {
+                        // Draw the current video frame to the canvas
+                        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                        // Convert canvas to a JPEG data URL and add to the array
+                        frames.push(canvas.toDataURL('image/jpeg'));
+                        framesExtracted++;
 
-                    let framesExtracted = 0;
-                    const captureFrame = () => {
+                        // If more frames are needed, seek to the next calculated position
                         if (framesExtracted < numFrames) {
-                            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                            frames.push(canvas.toDataURL('image/jpeg', 0.8)); // Adjust quality as needed
-                            framesExtracted++;
-                            video.currentTime += interval;
+                            const nextTime = (framesExtracted + 1) * (video.duration / (numFrames + 1));
+                            video.currentTime = nextTime;
                         } else {
-                            video.pause();
-                            URL.revokeObjectURL(video.src);
+                            // All frames captured, resolve the promise
+                            if (video.src) URL.revokeObjectURL(video.src);
                             resolve(frames);
                         }
-                    };
-
-                    video.onseeked = () => {
-                        captureFrame(); // Capture frame after seeking
-                    };
-
-                    video.onerror = (e) => {
-                        reject(new Error('Error loading video for frame extraction: ' + video.error.message));
-                    };
-
-                    // Start capturing from the beginning or a suitable initial point
-                    video.currentTime = 0.1; // Start slightly after 0 to avoid blank frames
+                    } catch (e) {
+                        reject(new Error("Error drawing video frame to canvas: " + e.message));
+                    }
                 };
 
+                // This event fires when the video's metadata (like duration and dimensions) is loaded
+                video.onloadeddata = () => {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    // Seek to the first frame position to start the process
+                    video.currentTime = (video.duration / (numFrames + 1));
+                };
+
+                // This event fires after the video has sought to a new position
+                video.onseeked = captureFrame;
+
+                // Handle any errors during video loading
                 video.onerror = (e) => {
-                    reject(new Error('Error loading video file: ' + e.message));
+                    const error = e.target.error;
+                    reject(new Error('Error loading video file: ' + (error ? error.message : 'Unknown error')));
                 };
             });
-        };
+        }
 
-        window.dataURLtoBlob = function(dataurl) {
+        /**
+         * Converts a base64 data URL into a Blob object.
+         * @param {string} dataurl The base64 data URL.
+         * @returns {Blob} The resulting Blob object.
+         */
+        function dataURLtoBlob(dataurl) {
             const arr = dataurl.split(',');
             const mimeMatch = arr[0].match(/:(.*?);/);
             const mime = mimeMatch ? mimeMatch[1] : 'application/octet-stream';
@@ -198,8 +228,11 @@ $supportPhone = '+1 (555) 123-4567';
             while (n--) {
                 u8arr[n] = bstr.charCodeAt(n);
             }
-            return new Blob([u8arr], { type: mime });
-        };
+            return new Blob([u8arr], {
+                type: mime
+            });
+        }
+
 
         // Accordion functionality for FAQs (if still used on public pages)
         document.querySelectorAll('[data-accordion-toggle]').forEach(header => {
