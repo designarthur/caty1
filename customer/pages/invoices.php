@@ -7,29 +7,41 @@ if (session_status() == PHP_SESSION_NONE) {
 }
 require_once __DIR__ . '/../../includes/db.php';
 require_once __DIR__ . '/../../includes/session.php'; // For has_role and user_id
+require_once __DIR__ . '/../../includes/functions.php'; // For CSRF token
 
 if (!is_logged_in()) {
     echo '<div class="text-red-500 text-center p-8">You must be logged in to view this content.</div>';
     exit;
 }
 
+generate_csrf_token();
+$csrf_token = $_SESSION['csrf_token'];
+
 $user_id = $_SESSION['user_id'];
 $invoices = [];
 $invoice_detail = null; // To hold data for a single invoice detail view if requested
 
+// --- Pagination & Filter Variables ---
+$items_per_page_options = [10, 25, 50, 100];
+$items_per_page = filter_input(INPUT_GET, 'per_page', FILTER_VALIDATE_INT);
+if (!in_array($items_per_page, $items_per_page_options)) {
+    $items_per_page = 25; // Default items per page
+}
+
+$current_page = filter_input(INPUT_GET, 'page', FILTER_VALIDATE_INT);
+if (!$current_page || $current_page < 1) {
+    $current_page = 1;
+}
+$offset = ($current_page - 1) * $items_per_page;
+
+$filter_status = $_GET['status'] ?? 'all'; // Default filter status
+$search_query = trim($_GET['search'] ?? ''); // Search query
+$start_date_filter = $_GET['start_date'] ?? '';
+$end_date_filter = $_GET['end_date'] ?? '';
+
 // Check if a specific invoice ID is requested for detail view
 $requested_invoice_id = $_GET['invoice_id'] ?? null;
 $requested_quote_id = $_GET['quote_id'] ?? null; // For direct link from pending quotes
-
-// Fetch all invoices for the list
-$stmt_all_invoices = $conn->prepare("SELECT id, invoice_number, amount, status, created_at, due_date FROM invoices WHERE user_id = ? ORDER BY created_at DESC");
-$stmt_all_invoices->bind_param("i", $user_id);
-$stmt_all_invoices->execute();
-$result_all_invoices = $stmt_all_invoices->get_result();
-while ($row = $result_all_invoices->fetch_assoc()) {
-    $invoices[] = $row;
-}
-$stmt_all_invoices->close();
 
 // If a specific invoice number is requested, fetch its details
 if ($requested_invoice_id || $requested_quote_id) { 
@@ -81,6 +93,82 @@ if ($requested_invoice_id || $requested_quote_id) {
 
     }
     $stmt_detail->close();
+} else {
+    // --- Fetch all invoices for the list view with Filters, Search, and Pagination ---
+    $base_query = "
+        FROM invoices i
+        JOIN users u ON i.user_id = u.id
+        WHERE i.user_id = ?
+    ";
+
+    $where_clauses = [];
+    $params = [$user_id];
+    $types = "i";
+
+    // Status Filter
+    if ($filter_status !== 'all') {
+        $where_clauses[] = "i.status = ?";
+        $params[] = $filter_status;
+        $types .= "s";
+    }
+
+    // Search Query (Invoice Number or User Address)
+    if (!empty($search_query)) {
+        $search_term = '%' . $search_query . '%';
+        $where_clauses[] = "(i.invoice_number LIKE ? OR u.address LIKE ? OR u.city LIKE ? OR u.state LIKE ? OR u.zip_code LIKE ?)";
+        array_push($params, $search_term, $search_term, $search_term, $search_term, $search_term);
+        $types .= "sssss";
+    }
+
+    // Date Range Filter
+    if (!empty($start_date_filter)) {
+        $where_clauses[] = "DATE(i.created_at) >= ?";
+        $params[] = $start_date_filter;
+        $types .= "s";
+    }
+    if (!empty($end_date_filter)) {
+        $where_clauses[] = "DATE(i.created_at) <= ?";
+        $params[] = $end_date_filter;
+        $types .= "s";
+    }
+
+    $where_sql = '';
+    if (!empty($where_clauses)) {
+        $where_sql = " AND " . implode(" AND ", $where_clauses);
+    }
+
+    // Get total count for pagination
+    $stmt_count = $conn->prepare("SELECT COUNT(*) " . $base_query . $where_sql);
+    if (!empty($params)) {
+        $stmt_count->bind_param($types, ...$params);
+    }
+    $stmt_count->execute();
+    $total_invoices_count = $stmt_count->get_result()->fetch_assoc()['COUNT(*)'];
+    $stmt_count->close();
+
+    $total_pages = ceil($total_invoices_count / $items_per_page);
+
+    // Main query for invoices list - FIX: Qualify ambiguous columns
+    $list_query = "
+        SELECT i.id, i.invoice_number, i.amount, i.status, i.created_at, i.due_date
+    " . $base_query . $where_sql . "
+    ORDER BY i.created_at DESC
+    LIMIT ? OFFSET ?";
+
+    $params[] = $items_per_page;
+    $params[] = $offset;
+    $types .= "ii"; // Add types for LIMIT and OFFSET
+
+    $stmt_list = $conn->prepare($list_query);
+    if (!empty($params)) {
+        $stmt_list->bind_param($types, ...$params);
+    }
+    $stmt_list->execute();
+    $result_list = $stmt_list->get_result();
+    while ($row = $result_list->fetch_assoc()) {
+        $invoices[] = $row;
+    }
+    $stmt_list->close();
 }
 
 
@@ -107,30 +195,74 @@ function getStatusBadgeClass($status) {
 
 <div id="invoice-list" class="<?php echo $invoice_detail ? 'hidden' : ''; ?>">
     <div class="bg-white p-6 rounded-lg shadow-md border border-blue-200">
+        <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-3">
+            <h2 class="text-xl font-semibold text-gray-700 flex-grow"><i class="fas fa-file-invoice-dollar mr-2 text-blue-600"></i>Your Invoices</h2>
+            
+            <div class="flex items-center gap-2 w-full sm:w-auto">
+                <label for="status-filter" class="text-sm font-medium text-gray-700">Status:</label>
+                <select id="status-filter" onchange="applyFilters()"
+                        class="p-2 border border-gray-300 rounded-md text-sm flex-grow">
+                    <option value="all" <?php echo $filter_status === 'all' ? 'selected' : ''; ?>>All</option>
+                    <option value="pending" <?php echo $filter_status === 'pending' ? 'selected' : ''; ?>>Pending</option>
+                    <option value="paid" <?php echo $filter_status === 'paid' ? 'selected' : ''; ?>>Paid</option>
+                    <option value="partially_paid" <?php echo $filter_status === 'partially_paid' ? 'selected' : ''; ?>>Partially Paid</option>
+                    <option value="cancelled" <?php echo $filter_status === 'cancelled' ? 'selected' : ''; ?>>Cancelled</option>
+                </select>
+            </div>
+            <div class="flex items-center gap-2 w-full sm:w-auto">
+                <label for="start-date-filter" class="text-sm font-medium text-gray-700">From:</label>
+                <input type="date" id="start-date-filter" value="<?php echo htmlspecialchars($start_date_filter); ?>"
+                       class="p-2 border border-gray-300 rounded-md text-sm flex-grow" onchange="applyFilters()">
+                <label for="end-date-filter" class="text-sm font-medium text-gray-700">To:</label>
+                <input type="date" id="end-date-filter" value="<?php echo htmlspecialchars($end_date_filter); ?>"
+                       class="p-2 border border-gray-300 rounded-md text-sm flex-grow" onchange="applyFilters()">
+            </div>
+            <div class="flex-grow w-full sm:w-auto">
+                <input type="text" id="search-input" placeholder="Search invoice # or address..."
+                       class="p-2 border border-gray-300 rounded-md w-full text-sm"
+                       value="<?php echo htmlspecialchars($search_query); ?>"
+                       onkeydown="if(event.key === 'Enter') applyFilters()">
+            </div>
+            <button onclick="applyFilters()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-md text-sm w-full sm:w-auto">
+                Apply Filters
+            </button>
+        </div>
+        <div class="flex justify-end mb-4">
+             <button id="bulk-delete-invoices-btn" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200 shadow-md hidden">
+                <i class="fas fa-trash-alt mr-2"></i>Delete Selected
+            </button>
+        </div>
+
         <?php if (empty($invoices)): ?>
-            <div class="text-center text-gray-600 p-4">You have no invoices yet.</div>
+            <p class="text-center text-gray-500 py-4">No invoices found for the selected filters or search query.</p>
         <?php else: ?>
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-blue-50">
                         <tr>
+                            <th class="px-6 py-3 text-left">
+                                <input type="checkbox" id="select-all-invoices" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                            </th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Invoice ID</th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Date</th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Amount</th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Status</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Actions</th>
+                            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
                         <?php foreach ($invoices as $invoice): ?>
                             <tr>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <input type="checkbox" class="invoice-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" value="<?php echo htmlspecialchars($invoice['id']); ?>">
+                                </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"><?php echo htmlspecialchars($invoice['invoice_number']); ?></td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><?php echo (new DateTime($invoice['created_at']))->format('Y-m-d'); ?></td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$<?php echo number_format($invoice['amount'], 2); ?></td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <?php echo getStatusBadgeClass($invoice['status']); ?>"><?php echo htmlspecialchars(strtoupper(str_replace('_', ' ', $invoice['status']))); ?></span>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-right">
                                     <button class="text-blue-600 hover:text-blue-900 view-invoice-details" data-invoice-id="<?php echo htmlspecialchars($invoice['id']); ?>">View</button>
                                     <?php if ($invoice['status'] == 'pending' || $invoice['status'] == 'partially_paid'): ?>
                                         <button class="ml-3 text-green-600 hover:text-green-900 pay-invoice-btn" data-invoice-id="<?php echo htmlspecialchars($invoice['id']); ?>" data-amount="<?php echo htmlspecialchars($invoice['amount']); ?>">Pay Now</button>
@@ -141,6 +273,50 @@ function getStatusBadgeClass($status) {
                     </tbody>
                 </table>
             </div>
+            <nav class="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div>
+                    <p class="text-sm text-gray-700">
+                        Showing <span class="font-medium"><?php echo $offset + 1; ?></span> to
+                        <span class="font-medium"><?php echo min($offset + $items_per_page, $total_invoices_count); ?></span> of
+                        <span class="font-medium"><?php echo $total_invoices_count; ?></span> results
+                    </p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-sm font-medium text-gray-700">Invoices per page:</span>
+                    <select id="items-per-page-select" onchange="applyFilters({page: 1, per_page: this.value})"
+                            class="p-2 border border-gray-300 rounded-md text-sm">
+                        <?php foreach ($items_per_page_options as $option): ?>
+                            <option value="<?php echo $option; ?>" <?php echo $items_per_page == $option ? 'selected' : ''; ?>>
+                                <?php echo $option; ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div>
+                    <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                        <button onclick="applyFilters({page: <?php echo max(1, $current_page - 1); ?>})"
+                                class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                            <span class="sr-only">Previous</span>
+                            <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                        <?php for ($i = 1; $i <= $total_pages; $i++): ?>
+                            <button onclick="applyFilters({page: <?php echo $i; ?>})"
+                                    class="<?php echo $i == $current_page ? 'z-10 bg-blue-50 border-blue-500 text-blue-600' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'; ?> relative inline-flex items-center px-4 py-2 border text-sm font-medium">
+                                <?php echo $i; ?>
+                            </button>
+                        <?php endfor; ?>
+                        <button onclick="applyFilters({page: <?php echo min($total_pages, $current_page + 1); ?>})"
+                                class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                            <span class="sr-only">Next</span>
+                            <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </nav>
+                </div>
+            </nav>
         <?php endif; ?>
     </div>
 </div>
@@ -238,6 +414,7 @@ function getStatusBadgeClass($status) {
         <input type="hidden" name="action" value="process_payment">
         <input type="hidden" name="invoice_id" id="payment-form-invoice-id-hidden">
         <input type="hidden" name="payment_method_token" id="payment-method-token-hidden">
+        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
 
         <div class="mb-5">
             <label for="cardholder-name" class="block text-sm font-medium text-gray-700 mb-2">Cardholder Name</label>
@@ -287,12 +464,11 @@ function getStatusBadgeClass($status) {
 <script>
     // These functions are specific to invoices.php and are made global for onclick attributes.
     window.showInvoiceDetails = function(invoiceId) {
-        window.loadCustomerSection('invoices', { invoice_id: invoiceId });
+        window.loadCustomerInvoices({ invoice_id: invoiceId });
     };
 
     window.hideInvoiceDetails = function() {
-        window.loadCustomerSection('invoices');
-        history.replaceState(null, '', '#invoices'); // Adjust URL hash
+        window.loadCustomerInvoices({}); // Load list view
     };
 
     window.hidePaymentForm = function() {
@@ -303,8 +479,7 @@ function getStatusBadgeClass($status) {
         if (isDetailViewVisible) {
             invoiceDetailView.classList.remove('hidden');
         } else {
-            window.loadCustomerSection('invoices');
-            history.replaceState(null, '', '#invoices');
+            window.loadCustomerInvoices({}); // Load list view
         }
     };
 
@@ -320,6 +495,55 @@ function getStatusBadgeClass($status) {
         const saveNewCardCheckbox = document.getElementById('save-new-card');
         const setNewCardDefaultSection = document.getElementById('set-new-card-default-section');
         const paymentMethodTokenInput = document.getElementById('payment-method-token-hidden');
+
+        // Helper function to get safe filter values
+        const getSafeFilterValues = () => {
+            const statusEl = document.getElementById('status-filter');
+            const searchEl = document.getElementById('search-input');
+            const startDateEl = document.getElementById('start-date-filter');
+            const endDateEl = document.getElementById('end-date-filter');
+            const perPageEl = document.getElementById('items-per-page-select');
+
+            const defaultPerPage = <?php echo json_encode($items_per_page); ?>;
+
+            return {
+                status: statusEl ? statusEl.value : 'all',
+                search: searchEl ? searchEl.value : '',
+                start_date: startDateEl ? startDateEl.value : '',
+                end_date: endDateEl ? endDateEl.value : '',
+                per_page: perPageEl ? perPageEl.value : defaultPerPage
+            };
+        };
+
+        // Main function to load customer invoices with filters and pagination
+        window.loadCustomerInvoices = function(params = {}) {
+            const filters = getSafeFilterValues();
+            const newParams = {
+                page: params.page || filters.page || 1, // Prioritize passed page, then current filter page, then 1
+                per_page: params.per_page || filters.per_page,
+                status: params.status || filters.status,
+                search: params.search || filters.search,
+                start_date: params.start_date || filters.start_date,
+                end_date: params.end_date || filters.end_date,
+                invoice_id: params.invoice_id || '' // For detail view
+            };
+            window.loadCustomerSection('invoices', newParams);
+        };
+
+        // Apply filters function, typically called by UI changes
+        window.applyFilters = function(params = {}) {
+            const currentPage = params.page || 1; // Always reset to page 1 for new filters
+            const filters = getSafeFilterValues(); // Get current filter values
+            window.loadCustomerInvoices({
+                page: currentPage,
+                status: filters.status,
+                search: filters.search,
+                start_date: filters.start_date,
+                end_date: filters.end_date,
+                per_page: filters.per_page
+            });
+        };
+
 
         function resetPaymentForm() {
             paymentForm.reset();
@@ -443,7 +667,7 @@ function getStatusBadgeClass($status) {
                 const cvv = cvvInput.value.trim();
 
                 if (!cardNumberInput.disabled) {
-                     if (!/^\d{13,16}$/.test(cardNumber.replace(/\s/g, ''))) {
+                     if (!/^\d{13,16}$/.test(cardNumber.replace(/\s/g, ''))) { // Remove spaces for validation
                         window.showToast('Please enter a valid card number (13-16 digits).', 'error');
                         return;
                     }
@@ -454,11 +678,11 @@ function getStatusBadgeClass($status) {
                 }
 
                 const expiryParts = expiryDate.split('/');
-                if (expiryParts.length !== 2 || !isValidExpiryDate(expiryParts[0], '20' + expiryParts[1])) {
+                if (expiryParts.length !== 2 || !isValidExpiryDate(expiryParts[0], '20' + expiryParts[1])) { // Assuming YY is 2-digit, convert to 4
                     window.showToast('Please enter a valid expiration date (MM/YY) that is not expired.', 'error');
                     return;
                 }
-
+                
                 window.showToast('Processing payment...', 'info');
 
                 try {
@@ -473,7 +697,12 @@ function getStatusBadgeClass($status) {
                     if (result.success) {
                         window.hidePaymentForm();
                         window.showToast(result.message || 'Payment successful!', 'success');
-                        window.loadCustomerSection('bookings', { booking_id: result.booking_id });
+                        // Redirect to invoices or relevant booking page based on result
+                        if (result.booking_id) {
+                            window.loadCustomerSection('bookings', { booking_id: result.booking_id });
+                        } else {
+                            window.loadCustomerInvoices({}); // Reload invoices page
+                        }
                     } else {
                         window.showToast('Payment failed: ' + result.message, 'error');
                     }
@@ -495,7 +724,82 @@ function getStatusBadgeClass($status) {
             if(viewButton){
                  window.showInvoiceDetails(viewButton.dataset.invoiceId);
             }
+
+            // --- Bulk Delete Functionality ---
+            const selectAllInvoicesCheckbox = document.getElementById('select-all-invoices');
+            const bulkDeleteInvoicesBtn = document.getElementById('bulk-delete-invoices-btn');
+
+            function toggleBulkDeleteButtonVisibility() {
+                const anyChecked = document.querySelectorAll('.invoice-checkbox:checked').length > 0;
+                if (bulkDeleteInvoicesBtn) {
+                    bulkDeleteInvoicesBtn.classList.toggle('hidden', !anyChecked);
+                }
+            }
+
+            if (event.target.id === 'select-all-invoices') {
+                document.querySelectorAll('.invoice-checkbox').forEach(checkbox => {
+                    checkbox.checked = event.target.checked;
+                });
+                toggleBulkDeleteButtonVisibility();
+            } else if (event.target.classList.contains('invoice-checkbox')) {
+                if (selectAllInvoicesCheckbox && !event.target.checked) {
+                    selectAllInvoicesCheckbox.checked = false;
+                }
+                toggleBulkDeleteButtonVisibility();
+            }
+
+            if (event.target.id === 'bulk-delete-invoices-btn') {
+                const selectedIds = Array.from(document.querySelectorAll('.invoice-checkbox:checked')).map(cb => cb.value);
+                if (selectedIds.length === 0) {
+                    window.showToast('Please select at least one invoice to delete.', 'warning');
+                    return;
+                }
+
+                window.showConfirmationModal(
+                    'Delete Selected Invoices',
+                    `Are you sure you want to delete ${selectedIds.length} selected invoice(s)? This action cannot be undone and will delete associated bookings.`,
+                    async (confirmed) => {
+                        if (confirmed) {
+                            window.showToast('Deleting invoices...', 'info');
+                            const formData = new FormData();
+                            formData.append('action', 'delete_bulk'); // Action handled by api/customer/invoices.php
+                            formData.append('csrf_token', '<?php echo htmlspecialchars($csrf_token); ?>'); // Add CSRF token
+                            selectedIds.forEach(id => formData.append('invoice_ids[]', id)); // Send as invoice_ids
+
+                            try {
+                                const response = await fetch('/api/customer/invoices.php', { // Target the invoices API
+                                    method: 'POST',
+                                    body: formData
+                                });
+                                const result = await response.json();
+                                if (result.success) {
+                                    window.showToast(result.message, 'success');
+                                    window.loadCustomerInvoices({}); // Reload list after deletion
+                                } else {
+                                    window.showToast('Error: ' + result.message, 'error');
+                                }
+                            } catch (error) {
+                                window.showToast('An unexpected error occurred during bulk delete.', 'error');
+                                console.error('Bulk delete invoices API Error:', error);
+                            }
+                        }
+                    },
+                    'Delete Selected',
+                    'bg-red-600'
+                );
+            }
+        });
+
+        // Ensure initial state of bulk delete button is correct on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            const selectAllInvoicesCheckbox = document.getElementById('select-all-invoices');
+            if (selectAllInvoicesCheckbox) {
+                selectAllInvoicesCheckbox.checked = false; // Reset "select all" state
+            }
+            document.querySelectorAll('.invoice-checkbox').forEach(checkbox => {
+                checkbox.checked = false; // Ensure individual checkboxes are also reset
+            });
+            toggleBulkDeleteButtonVisibility(); // Update button visibility
         });
 
     })(); // End IIFE
-</script>
