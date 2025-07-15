@@ -74,32 +74,38 @@
     </div>
 </div>
 
-<div id="tutorial-overlay" class="fixed inset-0 bg-black bg-opacity-70 flex items-start justify-center z-50 hidden">
-    <div class="bg-white w-full h-full sm:w-11/12 sm:max-w-3xl sm:h-auto sm:my-8 rounded-t-lg sm:rounded-lg shadow-xl flex flex-col">
-        <div class="flex items-center justify-between p-4 bg-gray-100 sm:bg-white border-b sm:border-b-0">
-            <h2 class="text-xl sm:text-2xl font-bold text-gray-800" id="tutorial-title">Welcome to Your Dashboard!</h2>
-            <button class="text-gray-500 hover:text-gray-700 text-xl" onclick="hideModal('tutorial-overlay')">
+<div id="tutorial-overlay" class="fixed inset-0 bg-black bg-opacity-70 flex items-start justify-center z-50 hidden tutorial-animate">
+    <div class="bg-white w-full h-full sm:w-11/12 sm:max-w-3xl sm:h-auto sm:my-8 rounded-t-lg sm:rounded-lg shadow-xl flex flex-col tutorial-content-animate">
+        <div class="flex items-center justify-between p-4 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-t-lg">
+            <h2 class="text-xl sm:text-2xl font-bold flex items-center" id="tutorial-title">Welcome to Your Dashboard!</h2>
+            <button class="text-white hover:text-gray-200 text-xl" onclick="hideModal('tutorial-overlay')">
                 <i class="fas fa-times"></i>
             </button>
         </div>
         <div class="flex-1 p-4 sm:p-8 text-gray-800 overflow-y-auto">
-            <p class="text-sm sm:text-base text-gray-700 mb-4 sm:mb-6" id="tutorial-text">
-                This short tour will guide you through the key features of your <?php echo htmlspecialchars($companyName); ?> Customer Dashboard.
-            </p>
-            <div class="flex justify-between items-center">
-                <button id="tutorial-prev-btn" class="px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 text-sm sm:text-base min-w-[80px] hidden">
+            <div id="tutorial-step-content" class="fade-in">
+                <p class="text-sm sm:text-base text-gray-700 mb-4 sm:mb-6" id="tutorial-text">
+                    This short tour will guide you through the key features of your <?php echo htmlspecialchars($companyName); ?> Customer Dashboard.
+                </p>
+                </div>
+            <div class="flex justify-between items-center mt-6">
+                <button id="tutorial-prev-btn" class="px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 text-sm sm:text-base min-w-[80px] hidden opacity-0 pointer-events-none transition-all duration-300">
                     <i class="fas fa-arrow-left mr-2"></i>Previous
                 </button>
-                <button id="tutorial-next-btn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm sm:text-base min-w-[80px]">
+                <button id="tutorial-next-btn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm sm:text-base min-w-[80px] transition-all duration-300">
                     Next <i class="fas fa-arrow-right ml-2"></i>
                 </button>
-                <button id="tutorial-end-btn" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm sm:text-base min-w-[80px]">
+                <button id="tutorial-end-btn" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm sm:text-base min-w-[80px] hidden opacity-0 transition-all duration-300">
                     End Tutorial
                 </button>
+            </div>
+            <div class="text-center mt-4 text-sm text-gray-500" id="tutorial-progress">
+                Step 1 of 7
             </div>
         </div>
     </div>
 </div>
+
 
 <div id="relocation-request-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 hidden">
     <div class="bg-white w-full h-full sm:w-11/12 sm:max-w-md sm:h-auto sm:my-8 rounded-t-lg sm:rounded-lg shadow-xl flex flex-col">
@@ -168,221 +174,174 @@
 </div>
 
 <script>
-    // These functions are specific to invoices.php and are made global for onclick attributes.
-    window.showInvoiceDetails = function(invoiceId) {
-        window.loadCustomerSection('invoices', { invoice_id: invoiceId });
-    };
+    // --- Global Helper Functions (UNCHANGED) ---
+    function showModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) modal.classList.remove('hidden');
+    }
 
-    window.hideInvoiceDetails = function() {
-        window.loadCustomerSection('invoices');
-        history.replaceState(null, '', '#invoices'); // Adjust URL hash
-    };
+    function hideModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) modal.classList.add('hidden');
+    }
+    // ... other helper functions like showToast, showConfirmationModal ...
 
-    window.hidePaymentForm = function() {
-        const invoiceDetailView = document.getElementById('invoice-detail-view');
-        const isDetailViewVisible = !invoiceDetailView.classList.contains('hidden');
-
-        document.getElementById('payment-form-view').classList.add('hidden');
-        if (isDetailViewVisible) {
-            invoiceDetailView.classList.remove('hidden');
-        } else {
-            window.loadCustomerSection('invoices');
-            history.replaceState(null, '', '#invoices');
+    // --- NEW: Tutorial Initialization Function ---
+    function initializeTutorial() {
+        // console.log("initializeTutorial() called."); // Debugging
+        const tutorialNextBtn = document.getElementById('tutorial-next-btn');
+        // If the button doesn't exist or already has a listener, do nothing.
+        // This check prevents re-attaching listeners on subsequent initializeTutorial calls (e.g., from AJAX re-runs).
+        if (!tutorialNextBtn || tutorialNextBtn.dataset.listenerAttached === 'true') {
+            // console.log("Tutorial buttons already initialized or not found yet."); // Debugging
+            return;
         }
-    };
 
-    // --- IIFE for Invoice Page Specific JavaScript ---
-    (function() {
-        const paymentForm = document.getElementById('payment-form');
-        const cardholderNameInput = document.getElementById('cardholder-name');
-        const cardNumberInput = document.getElementById('card-number');
-        const expiryDateInput = document.getElementById('expiry-date');
-        const cvvInput = document.getElementById('cvv');
-        const billingAddressInput = document.getElementById('billing-address');
-        const saveCardSection = document.getElementById('save-card-section');
-        const saveNewCardCheckbox = document.getElementById('save-new-card');
-        const setNewCardDefaultSection = document.getElementById('set-new-card-default-section');
-        const paymentMethodTokenInput = document.getElementById('payment-method-token-hidden');
+        const tutorialSteps = [
+            { title: "Welcome to Your Dashboard!", text: "This short tour will guide you through the key features of your <?php echo htmlspecialchars($companyName); ?> Customer Dashboard." },
+            { title: "1. Account Information", text: "This section displays your personal details. You can update this information by clicking the 'Edit Profile' button." },
+            { title: "2. Quick Statistics", text: "Get an at-a-glance overview of your active bookings, pending quotes, and invoice statuses." },
+            { title: "3. Pending Quotes for Pricing", text: "Here you'll see any service requests you've submitted that are awaiting a quote from our team." },
+            { title: "4. New Requests via AI Chat", text: "Easily start a new equipment booking or junk removal request using our smart AI assistant." },
+            { title: "5. Main Navigation Menu", text: "On the left (or bottom on mobile), you'll find quick links to manage your Quotes, Bookings, Invoices, and more." },
+            { title: "You're All Set!", text: "That's it for the tour! Feel free to explore your dashboard." }
+        ];
 
-        function resetPaymentForm() {
-            paymentForm.reset();
-            saveCardSection.classList.add('hidden');
-            setNewCardDefaultSection.classList.add('hidden');
-            paymentMethodTokenInput.value = '';
-            paymentForm.dataset.originalDetails = '';
-            cardNumberInput.value = '';
-            cvvInput.value = '';
-            [cardNumberInput, cvvInput].forEach(el => {
-                el.disabled = false;
-                el.placeholder = el.id === 'card-number' ? '**** **** **** ****' : '***';
-                el.classList.remove('bg-gray-100');
+        let currentTutorialStep = 0;
+
+        // Get references to tutorial elements once during initialization
+        const tutorialTitle = document.getElementById('tutorial-title');
+        const tutorialText = document.getElementById('tutorial-text');
+        const tutorialStepContent = document.getElementById('tutorial-step-content');
+        const tutorialPrevBtn = document.getElementById('tutorial-prev-btn');
+        const tutorialEndBtn = document.getElementById('tutorial-end-btn');
+        const tutorialProgress = document.getElementById('tutorial-progress');
+
+        // Verify all elements are found. If not, log error and return.
+        if (!tutorialTitle || !tutorialText || !tutorialStepContent || !tutorialPrevBtn || !tutorialNextBtn || !tutorialEndBtn || !tutorialProgress) {
+            console.error("Critical tutorial UI elements not found. Tutorial will not function.", {
+                tutorialTitle: tutorialTitle, tutorialText: tutorialText, tutorialStepContent: tutorialStepContent,
+                tutorialPrevBtn: tutorialPrevBtn, tutorialNextBtn: tutorialNextBtn, tutorialEndBtn: tutorialEndBtn,
+                tutorialProgress: tutorialProgress
             });
+            return; // Exit if elements are missing
         }
+        // console.log("All tutorial UI elements successfully referenced."); // Debugging
 
-        function populateWithDefault(method) {
-            cardholderNameInput.value = method.cardholder_name;
-            billingAddressInput.value = method.billing_address;
-            expiryDateInput.value = `${method.expiration_month}/${method.expiration_year.slice(-2)}`;
-            paymentMethodTokenInput.value = method.braintree_payment_token;
+        const updateTutorialUI = () => {
+            // console.log("updateTutorialUI called. Current step:", currentTutorialStep); // Debugging
 
-            cardNumberInput.value = `**** **** **** ${method.last_four}`;
-            cardNumberInput.disabled = true;
-            cvvInput.placeholder = "***";
-            cvvInput.disabled = true;
-            [cardNumberInput, cvvInput].forEach(el => el.classList.add('bg-gray-100'));
+            // Apply fade-out effect for current content
+            tutorialStepContent.classList.remove('fade-in');
+            tutorialStepContent.classList.add('fade-out');
 
-            const originalDetails = {
-                cardholder_name: method.cardholder_name,
-                billing_address: method.billing_address,
-                expiry_date: `${method.expiration_month}/${method.expiration_year.slice(-2)}`,
-            };
-            paymentForm.dataset.originalDetails = JSON.stringify(originalDetails);
-        }
+            setTimeout(() => {
+                // Update content
+                tutorialTitle.textContent = tutorialSteps[currentTutorialStep].title;
+                tutorialText.textContent = tutorialSteps[currentTutorialStep].text;
+                tutorialProgress.textContent = `Step ${currentTutorialStep + 1} of ${tutorialSteps.length}`;
 
-        function checkForChanges() {
-            const originalDetails = JSON.parse(paymentForm.dataset.originalDetails || '{}');
-            if (Object.keys(originalDetails).length === 0) return;
-
-            const currentDetails = {
-                cardholder_name: cardholderNameInput.value.trim(),
-                billing_address: billingAddressInput.value.trim(),
-                expiry_date: expiryDateInput.value.trim()
-            };
-
-            const hasChanged = JSON.stringify(originalDetails) !== JSON.stringify(currentDetails);
-
-            if (hasChanged) {
-                saveCardSection.classList.remove('hidden');
-                if (cardNumberInput.disabled) {
-                    cardNumberInput.disabled = false;
-                    cardNumberInput.value = '';
-                    cardNumberInput.placeholder = 'Enter new card number';
-                    cvvInput.disabled = false;
-                    cvvInput.value = '';
-                    cvvInput.placeholder = '***';
-                    [cardNumberInput, cvvInput].forEach(el => el.classList.remove('bg-gray-100'));
-                    paymentMethodTokenInput.value = '';
+                // Handle Previous button visibility and interactivity
+                if (currentTutorialStep === 0) {
+                    tutorialPrevBtn.classList.add('hidden', 'opacity-0');
+                    tutorialPrevBtn.style.pointerEvents = 'none'; // Disable clicks
+                } else {
+                    tutorialPrevBtn.classList.remove('hidden', 'opacity-0');
+                    tutorialPrevBtn.style.pointerEvents = 'auto'; // Enable clicks
                 }
-            } else {
-                saveCardSection.classList.add('hidden');
-            }
-        }
 
-        window.showPaymentForm = async function(invoiceId, amount) {
-            resetPaymentForm();
-
-            document.getElementById('payment-invoice-id').textContent = 'ID ' + invoiceId;
-            document.getElementById('payment-form-invoice-id-hidden').value = invoiceId;
-            document.getElementById('payment-amount').value = parseFloat(amount).toFixed(2);
-
-            document.getElementById('invoice-detail-view').classList.add('hidden');
-            document.getElementById('invoice-list').classList.add('hidden');
-            document.getElementById('payment-form-view').classList.remove('hidden');
-
-            try {
-                const response = await fetch('/api/customer/payment_methods.php?action=get_default_method');
-                const result = await response.json();
-                if (result.success && result.method) {
-                    populateWithDefault(result.method);
+                // Handle Next and End buttons visibility and interactivity
+                if (currentTutorialStep === tutorialSteps.length - 1) {
+                    // Last step: Hide Next, show End
+                    tutorialNextBtn.classList.add('hidden', 'opacity-0', 'pointer-events-none');
+                    tutorialEndBtn.classList.remove('hidden', 'opacity-0');
+                    tutorialEndBtn.style.pointerEvents = 'auto'; // Enable clicks
+                } else {
+                    // Not last step: Show Next, hide End
+                    tutorialNextBtn.classList.remove('hidden', 'opacity-0', 'pointer-events-none');
+                    tutorialNextBtn.style.pointerEvents = 'auto'; // Enable clicks
+                    tutorialEndBtn.classList.add('hidden', 'opacity-0');
+                    tutorialEndBtn.style.pointerEvents = 'none'; // Disable clicks
                 }
-            } catch (error) {
-                console.warn('Could not fetch default payment method:', error);
-            }
+
+                // Apply fade-in effect after content update
+                tutorialStepContent.classList.remove('fade-out');
+                tutorialStepContent.classList.add('fade-in');
+            }, 300); // This delay should match the CSS fade-out transition duration
         };
 
-        [cardholderNameInput, expiryDateInput, billingAddressInput].forEach(input => {
-            input.addEventListener('input', checkForChanges);
-        });
-
-        saveNewCardCheckbox.addEventListener('change', function() {
-            if (this.checked) {
-                setNewCardDefaultSection.classList.remove('hidden');
-            } else {
-                setNewCardDefaultSection.classList.add('hidden');
-            }
-        });
+        // Make window.startTutorial globally available
+        window.startTutorial = function() {
+            // console.log("window.startTutorial() called."); // Debugging
+            currentTutorialStep = 0; // Reset to the first step
+            updateTutorialUI(); // Load content for the first step
+            showModal('tutorial-overlay'); // Show the modal
+        };
         
-        function isValidExpiryDate(month, year) {
-            if (!/^(0[1-9]|1[0-2])$/.test(month) || !/^\d{4}$/.test(year)) {
-                return false;
-            }
-            const currentYear = new Date().getFullYear();
-            const currentMonth = new Date().getMonth() + 1;
-            const expMonth = parseInt(month, 10);
-            const expYear = parseInt(year, 10);
-
-            if (expYear < currentYear || (expYear === currentYear && expMonth < currentMonth)) {
-                return false;
-            }
-            return true;
-        }
-
-        if (paymentForm && !paymentForm.dataset.listenerAttached) {
-            paymentForm.addEventListener('submit', async function(event) {
-                event.preventDefault();
-                
-                const cardNumber = cardNumberInput.value.trim();
-                const expiryDate = expiryDateInput.value.trim();
-                const cvv = cvvInput.value.trim();
-
-                if (!cardNumberInput.disabled) {
-                     if (!/^\d{13,16}$/.test(cardNumber.replace(/\s/g, ''))) {
-                        window.showToast('Please enter a valid card number (13-16 digits).', 'error');
-                        return;
-                    }
-                     if (!/^\d{3,4}$/.test(cvv)) {
-                        window.showToast('Please enter a valid CVV (3 or 4 digits).', 'error');
-                        return;
-                    }
+        // Attach event listeners for tutorial navigation buttons
+        // Attach these listeners ONLY ONCE during the first initialization
+        // Use event delegation for robustness for 'Next', 'Previous', 'End Tutorial' buttons
+        document.addEventListener('click', function(event) {
+            if (event.target.closest('#tutorial-next-btn')) {
+                // console.log('Next button clicked! Current step:', currentTutorialStep); // Debugging
+                if (currentTutorialStep < tutorialSteps.length - 1) {
+                    currentTutorialStep++;
+                    updateTutorialUI();
                 }
-
-                const expiryParts = expiryDate.split('/');
-                if (expiryParts.length !== 2 || !isValidExpiryDate(expiryParts[0], '20' + expiryParts[1])) {
-                    window.showToast('Please enter a valid expiration date (MM/YY) that is not expired.', 'error');
-                    return;
+            } else if (event.target.closest('#tutorial-prev-btn')) {
+                // console.log('Previous button clicked! Current step:', currentTutorialStep); // Debugging
+                if (currentTutorialStep > 0) {
+                    currentTutorialStep--;
+                    updateTutorialUI();
                 }
-
-                window.showToast('Processing payment...', 'info');
-
-                try {
-                    const formData = new FormData(this);
-                    const response = await fetch('/api/payments.php', {
-                        method: 'POST',
-                        body: formData
-                    });
-
-                    const result = await response.json();
-
-                    if (result.success) {
-                        window.hidePaymentForm();
-                        window.showToast(result.message || 'Payment successful!', 'success');
-                        window.loadCustomerSection('bookings', { booking_id: result.booking_id });
-                    } else {
-                        window.showToast('Payment failed: ' + result.message, 'error');
-                    }
-                } catch (error) {
-                    console.error('Payment API Error:', error);
-                    window.showToast('An error occurred during payment. Please try again.', 'error');
-                }
-            });
-            paymentForm.dataset.listenerAttached = 'true';
-        }
-
-        document.body.addEventListener('click', function(event) {
-            const payButton = event.target.closest('.pay-invoice-btn, .pay-now-detail-btn');
-            if (payButton) {
-                window.showPaymentForm(payButton.dataset.invoiceId, payButton.dataset.amount);
-            }
-            
-            const viewButton = event.target.closest('.view-invoice-details');
-            if(viewButton){
-                 window.showInvoiceDetails(viewButton.dataset.invoiceId);
+            } else if (event.target.closest('#tutorial-end-btn')) {
+                // console.log('End Tutorial button clicked!'); // Debugging
+                hideModal('tutorial-overlay');
+                currentTutorialStep = 0; // Reset for next time
             }
         });
 
-    })(); // End IIFE
-</script>
+        // Mark the initializeTutorial function as completed for future checks if needed
+        // This is done via the dataset.listenerAttached on tutorialNextBtn.
+    }
 
+    // --- Run the initialization function ---
+    // Execute initialization logic after DOM is fully loaded.
+    // A slight delay is added to ensure all elements are rendered, especially useful for dynamic content.
+    document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(initializeTutorial, 100); // 100ms delay
+        // console.log("DOMContentLoaded fired. initializeTutorial scheduled.");
+    });
+
+
+    // --- Other Global Request functions for Modals (Relocation, Swap, Pickup) ---
+    window.confirmRelocation = function() {
+        const newAddress = document.getElementById('relocation-address').value;
+        if (newAddress) {
+            hideModal('relocation-request-modal');
+            showToast(`Relocation to "${newAddress}" requested successfully! Charges: $40.00 (Dummy)`, 'success');
+        } else {
+            showToast('Please enter a new destination address.', 'error');
+        }
+    }
+
+    window.confirmSwap = function() {
+        hideModal('swap-request-modal');
+        showToast('Equipment swap requested successfully! Charges: $30.00 (Dummy)', 'success');
+    }
+
+    window.confirmPickup = function() {
+        const pickupDate = document.getElementById('pickup-date').value;
+        const pickupTime = document.getElementById('pickup-time').value;
+        if (pickupDate && pickupTime) {
+            hideModal('pickup-request-modal');
+            showToast(`Pickup scheduled for ${pickupDate} at ${pickupTime}. (Dummy)`, 'success');
+        } else {
+            showToast('Please select a preferred pickup date and time.', 'error');
+        }
+    }
+
+</script>
 <?php include __DIR__ . '/../../includes/ai_chat_widget.php'; ?>
 
 <style>
@@ -400,5 +359,70 @@
     .custom-scroll::-webkit-scrollbar-thumb {
         background-color: #a0aec0;
         border-radius: 3px;
+    }
+
+    /* Tutorial Modal Enhancements for Extraordinary UI */
+    .tutorial-animate {
+        backdrop-filter: blur(5px); /* Subtle blur behind modal */
+        /* opacity and transform are handled by showModal/hideModal which toggles 'hidden' */
+    }
+    .tutorial-content-animate {
+        transform: translateY(20px);
+        opacity: 0;
+        transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    }
+    /* When modal is shown, make content visible */
+    #tutorial-overlay:not(.hidden) .tutorial-content-animate {
+        transform: translateY(0);
+        opacity: 1;
+    }
+
+    .tutorial-header {
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    #tutorial-title {
+        color: white; /* Text color for the gradient header */
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+    }
+
+    /* Fade transition for content inside the tutorial step */
+    #tutorial-step-content {
+        transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out; /* Apply transition directly to the element */
+    }
+    #tutorial-step-content.fade-in {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    #tutorial-step-content.fade-out {
+        opacity: 0;
+        transform: translateY(-10px); /* Move slightly up as it fades out */
+    }
+
+    /* Button Animations (already present, ensuring they align with new logic) */
+    .tutorial-next-btn,
+    .tutorial-prev-btn,
+    .tutorial-end-btn {
+        transition: all 0.2s ease-in-out;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    .tutorial-next-btn:hover {
+        transform: translateY(-2px) scale(1.02);
+        box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+    }
+    .tutorial-prev-btn:hover {
+        transform: translateY(-2px) scale(1.02);
+        box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+    }
+    .tutorial-end-btn:hover {
+        transform: translateY(-2px) scale(1.02);
+        box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+    }
+
+    /* Make buttons visually disabled when hidden/inactive, and prevent clicks */
+    .opacity-0.pointer-events-none {
+        cursor: not-allowed;
     }
 </style>
