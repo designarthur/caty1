@@ -19,7 +19,14 @@ $csrf_token = $_SESSION['csrf_token'];
 
 $user_id = $_SESSION['user_id'];
 $junk_removal_requests = [];
-$junk_detail_view_data = null; // To hold data for a single junk removal detail view if requested
+$junk_detail_view_data = null; 
+
+// --- Fetch User Data for Autopopulation ---
+$stmt_user = $conn->prepare("SELECT first_name, last_name, email, phone_number FROM users WHERE id = ?");
+$stmt_user->bind_param("i", $user_id);
+$stmt_user->execute();
+$user_profile_data = $stmt_user->get_result()->fetch_assoc();
+$stmt_user->close();
 
 // --- Pagination & Filter Variables ---
 $items_per_page_options = [10, 25, 50, 100];
@@ -78,7 +85,7 @@ if ($requested_quote_id_for_detail) {
     // --- Fetch all junk removal requests for the current user for the list view with Filters, Search, and Pagination ---
     $base_query = "
         FROM quotes q
-        JOIN junk_removal_details jrd ON q.id = jrd.quote_id
+        LEFT JOIN junk_removal_details jrd ON q.id = jrd.quote_id
         WHERE q.user_id = ? AND q.service_type = 'junk_removal'
     ";
 
@@ -139,9 +146,7 @@ if ($requested_quote_id_for_detail) {
             q.created_at,
             q.location,
             q.removal_date,
-            jrd.junk_items_json,
-            jrd.recommended_dumpster_size,
-            jrd.additional_comment
+            jrd.junk_items_json
     " . $base_query . $where_sql . "
     ORDER BY q.created_at DESC
     LIMIT ? OFFSET ?";
@@ -157,7 +162,7 @@ if ($requested_quote_id_for_detail) {
     $stmt_list->execute();
     $result_list = $stmt_list->get_result();
     while ($row = $result_list->fetch_assoc()) {
-        $row['junk_items_json'] = json_decode($row['junk_items_json'], true);
+        $row['junk_items_json'] = json_decode($row['junk_items_json'] ?? '[]', true);
         $junk_removal_requests[] = $row;
     }
     $stmt_list->close();
@@ -189,12 +194,81 @@ function getStatusBadgeClass($status) {
 <h1 class="text-3xl font-bold text-gray-800 mb-8">Junk Removal Services</h1>
 
 <div class="bg-white p-6 rounded-lg shadow-md border border-blue-200 mb-8 text-center <?php echo $junk_detail_view_data ? 'hidden' : ''; ?>" id="junk-removal-intro-section">
-    <h2 class="text-xl font-semibold text-gray-700 mb-4 flex items-center justify-center"><i class="fas fa-robot mr-2 text-teal-600"></i>Start a New Junk Removal Request</h2>
-    <p class="text-gray-600 mb-4">Click the button below to chat with our AI assistant and quickly arrange your next junk removal service.</p>
-    <button class="py-3 px-6 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors duration-200 shadow-lg" onclick="showAIChat('junk-removal-service');">
-        <i class="fas fa-comments mr-2"></i>Launch AI Junk Removal Chat
+    <h2 class="text-xl font-semibold text-gray-700 mb-4 flex items-center justify-center"><i class="fas fa-plus-circle mr-2 text-teal-600"></i>Create a New Junk Removal Quote</h2>
+    <p class="text-gray-600 mb-4">Click the button below to fill out our new quote form. You can also use our AI Vision to automatically detect your junk items!</p>
+    <button class="py-3 px-6 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors duration-200 shadow-lg" id="create-quote-btn">
+        <i class="fas fa-magic mr-2"></i>Create Quote
     </button>
 </div>
+
+<div id="junk-removal-form-section" class="hidden">
+    <div class="bg-white p-6 rounded-lg shadow-md border border-blue-200">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-semibold text-gray-700">New Junk Removal Quote</h2>
+            <div>
+                <label for="ai-vision-upload" class="py-2 px-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 shadow-md cursor-pointer">
+                    <i class="fas fa-camera-retro mr-2"></i>Upload for AI Vision
+                </label>
+                <input type="file" id="ai-vision-upload" class="hidden" multiple accept="image/*,video/*">
+                <p class="text-xs text-gray-500 mt-1">Our AI will automatically detect items and add them to the table below.</p>
+            </div>
+        </div>
+        <form id="junk-removal-quote-form">
+            <input type="hidden" name="submit_action" id="submit_action_input">
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label for="customer_name" class="block text-sm font-medium text-gray-700">Full Name</label>
+                    <input type="text" id="customer_name" name="customer_name" class="mt-1 p-2 border border-gray-300 rounded-md w-full" value="<?php echo htmlspecialchars(($user_profile_data['first_name'] ?? '') . ' ' . ($user_profile_data['last_name'] ?? '')); ?>" required>
+                </div>
+                <div>
+                    <label for="customer_phone" class="block text-sm font-medium text-gray-700">Phone Number</label>
+                    <input type="tel" id="customer_phone" name="customer_phone" class="mt-1 p-2 border border-gray-300 rounded-md w-full" value="<?php echo htmlspecialchars($user_profile_data['phone_number'] ?? ''); ?>" required>
+                </div>
+                <div>
+                    <label for="customer_email" class="block text-sm font-medium text-gray-700">Email Address</label>
+                    <input type="email" id="customer_email" name="customer_email" class="mt-1 p-2 border border-gray-300 rounded-md w-full" value="<?php echo htmlspecialchars($user_profile_data['email'] ?? ''); ?>" required>
+                </div>
+                <div>
+                    <label for="location" class="block text-sm font-medium text-gray-700">Service Address (Pickup Location)</label>
+                    <input type="text" id="location" name="location" class="mt-1 p-2 border border-gray-300 rounded-md w-full" required>
+                </div>
+                <div>
+                    <label for="preferred_date" class="block text-sm font-medium text-gray-700">Preferred Date for Service</label>
+                    <input type="date" id="preferred_date" name="preferred_date" class="mt-1 p-2 border border-gray-300 rounded-md w-full" required>
+                </div>
+                <div>
+                    <label for="preferred_time" class="block text-sm font-medium text-gray-700">Preferred Time for Service</label>
+                    <input type="time" id="preferred_time" name="preferred_time" class="mt-1 p-2 border border-gray-300 rounded-md w-full" required>
+                </div>
+            </div>
+
+            <h3 class="text-lg font-semibold text-gray-700 mt-6 mb-2">Junk Items</h3>
+            <table id="junk-items-table" class="min-w-full divide-y divide-gray-200 mb-4">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase">Item</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase">Quantity</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase">Estimated Dimensions</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase">Estimated Weight</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase"></th>
+                    </tr>
+                </thead>
+                <tbody id="junk-items-tbody">
+                </tbody>
+            </table>
+            <button type="button" id="add-junk-item-row" class="py-2 px-4 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors duration-200 text-sm">
+                <i class="fas fa-plus mr-2"></i>Add Item
+            </button>
+            <div class="mt-6 flex justify-end gap-3">
+                <button type="button" id="save-draft-btn" class="py-3 px-6 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors duration-200 shadow-lg">Save as Draft</button>
+                <button type="button" id="submit-for-pricing-btn" class="py-3 px-6 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors duration-200 shadow-lg">Submit for Pricing</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 
 <div class="bg-white p-6 rounded-lg shadow-md border border-blue-200 <?php echo $junk_detail_view_data ? 'hidden' : ''; ?>" id="junk-removal-list">
     <h2 class="text-xl font-semibold text-gray-700 mb-4 flex items-center"><i class="fas fa-history mr-2 text-blue-600"></i>Your Past Junk Removal Requests</h2>
@@ -413,8 +487,7 @@ function getStatusBadgeClass($status) {
                         </tr>
                     </thead>
                     <tbody>
-                        <!-- Editable rows will be inserted here by JavaScript -->
-                    </tbody>
+                        </tbody>
                 </table>
                 <button type="button" id="add-junk-item-btn" class="mb-4 px-4 py-2 bg-blue-100 text-blue-700 rounded-lg text-sm hover:bg-blue-200">
                     <i class="fas fa-plus-circle mr-2"></i>Add Item
@@ -547,7 +620,6 @@ function getStatusBadgeClass($status) {
             }
         }
 
-        // --- CORRECTED SECTION ---
         // We define this variable at a higher scope so it can be accessed by multiple functions.
         let originalJunkItems = []; // To store the original state for 'Cancel'
 
@@ -620,10 +692,9 @@ function getStatusBadgeClass($status) {
                     'bg-red-600'
                 );
             }
-            // ** FIX APPLIED HERE **
             // Handle "Edit Items" button (detail view)
             else if (event.target.id === 'edit-junk-items-btn') {
-                // ** FIX **: Get elements *inside* the event handler, when they are guaranteed to exist.
+                // Get elements *inside* the event handler, when they are guaranteed to exist.
                 const junkItemsViewMode = document.getElementById('junk-items-view-mode');
                 const junkItemsEditMode = document.getElementById('junk-items-edit-mode');
                 const editJunkItemsBtn = document.getElementById('edit-junk-items-btn');
@@ -738,13 +809,13 @@ function getStatusBadgeClass($status) {
 
                                 if (result.success) {
                                     window.showToast(result.message, 'success');
-                                    window.loadCustomerSection('junk-removal', { quote_id: quoteId }); // Reload
+                                    window.loadCustomerJunkRemoval(); // Reload list to show updated status
                                 } else {
                                     window.showToast(result.message, 'error');
                                 }
                             } catch (error) {
                                 console.error('Submit draft API Error:', error);
-                                window.showToast('An error occurred during submission. Please try again.', 'error');
+                                window.showToast('An unexpected error occurred during submission. Please try again.', 'error');
                             }
                         }
                     },
@@ -806,5 +877,109 @@ function getStatusBadgeClass($status) {
             });
             return items;
         }
+
+        // --- New Quote Form Logic ---
+        document.getElementById('create-quote-btn').addEventListener('click', () => {
+            document.getElementById('junk-removal-intro-section').classList.add('hidden');
+            document.getElementById('junk-removal-list').classList.add('hidden');
+            document.getElementById('junk-removal-form-section').classList.remove('hidden');
+        });
+
+        document.getElementById('add-junk-item-row').addEventListener('click', () => {
+            const tbody = document.getElementById('junk-items-tbody');
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td class="p-2"><input type="text" class="w-full p-2 border rounded junk-item-name" placeholder="Item Name"></td>
+                <td class="p-2"><input type="number" class="w-full p-2 border rounded junk-item-quantity" placeholder="1" value="1" min="1"></td>
+                <td class="p-2"><input type="text" class="w-full p-2 border rounded junk-item-dims" placeholder="e.g., 6x3x3 ft"></td>
+                <td class="p-2"><input type="text" class="w-full p-2 border rounded junk-item-weight" placeholder="e.g., 100 lbs"></td>
+                <td class="p-2 text-center"><button type="button" class="text-red-500 hover:text-red-700" onclick="this.closest('tr').remove()">&times;</button></td>
+            `;
+            tbody.appendChild(row);
+        });
+
+        document.getElementById('ai-vision-upload').addEventListener('change', async (event) => {
+            const files = event.target.files;
+            if (files.length === 0) return;
+
+            showToast('Uploading and analyzing images/videos...', 'info');
+
+            const formData = new FormData();
+            formData.append('action', 'analyze_media');
+            for (const file of files) {
+                formData.append('media_files[]', file);
+            }
+
+            try {
+                const response = await fetch('/api/openai_chat.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+
+                if (result.success && result.items) {
+                    const tbody = document.getElementById('junk-items-tbody');
+                    tbody.innerHTML = ''; // Clear existing items
+                    result.items.forEach(item => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td class="p-2"><input type="text" class="w-full p-2 border rounded junk-item-name" value="${item.item}"></td>
+                            <td class="p-2"><input type="number" class="w-full p-2 border rounded junk-item-quantity" value="1" min="1"></td>
+                            <td class="p-2"><input type="text" class="w-full p-2 border rounded junk-item-dims" value="${item.estDimensions}"></td>
+                            <td class="p-2"><input type="text" class="w-full p-2 border rounded junk-item-weight" value="${item.estWeight}"></td>
+                            <td class="p-2 text-center"><button type="button" class="text-red-500 hover:text-red-700" onclick="this.closest('tr').remove()">&times;</button></td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                    showToast('Items detected and added to the list!', 'success');
+                } else {
+                    showToast(result.message || 'Could not detect items from the upload.', 'error');
+                }
+            } catch (error) {
+                console.error('AI Vision API Error:', error);
+                showToast('An error occurred during AI analysis.', 'error');
+            }
+        });
+
+        function handleFormSubmission(action) {
+            const form = document.getElementById('junk-removal-quote-form');
+            const junkItems = [];
+            document.querySelectorAll('#junk-items-tbody tr').forEach(row => {
+                const inputs = row.querySelectorAll('input');
+                junkItems.push({
+                    itemType: inputs[0].value,
+                    quantity: inputs[1].value,
+                    estDimensions: inputs[2].value,
+                    estWeight: inputs[3].value
+                });
+            });
+
+            const formData = new FormData(form);
+            formData.append('junk_items', JSON.stringify(junkItems));
+            formData.set('submit_action', action); // Set the action based on button clicked
+            formData.append('action', 'create_quote_request'); // The API action
+
+            fetch('/api/customer/junk_removal_update.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    showToast(result.message, 'success');
+                    window.loadCustomerJunkRemoval(); // Reload the list view
+                } else {
+                    showToast(result.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error submitting quote:', error);
+                showToast('An error occurred while submitting the quote.', 'error');
+            });
+        }
+
+        document.getElementById('save-draft-btn').addEventListener('click', () => handleFormSubmission('draft'));
+        document.getElementById('submit-for-pricing-btn').addEventListener('click', () => handleFormSubmission('submit'));
+
     })(); // End of IIFE
 </script>

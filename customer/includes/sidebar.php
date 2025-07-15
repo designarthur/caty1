@@ -38,9 +38,9 @@ $companyName = $companyName ?? 'CAT Dump'; // Fallback for includes
         <a href="#notifications" class="nav-link-desktop flex items-center p-3 rounded-lg text-blue-200 hover:bg-blue-700 hover:text-white transition-colors duration-200" data-section="notifications">
             <i class="fas fa-bell mr-3"></i>Notifications
         </a>
-        <a href="#" class="nav-link-desktop flex items-center p-3 rounded-lg text-blue-200 hover:bg-blue-700 hover:text-white transition-colors duration-200" id="start-tutorial-btn">
-            <i class="fas fa-question-circle mr-3"></i>Start Tutorial
-        </a>
+       <a href="#tutorial" class="nav-link-desktop flex items-center p-3 rounded-lg text-blue-200 hover:bg-blue-700 hover:text-white transition-colors duration-200" data-section="tutorial">
+    <i class="fas fa-question-circle mr-3"></i>Start Tutorial
+</a>
     </nav>
     <div class="mt-8 pt-4 border-t border-blue-700 space-y-2">
         <a href="/customer/logout.php" class="nav-link-desktop flex items-center p-3 rounded-lg text-blue-200 hover:bg-blue-700 hover:text-white transition-colors duration-200" data-section="logout">

@@ -2,16 +2,15 @@
 // includes/ai_chat_widget.php
 // This widget can be included on any page where you want to provide AI chat functionality.
 
-// Ensure session is started and functions are available
-if (session_status() == PHP_SESSION_NONE) {
-    session_start();
-}
+// The parent page (e.g., index.php, dashboard.php) is responsible for starting the session.
+// A session check is not needed here as it's handled by the parent script.
+// We just need to ensure functions are available.
 require_once __DIR__ . '/functions.php';
 
 // Fetch company name from system settings
 $companyName = getSystemSetting('company_name') ?? 'Catdump';
 
-// Check if user is logged in
+// Check if user is logged in from the pre-existing session
 $isUserLoggedIn = isset($_SESSION['user_id']);
 ?>
 

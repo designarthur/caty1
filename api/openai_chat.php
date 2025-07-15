@@ -47,10 +47,15 @@ $aiModel = 'gpt-4o';
 
 
 // --- Re-usable getOpenAIResponse function ---
-function getOpenAIResponse(array $messages, array $tools, string $apiKey, string $model): array {
+function getOpenAIResponse(array $messages, array $tools, string $apiKey, string $model, $tool_choice = 'auto'): array {
     $url = "https://api.openai.com/v1/chat/completions";
     $headers = ['Content-Type: application/json', 'Authorization: Bearer ' . $apiKey];
-    $payload = ['model' => $model, 'messages' => $messages, 'tools' => $tools, 'tool_choice' => 'auto'];
+    $payload = ['model' => $model, 'messages' => $messages];
+    if (!empty($tools)) {
+        $payload['tools'] = $tools;
+        $payload['tool_choice'] = $tool_choice;
+    }
+
 
     $ch = curl_init($url);
     curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_POST => true, CURLOPT_POSTFIELDS => json_encode($payload), CURLOPT_HTTPHEADER => $headers, CURLOPT_TIMEOUT => 90]);
@@ -106,6 +111,78 @@ function handleFileUploads(): array {
 
 // --- Main API Logic ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $action = $_POST['action'] ?? '';
+    if ($action === 'analyze_media') {
+        $uploadedMediaUrls = handleFileUploads();
+        if (empty($uploadedMediaUrls)) {
+            echo json_encode(['success' => false, 'message' => 'No media files were uploaded.']);
+            exit;
+        }
+        
+        // Define the specific tool for this action
+        $vision_tool = [
+            [
+                'type' => 'function',
+                'function' => [
+                    'name' => 'list_detected_junk_items',
+                    'description' => 'Extracts a list of junk items from an image, including estimated dimensions and weight.',
+                    'parameters' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'items' => [
+                                'type' => 'array',
+                                'description' => 'A list of junk items detected in the media.',
+                                'items' => [
+                                    'type' => 'object',
+                                    'properties' => [
+                                        'item' => ['type' => 'string', 'description' => 'Name of the detected item (e.g., "Wooden Chair", "Microwave").'],
+                                        'estDimensions' => ['type' => 'string', 'description' => 'Estimated dimensions of the item (e.g., "3x2x2 ft").'],
+                                        'estWeight' => ['type' => 'string', 'description' => 'Estimated weight of the item (e.g., "approx. 50 lbs").']
+                                    ],
+                                    'required' => ['item', 'estDimensions', 'estWeight']
+                                ]
+                            ]
+                        ],
+                        'required' => ['items']
+                    ]
+                ]
+            ]
+        ];
+
+        $messages = [
+            [
+                'role' => 'system',
+                'content' => 'You are an expert in identifying items from images for a junk removal service. Your task is to analyze the provided images and use the `list_detected_junk_items` tool to report every distinct item you see.'
+            ],
+            [
+                'role' => 'user',
+                'content' => array_merge(
+                    [['type' => 'text', 'text' => 'Please identify the items in the following images and call the `list_detected_junk_items` function with the results.']],
+                    array_map(function ($url) {
+                        return ['type' => 'image_url', 'image_url' => ['url' => (isset($_SERVER['HTTPS']) ? "https" : "http") . "://$_SERVER[HTTP_HOST]" . $url]];
+                    }, $uploadedMediaUrls)
+                )
+            ]
+        ];
+        
+        $apiResponse = getOpenAIResponse($messages, $vision_tool, $openaiApiKey, 'gpt-4o', ['type' => 'function', 'function' => ['name' => 'list_detected_junk_items']]);
+        
+        // Extract arguments from the tool call instead of raw content
+        if (isset($apiResponse['choices'][0]['message']['tool_calls'][0]['function']['arguments'])) {
+            $argumentsJson = $apiResponse['choices'][0]['message']['tool_calls'][0]['function']['arguments'];
+            $detectedItemsData = json_decode($argumentsJson, true);
+
+            if (json_last_error() === JSON_ERROR_NONE && isset($detectedItemsData['items'])) {
+                echo json_encode(['success' => true, 'items' => $detectedItemsData['items']]);
+            } else {
+                 echo json_encode(['success' => false, 'message' => 'AI could not structure the identified items correctly.']);
+            }
+        } else {
+            echo json_encode(['success' => false, 'message' => 'AI could not identify items in a structured format.']);
+        }
+        exit;
+    }
+
     $userMessageText = trim($_POST['message'] ?? '');
     $initialServiceType = $_POST['initial_service_type'] ?? null;
     $uploadedMediaUrls = [];
@@ -115,12 +192,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $uploadedMediaUrls = handleFileUploads();
     }
 
-    // --- MODIFICATION START: Relax check for initial empty messages with initialServiceType ---
     if (empty($userMessageText) && empty($uploadedMediaUrls) && empty($initialServiceType) && empty($_POST['conversation_id'])) {
         echo json_encode(['success' => false, 'message' => 'Message or media cannot be empty without an initial service type or existing conversation.']);
         exit;
     }
-    // --- MODIFICATION END ---
 
     global $conn;
     $userId = $_SESSION['user_id'] ?? null;
@@ -163,12 +238,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $full_url = (isset($_SERVER['HTTPS']) ? "https" : "http") . "://$_SERVER[HTTP_HOST]" . $url;
         $message_content[] = ['type' => 'image_url', 'image_url' => ['url' => $full_url]];
     }
-    // Only add user message to messages array if it's not empty, to avoid empty user bubbles for initial calls
     if (!empty($userMessageText) || !empty($uploadedMediaUrls)) {
         $messages[] = ['role' => 'user', 'content' => $message_content];
     } else {
-        // If it's an initial empty message from frontend, ensure it's still sent to AI as user's first turn
-        // Add a placeholder message to ensure conversation starts. AI usually handles empty text fine.
         $messages[] = ['role' => 'user', 'content' => [['type' => 'text', 'text' => 'Start conversation.']]];
     }
 
@@ -185,8 +257,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'conversation_id' => $conversationId // Always return current conversation ID
     ];
 
-    // --- MODIFICATION START: Correct Pattern for Suggested Replies ---
-    // Pattern to capture the JSON array: \[SUGGESTED_REPLIES:\s*(\[.*\])\]
     $suggestedRepliesPattern = '/\[SUGGESTED_REPLIES:\s*(\[.*?\])\]/'; // Adjusted to capture array and non-greedy match
     $extractedSuggestedReplies = [];
 
@@ -202,7 +272,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             error_log("Failed to decode SUGGESTED_REPLIES JSON from AI response. Raw JSON: " . $suggestedRepliesJson . " Error: " . json_last_error_msg());
         }
     }
-    // --- MODIFICATION END ---
 
 
     // --- Process AI Response (Tool Calls) ---
@@ -328,7 +397,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // Save user's message to chat history (only if it's not an initial empty message for chat opening)
+    // Save user's message to chat history
     if (!empty($userMessageText) || !empty($uploadedMediaUrls)) {
         $stmt_save_user = $conn->prepare("INSERT INTO chat_messages (conversation_id, role, content) VALUES (?, 'user', ?)");
         $stmt_save_user->bind_param("is", $conversationId, $userMessageText);
@@ -336,9 +405,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt_save_user->close();
     }
     
-    // Save AI's response to chat history (only the actual text, not the SUGGESTED_REPLIES JSON)
+    // Save AI's response to chat history
     $stmt_save_ai = $conn->prepare("INSERT INTO chat_messages (conversation_id, role, content) VALUES (?, 'assistant', ?)");
-    $stmt_save_ai->bind_param("is", $conversationId, $jsonResponse['ai_response']); // Save the cleaned response text
+    $stmt_save_ai->bind_param("is", $conversationId, $jsonResponse['ai_response']);
     $stmt_save_ai->execute();
     $stmt_save_ai->close();
 

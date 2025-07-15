@@ -378,90 +378,90 @@ $conn->close();
         const navLinksMobile = document.querySelectorAll('.nav-link-mobile'); // Will be set after DOMContentLoaded
 
         window.loadCustomerSection = async function(sectionId, params = {}) {
-            // Re-fetch references if they are null, for safety on initial call or after dynamic re-parsing
-            const currentContentArea = document.getElementById('content-area');
-            const currentNavLinksDesktop = document.querySelectorAll('.nav-link-desktop');
-            const currentNavLinksMobile = document.querySelectorAll('.nav-link-mobile');
+        const currentContentArea = document.getElementById('content-area');
+        const currentNavLinksDesktop = document.querySelectorAll('.nav-link-desktop');
+        const currentNavLinksMobile = document.querySelectorAll('.nav-link-mobile');
 
-            let url = `/customer/pages/${sectionId}.php`;
-            let queryString = new URLSearchParams(params).toString();
-            if (queryString) {
-                url += '?' + queryString;
+        let url = `/customer/pages/${sectionId}.php`;
+        let queryString = new URLSearchParams(params).toString();
+        if (queryString) {
+            url += '?' + queryString;
+        }
+
+        // Handle special cases first
+        if (sectionId === 'logout') {
+            showModal('logout-modal');
+            return;
+        } else if (sectionId === 'delete-account') {
+            showModal('delete-account-modal');
+            return;
+        } else if (sectionId === 'tutorial') { // NEW CONDITION ADDED HERE
+            showModal('tutorial-overlay'); // Show the tutorial modal
+            history.pushState({ section: sectionId, params: params }, '', `#${sectionId}`); // Update URL hash
+            console.log('Tutorial modal opened!'); // For debugging
+            return; // Exit the function to prevent loading a .php file
+        }
+
+        try {
+            // Show a loading indicator in content area
+            if (currentContentArea) {
+                currentContentArea.innerHTML = `
+                    <div class="flex items-center justify-center h-full min-h-[300px] text-gray-500 text-lg">
+                        <i class="fas fa-spinner fa-spin mr-3 text-blue-500 text-2xl"></i> Loading ${sectionId.replace('-', ' ')}...
+                    </div>
+                `;
             }
 
-            // Handle special cases first
-            if (sectionId === 'logout') {
-                showModal('logout-modal');
-                return;
-            } else if (sectionId === 'delete-account') {
-                showModal('delete-account-modal');
-                return;
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const htmlContent = await response.text();
+            if (currentContentArea) {
+                currentContentArea.innerHTML = htmlContent;
+            }
+            
+            // Update active class for desktop links
+            currentNavLinksDesktop.forEach(link => link.classList.remove('bg-blue-700', 'text-white'));
+            const activeLinkDesktop = document.querySelector(`.nav-link-desktop[data-section="${sectionId}"]`);
+            if (activeLinkDesktop) {
+                activeLinkDesktop.classList.add('bg-blue-700', 'text-white');
             }
 
-            try {
-                // Show a loading indicator in content area
-                if (currentContentArea) {
-                    currentContentArea.innerHTML = `
-                        <div class="flex items-center justify-center h-full min-h-[300px] text-gray-500 text-lg">
-                            <i class="fas fa-spinner fa-spin mr-3 text-blue-500 text-2xl"></i> Loading ${sectionId.replace('-', ' ')}...
-                        </div>
-                    `;
-                }
-
-
-                const response = await fetch(url);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const htmlContent = await response.text();
-                if (currentContentArea) {
-                    currentContentArea.innerHTML = htmlContent;
-                }
-                
-
-                // Update active class for desktop links
-                currentNavLinksDesktop.forEach(link => link.classList.remove('bg-blue-700', 'text-white'));
-                const activeLinkDesktop = document.querySelector(`.nav-link-desktop[data-section="${sectionId}"]`);
-                if (activeLinkDesktop) {
-                    activeLinkDesktop.classList.add('bg-blue-700', 'text-white');
-                }
-
-                // Update active class for mobile links
-                currentNavLinksMobile.forEach(link => link.classList.remove('bg-blue-700', 'text-white'));
-                const activeLinkMobile = document.querySelector(`.nav-link-mobile[data-section="${sectionId}"]`);
-                if (activeLinkMobile) {
-                    activeLinkMobile.classList.add('bg-blue-700', 'text-white');
-                }
-
-                // Push state to history for back/forward navigation
-                history.pushState({ section: sectionId, params: params }, '', `#${sectionId}`);
-
-                // Re-run scripts in the loaded content if any (common for dynamic content)
-                // This is crucial for event listeners and other JS in the loaded page fragments
-                if (currentContentArea) {
-                    currentContentArea.querySelectorAll('script').forEach(oldScript => {
-                        const newScript = document.createElement('script');
-                        Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
-                        newScript.appendChild(document.createTextNode(oldScript.innerHTML));
-                        oldScript.parentNode.replaceChild(newScript, oldScript);
-                    });
-                }
-
-
-            } catch (error) {
-                console.error('Error loading customer section:', error);
-                if (currentContentArea) {
-                    currentContentArea.innerHTML = `
-                        <div class="flex flex-col items-center justify-center h-full min-h-[300px] text-red-500 text-lg">
-                            <i class="fas fa-exclamation-triangle mr-3 text-red-600 text-2xl"></i>
-                            Failed to load section: ${sectionId.replace('-', ' ')}. Please try again.
-                            <p class="text-sm text-gray-500 mt-2">Details: ${error.message}</p>
-                        </div>
-                    `;
-                }
-                showToast(`Failed to load ${sectionId.replace('-', ' ')}`, 'error');
+            // Update active class for mobile links
+            currentNavLinksMobile.forEach(link => link.classList.remove('bg-blue-700', 'text-white'));
+            const activeLinkMobile = document.querySelector(`.nav-link-mobile[data-section="${sectionId}"]`);
+            if (activeLinkMobile) {
+                activeLinkMobile.classList.add('bg-blue-700', 'text-white');
             }
-        };
+
+            // Push state to history for back/forward navigation
+            history.pushState({ section: sectionId, params: params }, '', `#${sectionId}`);
+
+            // Re-run scripts in the loaded content
+            if (currentContentArea) {
+                currentContentArea.querySelectorAll('script').forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            }
+
+        } catch (error) {
+            console.error('Error loading customer section:', error);
+            if (currentContentArea) {
+                currentContentArea.innerHTML = `
+                    <div class="flex flex-col items-center justify-center h-full min-h-[300px] text-red-500 text-lg">
+                        <i class="fas fa-exclamation-triangle mr-3 text-red-600 text-2xl"></i>
+                        Failed to load section: ${sectionId.replace('-', ' ')}. Please try again.
+                        <p class="text-sm text-gray-500 mt-2">Details: ${error.message}</p>
+                    </div>
+                `;
+            }
+            showToast(`Failed to load ${sectionId.replace('-', ' ')}`, 'error');
+        }
+    };
 
         // --- AI Chat Logic for Service Request Button (Made Global) ---
         window.showAIChat = async function(serviceType) {

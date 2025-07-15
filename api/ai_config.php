@@ -91,7 +91,14 @@ When an item is added or updated, display it with all collected details.
 ### JSON for Suggested Replies (MANDATORY)
 Append this EXACTLY as-is to the end of any message containing suggested replies.
 [SUGGESTED_REPLIES: [{"text": "Option Text 1", "value": "Value 1"}, {"text": "Option Text 2", "value": "Value 2"}]]
+
 PROMPT;
+
+// --- System Prompt for AI Vision ---
+$ai_vision_system_prompt = <<<PROMPT
+You are an expert in identifying items from images for a junk removal service. Analyze the provided images and list every distinct item you see. For each item, provide your best estimate for its dimensions and weight. Respond with a JSON array of objects, where each object has "item", "estDimensions", and "estWeight" keys. Do not include any other text in your response.
+PROMPT;
+
 
 // --- TOOL DEFINITIONS (No changes needed here, the previous version was good) ---
 $tools = [

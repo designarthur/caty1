@@ -27,13 +27,13 @@ $action = $_POST['action'] ?? '';
 $quote_id = filter_input(INPUT_POST, 'quote_id', FILTER_VALIDATE_INT);
 
 // Basic validation for common parameters
-if (!$quote_id || empty($action)) {
+if (empty($action)) {
     http_response_code(400); // Bad Request
     echo json_encode(['success' => false, 'message' => 'Invalid request parameters.']);
     exit;
 }
 
-// --- CSRF Token Validation ---
+// CSRF Token Validation
 try {
     validate_csrf_token();
 } catch (Exception $e) {
@@ -42,20 +42,13 @@ try {
     exit;
 }
 
-// Ensure the quote belongs to the logged-in user and is a junk_removal service
-$stmt_verify = $conn->prepare("SELECT status, service_type FROM quotes WHERE id = ? AND user_id = ? AND service_type = 'junk_removal'");
-$stmt_verify->bind_param("ii", $quote_id, $user_id);
-$stmt_verify->execute();
-$quote_data = $stmt_verify->get_result()->fetch_assoc();
-$stmt_verify->close();
-
-if (!$quote_data) {
-    http_response_code(404); // Not Found or Forbidden
-    echo json_encode(['success' => false, 'message' => 'Junk removal request not found or you do not have permission to edit it.']);
+if ($action !== 'create_quote_request' && !$quote_id) {
+    http_response_code(400); // Bad Request
+    echo json_encode(['success' => false, 'message' => 'Invalid request parameters.']);
     exit;
 }
 
-$current_quote_status = $quote_data['status'];
+
 
 // --- Action Routing ---
 $conn->begin_transaction();
@@ -81,6 +74,9 @@ try {
             // This action is handled by api/customer/quotes.php, but if this API were to handle it,
             // it would be similar to the admin/quotes.php delete_bulk. For now, it's a passthrough.
             throw new Exception('Bulk delete is handled by the main quotes API. Invalid action for this endpoint.');
+        case 'create_quote_request':
+            handleCreateQuoteRequest($conn, $user_id);
+            break;
             
         default:
             throw new Exception('Invalid action specified.');
@@ -132,8 +128,8 @@ function handleUpdateJunkItems($conn, $quote_id) {
             throw new Exception('Quantity must be a positive number for all junk items.');
         }
         // Sanitize other fields
-        $item['estDimensions'] = filter_var($item['estDimensions'] ?? '', FILTER_SANITIZE_SPECIAL_CHARS);
-        $item['estWeight'] = filter_var($item['estWeight'] ?? '', FILTER_SANITIZE_SPECIAL_CHARS);
+        $item['estDimensions'] = htmlspecialchars($item['estDimensions'] ?? '', ENT_QUOTES, 'UTF-8');
+        $item['estWeight'] = htmlspecialchars($item['estWeight'] ?? '', ENT_QUOTES, 'UTF-8');
     }
 
     // Re-encode to ensure consistency after validation/sanitization
@@ -183,4 +179,38 @@ function handleSubmitCustomerDraft($conn, $quote_id) {
     $stmt_admin_notify->close();
 
     echo json_encode(['success' => true, 'message' => 'Junk removal request submitted for a quote! Our team will get back to you shortly.']);
+}
+
+function handleCreateQuoteRequest($conn, $user_id) {
+    $customer_name = htmlspecialchars($_POST['customer_name'] ?? '', ENT_QUOTES, 'UTF-8');
+    $customer_email = filter_input(INPUT_POST, 'customer_email', FILTER_VALIDATE_EMAIL);
+    $customer_phone = htmlspecialchars($_POST['customer_phone'] ?? '', ENT_QUOTES, 'UTF-8');
+    $location = htmlspecialchars($_POST['location'] ?? '', ENT_QUOTES, 'UTF-8');
+    $preferred_date = htmlspecialchars($_POST['preferred_date'] ?? '', ENT_QUOTES, 'UTF-8');
+    $preferred_time = htmlspecialchars($_POST['preferred_time'] ?? '', ENT_QUOTES, 'UTF-8');
+    $junk_items = json_decode($_POST['junk_items'] ?? '[]', true);
+    $submit_action = $_POST['submit_action'] ?? 'draft'; // Default to 'draft'
+
+    if (!$customer_name || !$customer_email || !$customer_phone || !$location || !$preferred_date || !$preferred_time) {
+        throw new Exception("All fields are required.");
+    }
+    
+    $quote_status = ($submit_action === 'submit') ? 'pending' : 'customer_draft';
+    $service_type = 'junk_removal';
+    
+    // Insert into quotes table
+    $stmt_quote = $conn->prepare("INSERT INTO quotes (user_id, service_type, status, location, removal_date, removal_time) VALUES (?, ?, ?, ?, ?, ?)");
+    $stmt_quote->bind_param("isssss", $user_id, $service_type, $quote_status, $location, $preferred_date, $preferred_time);
+    $stmt_quote->execute();
+    $quote_id = $conn->insert_id;
+    $stmt_quote->close();
+
+    // Insert into junk_removal_details table
+    $junk_items_json = json_encode($junk_items);
+    $stmt_junk = $conn->prepare("INSERT INTO junk_removal_details (quote_id, junk_items_json) VALUES (?, ?)");
+    $stmt_junk->bind_param("is", $quote_id, $junk_items_json);
+    $stmt_junk->execute();
+    $stmt_junk->close();
+    
+    echo json_encode(['success' => true, 'message' => 'Quote request submitted successfully!']);
 }
