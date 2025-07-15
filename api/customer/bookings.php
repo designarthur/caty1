@@ -24,6 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 // --- Action Routing ---
 $action = $_POST['action'] ?? '';
+$user_id = $_SESSION['user_id']; // Get user_id from session for security checks
 
 try {
     // CSRF token validation
@@ -41,6 +42,9 @@ try {
             break;
         case 'request_extension':
             handleRequestExtension($conn);
+            break;
+        case 'delete_bulk': // Handle bulk delete action
+            handleDeleteBulk($conn, $user_id);
             break;
         default:
             throw new Exception('Invalid action specified.');
@@ -102,7 +106,7 @@ function handleServiceRequest($conn, $serviceType) {
         $stmt_fetch->close();
 
         if (!$quote_data) {
-            throw new Exception("Could not find the specified booking or its original quote details.");
+            throw new Exception("Could not find the specified booking or you don't have permission to access it.");
         }
 
         $is_included = (bool)($quote_data[$included_column] ?? false); // Default to false if column is null
@@ -343,6 +347,54 @@ function handleRequestExtension($conn) {
         ]);
     } catch (Exception $e) {
         $conn->rollback();
+        throw $e;
+    }
+}
+
+/**
+ * Handles bulk deletion of bookings.
+ * This function deletes the booking records and relies on ON DELETE CASCADE
+ * to remove associated records in `booking_charges`, `booking_extension_requests`,
+ * `booking_status_history`, and `reviews`.
+ * Invoices and quotes are NOT deleted by this function, as they may have broader financial context.
+ *
+ * @param mysqli $conn The database connection object.
+ * @param int $user_id The ID of the currently logged-in user.
+ * @return array Response array with success status and message.
+ * @throws Exception If no booking IDs are provided or a database error occurs.
+ */
+function handleDeleteBulk($conn, $user_id) {
+    $booking_ids = $_POST['booking_ids'] ?? [];
+    if (empty($booking_ids) || !is_array($booking_ids)) {
+        throw new Exception("No booking IDs provided for bulk deletion.");
+    }
+
+    $conn->begin_transaction();
+
+    try {
+        $placeholders = implode(',', array_fill(0, count($booking_ids), '?'));
+        $types = str_repeat('i', count($booking_ids));
+        
+        // IMPORTANT SECURITY FIX: Ensure user_id is included in the WHERE clause
+        // to prevent users from deleting bookings that do not belong to them.
+        $stmt_delete_bookings = $conn->prepare("DELETE FROM bookings WHERE id IN ($placeholders) AND user_id = ?");
+        // Bind parameters: first the booking IDs, then the user_id
+        $types .= 'i'; // Add 'i' for the user_id integer parameter
+        $params_with_user_id = array_merge($booking_ids, [$user_id]);
+
+        $stmt_delete_bookings->bind_param($types, ...$params_with_user_id);
+        
+        if (!$stmt_delete_bookings->execute()) {
+            throw new Exception("Failed to delete bookings: " . $stmt_delete_bookings->error);
+        }
+        $stmt_delete_bookings->close();
+
+        $conn->commit();
+        echo json_encode(['success' => true, 'message' => 'Selected bookings and their associated data have been deleted.']);
+
+    } catch (Exception $e) {
+        $conn->rollback();
+        error_log("Bulk delete bookings error: " . $e->getMessage());
         throw $e;
     }
 }
