@@ -34,12 +34,19 @@ if (!$current_page || $current_page < 1) {
 }
 $offset = ($current_page - 1) * $items_per_page;
 
+$filter_status = $_GET['status'] ?? 'all'; // Default filter status
 $search_query = trim($_GET['search'] ?? ''); // Search query
 
-// Build the query with search and pagination
+// Build the query with search, status filter, and pagination
 $base_query = "FROM quotes q WHERE q.user_id = ?";
 $params = [$user_id];
 $types = "i";
+
+if ($filter_status !== 'all') {
+    $base_query .= " AND q.status = ?";
+    $params[] = $filter_status;
+    $types .= "s";
+}
 
 if (!empty($search_query)) {
     $search_term = '%' . $search_query . '%';
@@ -124,6 +131,7 @@ function getCustomerStatusBadgeClass($status) {
         case 'accepted': return 'bg-green-100 text-green-800';
         case 'rejected': return 'bg-red-100 text-red-800';
         case 'converted_to_booking': return 'bg-purple-100 text-purple-800';
+        case 'customer_draft': return 'bg-gray-200 text-gray-700'; // New status for drafts
         default: return 'bg-gray-100 text-gray-700';
     }
 }
@@ -139,7 +147,20 @@ function getCustomerStatusBadgeClass($status) {
             <button onclick="applyFilters()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"><i class="fas fa-search"></i></button>
         </div>
     </div>
-     <div class="flex justify-start mb-4">
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-2">
+            <label for="status-filter" class="text-sm font-medium text-gray-700">Status:</label>
+            <select id="status-filter" onchange="applyFilters()"
+                    class="p-2 border border-gray-300 rounded-md text-sm">
+                <option value="all" <?php echo $filter_status === 'all' ? 'selected' : ''; ?>>All</option>
+                <option value="customer_draft" <?php echo $filter_status === 'customer_draft' ? 'selected' : ''; ?>>Draft</option>
+                <option value="pending" <?php echo $filter_status === 'pending' ? 'selected' : ''; ?>>Pending</option>
+                <option value="quoted" <?php echo $filter_status === 'quoted' ? 'selected' : ''; ?>>Quoted</option>
+                <option value="accepted" <?php echo $filter_status === 'accepted' ? 'selected' : ''; ?>>Accepted</option>
+                <option value="rejected" <?php echo $filter_status === 'rejected' ? 'selected' : ''; ?>>Rejected</option>
+                <option value="converted_to_booking" <?php echo $filter_status === 'converted_to_booking' ? 'selected' : ''; ?>>Converted to Booking</option>
+            </select>
+        </div>
         <button id="bulk-delete-quotes-btn" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 hidden">
             <i class="fas fa-trash-alt mr-2"></i>Delete Selected
         </button>
@@ -178,6 +199,11 @@ function getCustomerStatusBadgeClass($status) {
                                 <button class="text-blue-600 hover:text-blue-900 view-quote-request-btn" data-id="<?php echo htmlspecialchars($quote['id']); ?>">
                                     <i class="fas fa-eye mr-1"></i>View Request
                                 </button>
+                                <?php if ($quote['status'] === 'customer_draft' && $quote['service_type'] === 'junk_removal'): ?>
+                                    <button class="ml-3 text-orange-600 hover:text-orange-900" onclick="window.loadCustomerSection('junk-removal', { quote_id: <?php echo $quote['id']; ?> });">
+                                        <i class="fas fa-edit mr-1"></i>Edit Draft
+                                    </button>
+                                <?php endif; ?>
                             </td>
                         </tr>
                         <tr id="quote-details-<?php echo htmlspecialchars($quote['id']); ?>" class="quote-details-row bg-gray-50 hidden">
@@ -354,7 +380,7 @@ function getCustomerStatusBadgeClass($status) {
             </div>
              <div class="flex items-center gap-2">
                 <span class="text-sm font-medium text-gray-700">Per Page:</span>
-                 <select onchange="loadCustomerSection('quotes', {page: 1, per_page: this.value, search: '<?php echo htmlspecialchars($search_query); ?>'})" class="p-2 border border-gray-300 rounded-md text-sm">
+                 <select onchange="loadCustomerSection('quotes', {page: 1, per_page: this.value, search: '<?php echo htmlspecialchars($search_query); ?>', status: document.getElementById('status-filter').value})" class="p-2 border border-gray-300 rounded-md text-sm">
                     <?php foreach ($items_per_page_options as $option): ?>
                         <option value="<?php echo $option; ?>" <?php echo $items_per_page == $option ? 'selected' : ''; ?>><?php echo $option; ?></option>
                     <?php endforeach; ?>
@@ -363,7 +389,7 @@ function getCustomerStatusBadgeClass($status) {
             <div>
                  <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
                     <?php for ($i = 1; $i <= $total_pages; $i++): ?>
-                        <button onclick="loadCustomerSection('quotes', {page: <?php echo $i; ?>, per_page: <?php echo $items_per_page; ?>, search: '<?php echo htmlspecialchars($search_query); ?>'})" class="<?php echo $i == $current_page ? 'z-10 bg-blue-50 border-blue-500 text-blue-600' : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'; ?> relative inline-flex items-center px-4 py-2 border text-sm font-medium">
+                        <button onclick="loadCustomerSection('quotes', {page: <?php echo $i; ?>, per_page: <?php echo $items_per_page; ?>, search: '<?php echo htmlspecialchars($search_query); ?>', status: document.getElementById('status-filter').value})" class="<?php echo $i == $current_page ? 'z-10 bg-blue-50 border-blue-500 text-blue-600' : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'; ?> relative inline-flex items-center px-4 py-2 border text-sm font-medium">
                             <?php echo $i; ?>
                         </button>
                     <?php endfor; ?>
@@ -505,7 +531,8 @@ function getCustomerStatusBadgeClass($status) {
 
     function applyFilters() {
         const search = document.getElementById('search-input').value;
+        const status = document.getElementById('status-filter').value; // Get status filter value
         const per_page = document.querySelector('select[onchange^="loadCustomerSection"]').value;
-        loadCustomerSection('quotes', { search, per_page, page: 1 });
+        window.loadCustomerSection('quotes', { search, per_page, page: 1, status }); // Pass status to loadCustomerSection
     }
 </script>
