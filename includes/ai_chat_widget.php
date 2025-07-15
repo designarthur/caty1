@@ -185,12 +185,20 @@ $isUserLoggedIn = isset($_SESSION['user_id']);
             if (initialServiceType) {
                 formData.append('initial_service_type', initialServiceType);
             }
-            if (selectedFile) {
-                formData.append('media_files[]', selectedFile);
-                selectedFile = null;
+            
+            // Use processed files from aiChatFileInput.processedFiles if available
+            const filesToSend = mediaFileInput && mediaFileInput.processedFiles ? mediaFileInput.processedFiles : [];
+
+            if (filesToSend.length > 0) {
+                for (const file of filesToSend) {
+                    formData.append('media_files[]', file);
+                }
+                // Clear the processed files array after appending them to FormData
+                mediaFileInput.processedFiles = [];
                 fileUploadPreview.classList.add('hidden');
                 previewFileName.textContent = '';
             }
+
 
             if (currentConversationId) {
                 formData.append('conversation_id', currentConversationId);
@@ -254,21 +262,45 @@ $isUserLoggedIn = isset($_SESSION['user_id']);
             }
         });
 
-        mediaFileInput.addEventListener('change', function(e) {
+        mediaFileInput.addEventListener('change', async function(e) {
             if (e.target.files.length > 0) {
-                selectedFile = e.target.files[0];
-                previewFileName.textContent = selectedFile.name;
+                const files = Array.from(e.target.files);
+                let fileNames = files.map(f => f.name).join(', ');
+                previewFileName.textContent = `Selected: ${fileNames}`;
                 fileUploadPreview.classList.remove('hidden');
+
+                const processedFiles = [];
+                for (const file of files) {
+                    if (file.type.startsWith('video/')) {
+                        window.showToast(`Processing video: ${file.name}...`, 'info');
+                        try {
+                            // Extract 10 frames from the video
+                            const frames = await window.extractFramesFromVideo(file, 10);
+                            frames.forEach((frame, index) => {
+                                const blob = window.dataURLtoBlob(frame);
+                                processedFiles.push(new File([blob], `frame_${file.name}_${index}.jpeg`, { type: 'image/jpeg' }));
+                            });
+                            window.showToast(`Extracted ${frames.length} frames from ${file.name}.`, 'success');
+                        } catch (error) {
+                            console.error('Error extracting frames:', error);
+                            window.showToast(`Failed to extract frames from ${file.name}. Sending original video.`, 'error');
+                            processedFiles.push(file); // Fallback to sending original video if frame extraction fails
+                        }
+                    } else {
+                        processedFiles.push(file); // For images, just push the original file
+                    }
+                }
+                mediaFileInput.processedFiles = processedFiles; // Store processed files
             } else {
-                selectedFile = null;
+                mediaFileInput.processedFiles = [];
                 previewFileName.textContent = '';
                 fileUploadPreview.classList.add('hidden');
             }
         });
 
         removeFileButton.addEventListener('click', function() {
-            selectedFile = null;
-            mediaFileInput.value = '';
+            mediaFileInput.value = ''; // Clear file input
+            mediaFileInput.processedFiles = []; // Clear processed files
             previewFileName.textContent = '';
             fileUploadPreview.classList.add('hidden');
         });
