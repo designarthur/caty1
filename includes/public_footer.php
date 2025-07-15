@@ -1,54 +1,85 @@
 <?php
 // includes/public_footer.php
 // This file holds modals and all shared JavaScript for the public-facing pages.
+
+// Ensure functions are available for getSystemSetting
+require_once __DIR__ . '/functions.php';
+
+// Fetch company name from system settings
+$companyName = getSystemSetting('company_name');
+if (!$companyName) {
+    $companyName = 'Catdump'; // Fallback if not set in DB
+}
+
+// Fetch admin email from system settings for support email
+$supportEmail = getSystemSetting('admin_email');
+if (!$supportEmail) {
+    $supportEmail = 'info@' . strtolower(str_replace(' ', '', $companyName)) . '.com'; // Dynamic fallback
+}
+
+// Placeholder for a phone number as it's not in system settings currently.
+$supportPhone = '+1 (555) 123-4567';
+
 ?>
-    <footer class="bg-gray-800 text-white py-12">
+    <footer class="bg-gray-900 text-gray-300 py-12">
         <div class="container-box">
-            <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-8">
-                <div class="col-span-1">
-                    <h3 class="text-xl font-bold mb-4"><?php echo htmlspecialchars($companyName); ?></h3>
-                    <p class="text-gray-400 text-sm mb-4">Your trusted partner for efficient equipment rentals and waste management solutions. Powered by AI, designed for simplicity.</p>
-                    <div class="flex space-x-4">
-                        <a href="#" class="text-gray-400 hover:text-white"><i class="fab fa-facebook-f"></i></a>
-                        <a href="#" class="text-gray-400 hover:text-white"><i class="fab fa-twitter"></i></a>
-                        <a href="#" class="text-gray-400 hover:text-white"><i class="fab fa-linkedin-in"></i></a>
-                        <a href="#" class="text-gray-400 hover:text-white"><i class="fab fa-instagram"></i></a>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
+                <div class="col-span-1 md:col-span-2 lg:col-span-2 flex flex-col items-center md:items-start text-center md:text-left">
+                    <div class="flex items-center mb-5">
+                        <img src="/assets/images/logo.png" alt="<?php echo htmlspecialchars($companyName); ?> Logo" class="h-16 w-16 mr-4 rounded-full shadow-md">
+                        <div class="text-5xl font-extrabold text-blue-custom"><?php echo htmlspecialchars($companyName); ?></div>
+                    </div>
+                    <p class="leading-relaxed text-gray-400 mb-4">Your premier marketplace for fast, easy, and affordable equipment rentals. We connect you with the best local deals for dumpsters, temporary toilets, storage, and heavy machinery, ensuring your projects run smoothly and efficiently.</p>
+                    <div class="flex space-x-4 mt-4">
+                        <a href="https://facebook.com" target="_blank" aria-label="Facebook" class="text-gray-400 hover:text-white transition duration-200"><i class="fab fa-facebook-f text-2xl"></i></a>
+                        <a href="https://twitter.com" target="_blank" aria-label="Twitter" class="text-gray-400 hover:text-white transition duration-200"><i class="fab fa-twitter text-2xl"></i></a>
+                        <a href="https://linkedin.com" target="_blank" aria-label="LinkedIn" class="text-gray-400 hover:text-white transition duration-200"><i class="fab fa-linkedin-in text-2xl"></i></a>
+                        <a href="https://instagram.com" target="_blank" aria-label="Instagram" class="text-gray-400 hover:text-white transition duration-200"><i class="fab fa-instagram text-2xl"></i></a>
                     </div>
                 </div>
 
                 <div class="col-span-1">
-                    <h3 class="text-xl font-bold mb-4">Quick Links</h3>
-                    <ul class="space-y-2">
-                        <li><a href="/" class="text-gray-400 hover:text-white text-sm">Home</a></li>
-                        <li><a href="/Services/Dumpster-Rentals.php" class="text-gray-400 hover:text-white text-sm">Dumpster Rentals</a></li>
-                        <li><a href="/Services/Junk-Removal.php" class="text-gray-400 hover:text-white text-sm">Junk Removal</a></li>
-                        <li><a href="/How-it-works.php" class="text-gray-400 hover:text-white text-sm">How It Works</a></li>
-                        <li><a href="/Company/About-Us.php" class="text-gray-400 hover:text-white text-sm">About Us</a></li>
-                        <li><a href="/Resources/Contact.php" class="text-gray-400 hover:text-white text-sm">Contact</a></li>
+                    <h3 class="text-xl font-bold text-white mb-6">Quick Links</h3>
+                    <ul class="space-y-4">
+                        <li><a href="/index.php" class="text-gray-400 hover:text-blue-custom transition duration-200">Home</a></li>
+                        <li><a href="/How-it-works.php" class="text-gray-400 hover:text-blue-custom transition duration-200">How It Works</a></li>
+                        <li><a href="/Services/Dumpster-Rentals.php" class="text-gray-400 hover:text-blue-custom transition duration-200">Equipment Rentals</a></li>
+                        <li><a href="/Resources/Blog.php" class="text-gray-400 hover:text-blue-custom transition duration-200">Blog/News</a></li>
+                        <li><a href="/Resources/Customer-Resources.php" class="text-gray-400 hover:text-blue-custom transition duration-200">Customer Resources</a></li>
+                        <li><a href="/Resources/Pricing-Finance.php" class="text-gray-400 hover:text-blue-custom transition duration-200">Pricing & Finance</a></li>
                     </ul>
                 </div>
 
                 <div class="col-span-1">
-                    <h3 class="text-xl font-bold mb-4">Resources</h3>
-                    <ul class="space-y-2">
-                        <li><a href="/Resources/FAQs.php" class="text-gray-400 hover:text-white text-sm">FAQs</a></li>
-                        <li><a href="/Resources/Blog.php" class="text-gray-400 hover:text-white text-sm">Blog</a></li>
-                        <li><a href="/Resources/Customer-Resources.php" class="text-gray-400 hover:text-white text-sm">Customer Resources</a></li>
-                        <li><a href="/Resources/Pricing-Finance.php" class="text-gray-400 hover:text-white text-sm">Pricing & Finance</a></li>
-                        <li><a href="/PrivacyPolicy.html" class="text-gray-400 hover:text-white text-sm">Privacy Policy</a></li>
-                        <li><a href="/Terms and Conditions.html" class="text-gray-400 hover:text-white text-sm">Terms & Conditions</a></li>
+                    <h3 class="text-xl font-bold text-white mb-6">Company & Support</h3>
+                    <ul class="space-y-4">
+                        <li><a href="/Company/About-Us.php" class="text-gray-400 hover:text-blue-custom transition duration-200">About Us</a></li>
+                        <li><a href="/Company/Sustainability.php" class="text-gray-400 hover:text-blue-custom transition duration-200">Sustainability</a></li>
+                        <li><a href="/Company/Testimonials.php" class="text-gray-400 hover:text-blue-custom transition duration-200">Testimonials</a></li>
+                        <li><a href="/Resources/FAQs.php" class="text-gray-400 hover:text-blue-custom transition duration-200">FAQs</a></li>
+                        <li><a href="/Resources/Support-Center.php" class="text-gray-400 hover:text-blue-custom transition duration-200">Support Center</a></li>
+                        <li><a href="/Resources/Contact.php" class="text-gray-400 hover:text-blue-custom transition duration-200">Contact Us</a></li>
                     </ul>
                 </div>
 
                 <div class="col-span-1">
-                    <h3 class="text-xl font-bold mb-4">Contact Us</h3>
-                    <p class="text-gray-400 text-sm mb-2"><i class="fas fa-map-marker-alt mr-2"></i> 123 Main St, Anytown, USA 12345</p>
-                    <p class="text-gray-400 text-sm mb-2"><i class="fas fa-phone mr-2"></i> +1 (555) 123-4567</p>
-                    <p class="text-gray-400 text-sm mb-2"><i class="fas fa-envelope mr-2"></i> info@<?php echo strtolower(str_replace(' ', '', $companyName)); ?>.com</p>
+                    <h3 class="text-xl font-bold text-white mb-6">Stay Updated</h3>
+                    <p class="text-gray-400 text-sm mb-4">Subscribe to our newsletter for the latest news, offers, and industry insights!</p>
+                    <form id="newsletter-form" class="flex flex-col gap-3">
+                        <input type="email" id="newsletter-email" name="email" placeholder="Your email address" aria-label="Email for newsletter" required class="p-3 rounded-lg border border-gray-700 bg-gray-800 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-custom">
+                        <button type="submit" class="btn-primary py-2.5 px-5 text-base shadow-md hover:shadow-lg transition duration-300">Subscribe</button>
+                    </form>
+                    <p class="text-gray-400 text-sm mt-6 mb-2"><i class="fas fa-map-marker-alt mr-2"></i> 123 Main St, Anytown, USA 12345</p>
+                    <p class="text-gray-400 text-sm mb-2"><i class="fas fa-phone mr-2"></i> <?php echo htmlspecialchars($supportPhone); ?></p>
+                    <p class="text-gray-400 text-sm mb-2"><i class="fas fa-envelope mr-2"></i> <?php echo htmlspecialchars($supportEmail); ?></p>
                 </div>
             </div>
             <div class="border-t border-gray-700 mt-8 pt-8 text-center text-gray-500 text-sm">
-                &copy; <?php echo date("Y"); ?> <?php echo htmlspecialchars($companyName); ?>. All rights reserved.
+                <p>&copy; <?php echo date("Y"); ?> <?php echo htmlspecialchars($companyName); ?>. All rights reserved.</p>
+                <p class="mt-2">
+                    <a href="/PrivacyPolicy.html" class="hover:text-blue-custom transition duration-200">Privacy Policy</a> | 
+                    <a href="/Terms and Conditions.html" class="hover:text-blue-custom transition duration-200">Terms & Conditions</a>
+                </p>
             </div>
         </div>
     </footer>
@@ -199,6 +230,36 @@
             });
         });
 
+        // Newsletter Signup Form (Client-side only)
+        const newsletterForm = document.getElementById('newsletter-form');
+        if (newsletterForm) {
+            newsletterForm.addEventListener('submit', function(event) {
+                event.preventDefault(); // Prevent default form submission
+
+                const emailInput = document.getElementById('newsletter-email');
+                const email = emailInput.value.trim();
+
+                if (!email) {
+                    window.showToast('Please enter your email address.', 'error');
+                    return;
+                }
+                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                    window.showToast('Please enter a valid email address.', 'error');
+                    return;
+                }
+
+                // Simulate subscription process
+                window.showToast('Subscribing you to our newsletter...', 'info');
+
+                setTimeout(() => {
+                    // In a real application, you would send this email to your backend
+                    // for actual subscription (e.g., to Mailchimp, SendGrid, or a database).
+                    // For this exercise, we just simulate success.
+                    window.showToast('Thank you for subscribing! You\'ll receive our updates soon.', 'success');
+                    emailInput.value = ''; // Clear the input field
+                }, 1500); // Simulate network delay
+            });
+        }
     </script>
     <?php include __DIR__ . '/ai_chat_widget.php'; ?>
 </body>
