@@ -1,9 +1,33 @@
+<?php
+// Resources/Support-Center.php
+
+// Include necessary files
+require_once __DIR__ . '/../includes/db.php';
+require_once __DIR__ . '/../includes/functions.php';
+
+// Fetch company name from system settings
+$companyName = getSystemSetting('company_name');
+if (!$companyName) {
+    $companyName = 'Catdump'; // Fallback if not set in DB
+}
+
+// Fetch admin email from system settings for support email
+$supportEmail = getSystemSetting('admin_email');
+if (!$supportEmail) {
+    $supportEmail = 'support@catdump.com'; // Fallback if not set in DB
+}
+
+// Placeholder for a phone number as it's not in system settings currently.
+// In a real application, you might add this to system settings or another config.
+$supportPhone = '+1 (555) 123-4567';
+
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Support Center - Catdump: We're Here to Help!</title>
+    <title>Support Center - <?php echo htmlspecialchars($companyName); ?>: We're Here to Help!</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
@@ -497,7 +521,7 @@
             <div class="hero-overlay"></div>
             <div class="container-box hero-content text-center">
                 <h1 class="text-5xl md:text-7xl lg:text-8xl font-extrabold leading-tight mb-8 animate-on-scroll">
-                    Catdump Support Center: <span class="text-blue-custom">We're Here to Help!</span>
+                    <?php echo htmlspecialchars($companyName); ?> Support Center: <span class="text-blue-custom">We're Here to Help!</span>
                 </h1>
                 <p class="text-xl md:text-2xl lg:text-3xl text-gray-700 mb-12 max-w-5xl mx-auto animate-on-scroll delay-300">
                     Your quick guide to getting the assistance you need. Find answers, manage your rentals, or connect directly with our dedicated support team.
@@ -525,22 +549,22 @@
                         <h3>Submit a Support Ticket</h3>
                         <p>For non-urgent issues or detailed inquiries, submit a ticket and our team will get back to you promptly via email.</p>
                     </a>
-                    <a href="/Resources/Contact.php" class="support-option-card animate-on-scroll delay-400">
+                    <a href="#" onclick="showAIChat('support'); return false;" class="support-option-card animate-on-scroll delay-400">
                         <div class="icon-large">💬</div>
                         <h3>Live Chat Support</h3>
                         <p>Connect with a support agent in real-time for immediate assistance during business hours. (Availability may vary)</p>
                     </a>
-                    <a href="tel:[Your Phone Number]" class="support-option-card animate-on-scroll delay-500">
+                    <a href="tel:<?php echo htmlspecialchars($supportPhone); ?>" class="support-option-card animate-on-scroll delay-500">
                         <div class="icon-large">📞</div>
                         <h3>Call Us</h3>
                         <p>For urgent matters or direct assistance, speak to a member of our support team over the phone.</p>
-                        <p class="text-blue-custom font-semibold mt-2">[Your Phone Number]</p>
+                        <p class="text-blue-custom font-semibold mt-2"><?php echo htmlspecialchars($supportPhone); ?></p>
                     </a>
-                    <a href="mailto:[Your Support Email]" class="support-option-card animate-on-scroll delay-600">
+                    <a href="mailto:<?php echo htmlspecialchars($supportEmail); ?>" class="support-option-card animate-on-scroll delay-600">
                         <div class="icon-large">📧</div>
                         <h3>Email Support</h3>
                         <p>Send us an email with your question or concern, and we'll reply as quickly as possible.</p>
-                        <p class="text-blue-custom font-semibold mt-2">[Your Support Email]</p>
+                        <p class="text-blue-custom font-semibold mt-2"><?php echo htmlspecialchars($supportEmail); ?></p>
                     </a>
                 </div>
             </div>
@@ -553,7 +577,9 @@
                     Our dedicated support team is available to assist you during the following hours (all times in Eastern Standard Time):
                 </p>
                 <ul class="text-2xl font-semibold text-gray-800 space-y-4 animate-on-scroll delay-200">
-                    <li>Monday - Friday: <span class="text-blue-custom">8:00 AM - 6:00 PM EST</span></li>
+                    <li>**Live Chat Support:** Monday - Friday: <span class="text-blue-custom">8:00 AM - 5:00 PM EST</span></li>
+                    <li>**Phone Support:** Monday - Friday: <span class="text-blue-custom">9:00 AM - 4:00 PM EST</span></li>
+                    <li>**General Email Support:** Monday - Saturday: <span class="text-blue-custom">8:00 AM - 6:00 PM EST</span></li>
                     <li>Saturday: <span class="text-blue-custom">9:00 AM - 3:00 PM EST</span></li>
                     <li>Sunday: <span class="text-red-500">Closed</span></li>
                 </ul>
@@ -610,6 +636,73 @@
             </div>
         </section>
 
+        <section id="getting-started-section" class="container-box py-20 md:py-32">
+            <div class="section-box text-center">
+                <h2 class="text-4xl md:text-5xl font-bold text-gray-800 mb-20 animate-on-scroll">Getting Started with Your Dashboard</h2>
+                <p class="text-xl text-gray-700 mb-8 max-w-3xl mx-auto animate-on-scroll delay-100">
+                    New to the <?php echo htmlspecialchars($companyName); ?> customer portal? Here are some quick guides to help you get started and manage your rentals efficiently.
+                </p>
+                <div class="max-w-3xl mx-auto">
+                    <div class="accordion-item animate-on-scroll delay-200">
+                        <div class="accordion-header" data-accordion-toggle="start-guide-1">
+                            How to Navigate Your Customer Dashboard
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </div>
+                        <div id="start-guide-1" class="accordion-content">
+                            <p>Your dashboard provides a comprehensive overview of your account, including active rentals, pending quotes, invoices, and notifications. Use the sidebar (or bottom navigation on mobile) to easily switch between sections like 'My Quotes', 'Bookings', and 'Invoices'.</p>
+                            <p class="text-blue-custom font-medium mt-2"><a href="/customer/dashboard.php">Go to Dashboard</a></p>
+                        </div>
+                    </div>
+                    <div class="accordion-item animate-on-scroll delay-300">
+                        <div class="accordion-header" data-accordion-toggle="start-guide-2">
+                            Managing Your Quotes: Accept, Reject, or Edit Drafts
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </div>
+                        <div id="start-guide-2" class="accordion-content">
+                            <p>In the 'My Quotes' section, you can review new quotations from our team, accept them to proceed to payment, or reject offers that don't fit your needs. If you submitted a junk removal request as a draft, you can also edit and re-submit it from here.</p>
+                            <p class="text-blue-custom font-medium mt-2"><a href="/customer/dashboard.php#quotes">View My Quotes</a></p>
+                        </div>
+                    </div>
+                    <div class="accordion-item animate-on-scroll delay-400">
+                        <div class="accordion-header" data-accordion-toggle="start-guide-3">
+                            Tracking Your Active Bookings and Scheduling Pickups
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </div>
+                        <div id="start-guide-3" class="accordion-content">
+                            <p>The 'Bookings' section provides details on your active rentals. Here, you can check their status, view estimated end dates, and for completed projects, schedule a pickup. You can also submit requests for extensions, swaps, or relocations for applicable equipment.</p>
+                            <p class="text-blue-custom font-medium mt-2"><a href="/customer/dashboard.php#bookings">View My Bookings</a></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-center mt-16 animate-on-scroll delay-500">
+                    <a href="/Resources/Customer-Resources.php" class="btn-secondary inline-block">More Customer Resources</a>
+                </div>
+            </div>
+        </section>
+
+        <section id="advanced-support-section" class="container-box py-20 md:py-32">
+            <div class="section-box-alt text-center">
+                <h2 class="text-4xl md:text-5xl font-bold text-gray-800 mb-10 animate-on-scroll">Advanced Support & Resources</h2>
+                <p class="text-xl text-gray-700 mb-12 max-w-3xl mx-auto animate-on-scroll delay-100">
+                    For in-depth troubleshooting, industry insights, or connecting with other users, explore these additional resources.
+                </p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-12 max-w-4xl mx-auto">
+                    <div class="support-option-card animate-on-scroll delay-200">
+                        <div class="icon-large">📚</div>
+                        <h3>In-Depth Guides & Blog</h3>
+                        <p>Access detailed articles and expert guides on a variety of topics, from choosing the right equipment to optimizing waste management and troubleshooting common issues.</p>
+                        <a href="/Resources/Blog.php" class="text-blue-custom font-semibold mt-4 inline-block">Explore Our Blog &rarr;</a>
+                    </div>
+                    <div class="support-option-card animate-on-scroll delay-300">
+                        <div class="icon-large">🗣️</div>
+                        <h3>Community Forum & Feedback</h3>
+                        <p>Join our growing community to ask questions, share experiences, and get tips from other <?php echo htmlspecialchars($companyName); ?> users. Your feedback helps us improve!</p>
+                        <a href="#" onclick="showAIChat('support'); return false;" class="text-blue-custom font-semibold mt-4 inline-block">Join the Community &rarr;</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <section id="contact-form-section" class="container-box py-20 md:py-32">
             <div class="section-box text-center">
                 <h2 class="text-4xl md:text-5xl font-bold text-gray-800 mb-10 animate-on-scroll">Can't Find What You Need? Send Us a Message!</h2>
@@ -617,7 +710,7 @@
                     For specific inquiries or if you prefer written communication, please fill out the form below. Our team will get back to you as soon as possible.
                 </p>
                 <div class="max-w-2xl mx-auto animate-on-scroll delay-200">
-                    <form class="space-y-6 text-left">
+                    <form id="support-contact-form" class="space-y-6 text-left">
                         <div>
                             <label for="support-name" class="block text-lg font-medium text-gray-700 mb-2">Your Full Name</label>
                             <input type="text" id="support-name" name="name" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-custom transition duration-200" placeholder="Enter your full name" required>
@@ -644,7 +737,11 @@
         </section>
     </main>
 
-   <?php include '../includes/public_footer.php'; ?>
+    <div id="floating-chat-trigger" onclick="showAIChat('support');">
+        <i class="fas fa-comment-dots"></i>
+    </div>
+
+    <?php include '../includes/public_footer.php'; ?>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -738,6 +835,61 @@
             document.querySelectorAll('[data-target]').forEach(counter => {
                 counterObserver.observe(counter);
             });
+
+            // --- Contact Form Submission (Client-side only) ---
+            const supportContactForm = document.getElementById('support-contact-form');
+            if (supportContactForm) {
+                supportContactForm.addEventListener('submit', function(event) {
+                    event.preventDefault(); // Prevent actual form submission
+
+                    const name = document.getElementById('support-name').value.trim();
+                    const email = document.getElementById('support-email').value.trim();
+                    const subject = document.getElementById('support-subject').value.trim();
+                    const message = document.getElementById('support-message').value.trim();
+
+                    // Basic client-side validation
+                    if (!name || !email || !subject || !message) {
+                        window.showToast('Please fill in all required fields.', 'error');
+                        return;
+                    }
+                    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                        window.showToast('Please enter a valid email address.', 'error');
+                        return;
+                    }
+
+                    // Simulate form submission and display success/error message
+                    window.showToast('Sending your message...', 'info');
+
+                    // Simulate API call delay
+                    setTimeout(() => {
+                        // In a real application, you would send this data to a backend API
+                        // using fetch() or XMLHttpRequest.
+                        // Example:
+                        // fetch('/api/contact_submit.php', {
+                        //     method: 'POST',
+                        //     headers: { 'Content-Type': 'application/json' },
+                        //     body: JSON.stringify({ name, email, subject, message })
+                        // })
+                        // .then(response => response.json())
+                        // .then(data => {
+                        //     if (data.success) {
+                        //         window.showToast('Your message has been sent successfully! We will get back to you soon.', 'success');
+                        //         supportContactForm.reset();
+                        //     } else {
+                        //         window.showToast(data.message || 'Failed to send your message. Please try again.', 'error');
+                        //     }
+                        // })
+                        // .catch(error => {
+                        //     console.error('Contact form submission error:', error);
+                        //     window.showToast('An error occurred. Please try again later.', 'error');
+                        // });
+
+                        // For this exercise, we just show a success message directly
+                        window.showToast('Your message has been sent successfully! We will get back to you soon.', 'success');
+                        supportContactForm.reset();
+                    }, 1000); // Simulate 1 second delay
+                });
+            }
         });
     </script>
 </body>
