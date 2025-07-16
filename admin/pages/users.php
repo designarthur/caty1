@@ -58,7 +58,7 @@ $conn->close();
                         <tr data-id="<?php echo htmlspecialchars($user['id']); ?>">
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"><?php echo htmlspecialchars($user['first_name'] . ' ' . $user['last_name']); ?></td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><?php echo htmlspecialchars($user['email']); ?></td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><?php echo htmlspecialchars($user['phone_number']); ?></td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><?php echo htmlspecialchars($user['phone_number'] ?? ''); ?></td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><?php echo htmlspecialchars(ucfirst($user['role'])); ?></td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><?php echo (new DateTime($user['created_at']))->format('Y-m-d H:i'); ?></td>
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -67,11 +67,11 @@ $conn->close();
                                     data-first-name="<?php echo htmlspecialchars($user['first_name']); ?>"
                                     data-last-name="<?php echo htmlspecialchars($user['last_name']); ?>"
                                     data-email="<?php echo htmlspecialchars($user['email']); ?>"
-                                    data-phone="<?php echo htmlspecialchars($user['phone_number']); ?>"
-                                    data-address="<?php echo htmlspecialchars($user['address']); ?>"
-                                    data-city="<?php echo htmlspecialchars($user['city']); ?>"
-                                    data-state="<?php echo htmlspecialchars($user['state']); ?>"
-                                    data-zip-code="<?php echo htmlspecialchars($user['zip_code']); ?>"
+                                    data-phone="<?php echo htmlspecialchars($user['phone_number'] ?? ''); ?>"
+                                    data-address="<?php echo htmlspecialchars($user['address'] ?? ''); ?>"
+                                    data-city="<?php echo htmlspecialchars($user['city'] ?? ''); ?>"
+                                    data-state="<?php echo htmlspecialchars($user['state'] ?? ''); ?>"
+                                    data-zip-code="<?php echo htmlspecialchars($user['zip_code'] ?? ''); ?>"
                                     data-role="<?php echo htmlspecialchars($user['role']); ?>">
                                     Edit
                                 </button>

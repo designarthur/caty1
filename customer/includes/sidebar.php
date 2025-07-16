@@ -7,7 +7,7 @@ $companyName = $companyName ?? 'CAT Dump'; // Fallback for includes
 
 <aside class="w-full md:w-64 bg-blue-900 text-white flex-shrink-0 p-4 shadow-lg md:rounded-r-lg hidden md:flex flex-col">
     <div class="flex items-center justify-center md:justify-start mb-8 flex-col">
-        <img src="/assets/images/logo.png" alt="<?php echo htmlspecialchars($companyName); ?> Logo" class="h-12 mb-2" onerror="this.onerror=null;this.src='https://placehold.co/100x48/000/FFF?text=<?php echo urlencode($companyName); ?>';">
+        <img src="/assets/images/logo.png" alt="<?php echo htmlspecialchars($companyName); ?> Logo" class="h-12 mb-2" onerror="this.onerror=null;this.src='https://catproject.prelaunchdesigns.com/assets/images/logocatdump.png';">
         <span class="text-white text-2xl font-bold">Customer Dashboard</span>
     </div>
     <nav class="flex-1 space-y-2">

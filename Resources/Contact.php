@@ -93,7 +93,7 @@
         }
 
         .hero-background {
-            background-image: url('https://placehold.co/1920x900/d0e2ec/1a73e8?text=Contact+Us+Hero');
+            background-image: url('/assets/images/hero image for about us page.png');
             background-size: cover;
             background-position: center;
             position: relative;
@@ -654,7 +654,7 @@
             <div class="section-box contact-grid animate-on-scroll delay-100">
                 <div class="contact-info-box">
                     <div class="flex items-center mb-6">
-                        <img src="/assets/images/icon_cd.png" alt="Catdump Icon" class="h-10 w-10 mr-3 rounded-full">
+                        <img src="/assets/images/logocatdump.png" alt="Catdump Icon" class="h-10 w-10 mr-3 rounded-full">
                         <span class="text-xl font-semibold">Catdump Support</span>
                     </div>
                     <h2>Need Personalized Assistance?</h2>

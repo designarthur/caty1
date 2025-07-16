@@ -14,10 +14,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         validate_csrf_token(); // Validate CSRF token
 
-        $first_name = filter_input(INPUT_POST, 'first_name', FILTER_SANITIZE_STRING);
-        $last_name = filter_input(INPUT_POST, 'last_name', FILTER_SANITIZE_STRING);
+        $first_name = isset($_POST['first_name']) ? strip_tags(trim($_POST['first_name'])) : '';
+        $last_name = isset($_POST['last_name']) ? strip_tags(trim($_POST['last_name'])) : '';
         $email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
-        $password = $_POST['password'];
+        $password = $_POST['password']; // Keep original for hashing
         $confirm_password = $_POST['confirm_password'];
 
         // Basic validation
@@ -51,7 +51,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $password_hash = hashPassword($password);
 
         // Insert new user into database
-        // Assuming 'is_active' defaults to 1, adjust if email verification is needed
         $stmt = $conn->prepare("INSERT INTO users (first_name, last_name, email, password_hash, is_active) VALUES (?, ?, ?, ?, 1)");
         if (!$stmt) {
             throw new Exception("Database prepare error: " . $conn->error);
@@ -60,9 +59,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         if ($stmt->execute()) {
             $message = "<div class='bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4' role='alert'>Registration successful! You can now log in.</div>";
-            // Optionally, log the registration
-            // insert_audit_log($conn->insert_id, 'registration', 'User registered successfully');
-            // Redirect to login page after a short delay or directly
+            
+            // --- Send Confirmation Email to Customer ---
+            $customerName = htmlspecialchars($first_name);
+            $customerEmail = htmlspecialchars($email);
+            $loginLink = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://{$_SERVER['HTTP_HOST']}/customer/login.php";
+            
+            // Get company name from system settings for the email
+            $companyName = getSystemSetting('company_name');
+            if (!$companyName) {
+                $companyName = 'Catdump'; // Fallback if not set in DB
+            }
+
+            // Capture the email template content
+            ob_start();
+            // Pass an empty string for $password to indicate it's not a temporary password
+            // The template will handle displaying appropriate message.
+            include __DIR__ . '/../includes/mail_templates/confirmation_email.php';
+            $emailBody = ob_get_clean();
+
+            // Send the email
+            if (!sendEmail($customerEmail, "Welcome to " . htmlspecialchars($companyName) . "!", $emailBody)) {
+                error_log("Failed to send welcome email to {$customerEmail} on registration.");
+            }
+            // --- End Send Confirmation Email ---
+
             redirect('login.php?registration=success');
         } else {
             throw new Exception("Registration failed: " . $stmt->error);
@@ -71,8 +92,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     } catch (Exception $e) {
         $message = "<div class='bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4' role='alert'>" . htmlspecialchars($e->getMessage()) . "</div>";
-        // Optionally, log the registration failure
-        // insert_audit_log(null, 'registration_failed', 'Registration attempt failed for email: ' . $email . ' - ' . $e->getMessage());
     }
 }
 
@@ -171,7 +190,7 @@ $csrf_token = generate_csrf_token();
 
     <main class="py-12">
         <div class="register-container">
-            <img src="../assets/images/logo.png" alt="Catdump Logo" class="mx-auto h-24 w-auto mb-6">
+            <img src="../assets/images/logocatdump.png" alt="Catdump Logo" class="mx-auto h-24 w-auto mb-6">
             <h2>Create Your Account</h2>
             <?php echo $message; ?>
             <form action="register.php" method="POST">

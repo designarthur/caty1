@@ -106,7 +106,7 @@ if (!$companyName) {
         }
 
         .hero-background {
-            background-image: url('https://placehold.co/1920x900/e0e9f5/1a73e8?text=About+Us+Hero');
+            background-image: url('/assets/images/hero image for about us page.png');
             background-size: cover;
             background-position: center;
             position: relative;
@@ -378,7 +378,7 @@ if (!$companyName) {
                         </p>
                     </div>
                     <div class="animate-on-scroll delay-200">
-                        <img src="https://placehold.co/600x400/e0e9f5/1a73e8?text=Our+Story+Image" alt="Our Story" class="rounded-2xl shadow-xl w-full h-auto">
+                        <img src="/assets/images/5001295_52447 11.png" alt="Our Story" class="rounded-2xl shadow-xl w-full h-auto">
                     </div>
                 </div>
             </div>

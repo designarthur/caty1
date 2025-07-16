@@ -207,7 +207,7 @@ $csrf_token = generate_csrf_token();
 
     <main class="py-12">
         <div class="login-container">
-            <img src="../assets/images/logo.png" alt="Catdump Logo" class="mx-auto h-24 w-auto mb-6">
+            <img src="../assets/images/logocatdump.png" alt="Catdump Logo" class="mx-auto h-24 w-auto mb-6">
             <h2>Welcome Back!</h2>
             <?php echo $message; ?>
             <form action="login.php" method="POST">

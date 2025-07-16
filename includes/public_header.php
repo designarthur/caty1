@@ -122,7 +122,7 @@ if (!$companyName) {
             <div class="flex lg:flex-1">
                 <a href="/index.php" class="-m-1.5 p-1.5">
                     <span class="sr-only"><?php echo htmlspecialchars($companyName); ?></span>
-                    <img class="h-12 w-auto mr-4 rounded-full shadow-lg" src="/assets/images/logo.png" alt="<?php echo htmlspecialchars($companyName); ?> Logo" />
+                    <img class="h-12 w-auto mr-4 rounded-full shadow-lg" src="/assets/images/logocatdump.png" alt="<?php echo htmlspecialchars($companyName); ?> Logo" />
                 </a>
             </div>
             <div class="flex lg:hidden">

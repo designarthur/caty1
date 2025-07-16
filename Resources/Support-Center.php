@@ -117,7 +117,7 @@ $supportPhone = '+1 (555) 123-4567';
         }
 
         .hero-background {
-            background-image: url('https://placehold.co/1920x900/e8f3f8/1a73e8?text=Support+Center+Hero');
+            background-image: url('/assets/images/hero image for about us page.png');
             background-size: cover;
             background-position: center;
             position: relative;
@@ -535,33 +535,33 @@ $supportPhone = '+1 (555) 123-4567';
                 <h2 class="text-4xl md:text-5xl font-bold text-center text-gray-800 mb-20 animate-on-scroll">Your Options for Quick Assistance</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
                     <a href="/Resources/FAQs.php" class="support-option-card animate-on-scroll delay-100">
-                        <div class="icon-large">❓</div>
+                        <div class="icon-large"><img src="/assets/images/Mask group4.png" width="100" height="100"></div>
                         <h3>Search Our FAQs</h3>
                         <p>Browse our extensive database of frequently asked questions to find immediate answers to common inquiries.</p>
                     </a>
                     <a href="/customer/dashboard.php" class="support-option-card animate-on-scroll delay-200">
-                        <div class="icon-large">🖥️</div>
+                        <div class="icon-large"><img src="/assets/images/suppoort2.png" width="100" height="100"></div>
                         <h3>Access Customer Portal</h3>
                         <p>Manage your active rentals, view invoices, track orders, and communicate with suppliers directly through your dashboard.</p>
                     </a>
                     <a href="/Resources/Contact.php" class="support-option-card animate-on-scroll delay-300">
-                        <div class="icon-large">📝</div>
+                        <div class="icon-large"><img src="/assets/images/support7.png" width="100" height="100"></div>
                         <h3>Submit a Support Ticket</h3>
                         <p>For non-urgent issues or detailed inquiries, submit a ticket and our team will get back to you promptly via email.</p>
                     </a>
                     <a href="#" onclick="showAIChat('support'); return false;" class="support-option-card animate-on-scroll delay-400">
-                        <div class="icon-large">💬</div>
+                        <div class="icon-large"><img src="/assets/images/support5.png" width="100" height="100"></div>
                         <h3>Live Chat Support</h3>
                         <p>Connect with a support agent in real-time for immediate assistance during business hours. (Availability may vary)</p>
                     </a>
                     <a href="tel:<?php echo htmlspecialchars($supportPhone); ?>" class="support-option-card animate-on-scroll delay-500">
-                        <div class="icon-large">📞</div>
+                        <div class="icon-large"><img src="/assets/images/support6.png" width="100" height="100"></div>
                         <h3>Call Us</h3>
                         <p>For urgent matters or direct assistance, speak to a member of our support team over the phone.</p>
                         <p class="text-blue-custom font-semibold mt-2"><?php echo htmlspecialchars($supportPhone); ?></p>
                     </a>
                     <a href="mailto:<?php echo htmlspecialchars($supportEmail); ?>" class="support-option-card animate-on-scroll delay-600">
-                        <div class="icon-large">📧</div>
+                        <div class="icon-large"><img src="/assets/images/support3.png" width="100" height="100"></div>
                         <h3>Email Support</h3>
                         <p>Send us an email with your question or concern, and we'll reply as quickly as possible.</p>
                         <p class="text-blue-custom font-semibold mt-2"><?php echo htmlspecialchars($supportEmail); ?></p>

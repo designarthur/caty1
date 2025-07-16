@@ -106,7 +106,7 @@ if (!$companyName) {
         }
 
         .hero-background {
-            background-image: url('https://placehold.co/1920x900/e0efff/1a73e8?text=Blog+Hero');
+            background-image: url('/assets/images/hero image for about us page.png');
             background-size: cover;
             background-position: center;
             position: relative;
@@ -441,7 +441,7 @@ if (!$companyName) {
                 <h2 class="text-4xl md:text-5xl font-bold text-center text-gray-800 mb-20 animate-on-scroll">Latest Articles & Insights</h2>
                 <div class="blog-grid">
                     <div class="blog-post-card animate-on-scroll delay-100">
-                        <img src="https://placehold.co/400x200/a0e0ff/1a73e8?text=Dumpster+Tips" alt="Choosing the Right Dumpster Size">
+                        <img src="/assets/images/Rectangle 3943.png" alt="Choosing the Right Dumpster Size">
                         <div class="blog-post-content">
                             <div class="blog-post-meta">
                                 <span><i class="far fa-calendar"></i> July 10, 2024</span>
@@ -454,7 +454,7 @@ if (!$companyName) {
                     </div>
 
                     <div class="blog-post-card animate-on-scroll delay-200">
-                        <img src="https://placehold.co/400x200/b0ffc0/34a853?text=Eco+Disposal" alt="Eco-Friendly Waste Disposal">
+                        <img src="/assets/images/Rectangle 3944.png" alt="Eco-Friendly Waste Disposal">
                         <div class="blog-post-content">
                             <div class="blog-post-meta">
                                 <span><i class="far fa-calendar"></i> June 25, 2024</span>
@@ -467,7 +467,7 @@ if (!$companyName) {
                     </div>
 
                     <div class="blog-post-card animate-on-scroll delay-300">
-                        <img src="https://placehold.co/400x200/ffd0b0/f59e0b?text=AI+Benefits" alt="Benefits of AI in Rentals">
+                        <img src="/assets/images/Rectangle 3945.png" alt="Benefits of AI in Rentals">
                         <div class="blog-post-content">
                             <div class="blog-post-meta">
                                 <span><i class="far fa-calendar"></i> June 12, 2024</span>
@@ -480,7 +480,7 @@ if (!$companyName) {
                     </div>
 
                     <div class="blog-post-card animate-on-scroll delay-400">
-                        <img src="https://placehold.co/400x200/c0c0ff/800080?text=Site+Safety" alt="Job Site Safety Tips">
+                        <img src="/assets/images/Rectangle 3946.png" alt="Job Site Safety Tips">
                         <div class="blog-post-content">
                             <div class="blog-post-meta">
                                 <span><i class="far fa-calendar"></i> May 30, 2024</span>
@@ -493,7 +493,7 @@ if (!$companyName) {
                     </div>
 
                     <div class="blog-post-card animate-on-scroll delay-500">
-                        <img src="https://placehold.co/400x200/ffb0b0/ef4444?text=Permits" alt="Understanding Rental Permits">
+                        <img src="/assets/images/Rectangle 3947.png" alt="Understanding Rental Permits">
                         <div class="blog-post-content">
                             <div class="blog-post-meta">
                                 <span><i class="far fa-calendar"></i> May 15, 2024</span>
@@ -506,7 +506,7 @@ if (!$companyName) {
                     </div>
 
                     <div class="blog-post-card animate-on-scroll delay-600">
-                        <img src="https://placehold.co/400x200/d0ffd0/34d59f?text=Cost+Saving" alt="Cost-Saving Rental Strategies">
+                        <img src="/assets/images/Rectangle 3948.png" alt="Cost-Saving Rental Strategies">
                         <div class="blog-post-content">
                             <div class="blog-post-meta">
                                 <span><i class="far fa-calendar"></i> April 28, 2024</span>

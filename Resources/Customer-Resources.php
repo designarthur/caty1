@@ -92,7 +92,7 @@
         }
 
         .hero-background {
-            background-image: url('https://placehold.co/1920x900/d0e9e9/1a73e8?text=Customer+Resources+Hero');
+            background-image: url('/assets/images/hero image for about us page.png');
             background-size: cover;
             background-position: center;
             position: relative;

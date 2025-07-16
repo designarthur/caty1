@@ -93,7 +93,7 @@
         }
 
         .hero-background {
-            background-image: url('https://placehold.co/1920x900/e6f0f5/1a73e8?text=FAQs+Hero');
+            background-image: url('/assets/images/hero image for about us page.png');
             background-size: cover;
             background-position: center;
             position: relative;

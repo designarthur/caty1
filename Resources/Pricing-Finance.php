@@ -106,7 +106,7 @@ if (!$companyName) {
         }
 
         .hero-background {
-            background-image: url('https://placehold.co/1920x900/e6e6fa/1a73e8?text=Pricing+Finance+Hero');
+            background-image: url('/assets/images/hero image for about us page.png');
             background-size: cover;
             background-position: center;
             position: relative;
@@ -491,7 +491,7 @@ if (!$companyName) {
                 <div class="how-it-works-container">
                     <div class="how-it-works-row animate-on-scroll delay-100">
                         <div class="how-it-works-image-box">
-                            <img src="https://placehold.co/300x200/e0e7ff/1a73e8?text=Request+Quote" alt="Request a Quote">
+                            <img src="/assets/images/Group 1000002808.png" alt="Request a Quote">
                         </div>
                         <div class="how-it-works-content">
                             <p class="how-it-works-step-number">Step 1</p>
@@ -503,7 +503,7 @@ if (!$companyName) {
 
                     <div class="how-it-works-row animate-on-scroll delay-300">
                         <div class="how-it-works-image-box">
-                            <img src="https://placehold.co/300x200/e0e7ff/34a853?text=Compare+Options" alt="Compare Options">
+                            <img src="/assets/images/Group 1000002809.png" alt="Compare Options">
                         </div>
                         <div class="how-it-works-content">
                             <p class="how-it-works-step-number">Step 2</p>
@@ -515,7 +515,7 @@ if (!$companyName) {
 
                     <div class="how-it-works-row animate-on-scroll delay-500">
                         <div class="how-it-works-image-box">
-                            <img src="https://placehold.co/300x200/e0e7ff/1a73e8?text=Secure+Payment" alt="Secure Payment">
+                            <img src="/assets/images/Group 1000002811.png" alt="Secure Payment">
                         </div>
                         <div class="how-it-works-content">
                             <p class="how-it-works-step-number">Step 3</p>

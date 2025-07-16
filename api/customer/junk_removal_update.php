@@ -48,6 +48,23 @@ if ($action !== 'create_quote_request' && !$quote_id) {
     exit;
 }
 
+// --- FIX: Fetch current_quote_status before it's used ---
+$current_quote_status = null; // Initialize to null
+// Only attempt to fetch status if quote_id is valid and action is not creating a new quote
+if ($quote_id && $action !== 'create_quote_request') {
+    $stmt_status = $conn->prepare("SELECT status FROM quotes WHERE id = ? AND user_id = ?");
+    $stmt_status->bind_param("ii", $quote_id, $user_id);
+    $stmt_status->execute();
+    $result_status = $stmt_status->get_result();
+    if ($status_row = $result_status->fetch_assoc()) {
+        $current_quote_status = $status_row['status'];
+    } else {
+        // If quote not found or doesn't belong to the user, throw an exception
+        throw new Exception('Quote not found or you do not have permission to access it.');
+    }
+    $stmt_status->close();
+}
+// --- END FIX ---
 
 
 // --- Action Routing ---

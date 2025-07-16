@@ -102,8 +102,8 @@ if ($requested_booking_id) {
 
 
         // Safely calculate remaining days, handling potential NULL end_date
-        if ($booking_detail_view_data && 
-            in_array($booking_detail_view_data['status'], ['delivered', 'in_use', 'awaiting_pickup']) && 
+        if ($booking_detail_view_data &&
+            in_array($booking_detail_view_data['status'], ['delivered', 'in_use', 'awaiting_pickup']) &&
             !empty($booking_detail_view_data['end_date'])) {
              try {
                 $endDate = new DateTime($booking_detail_view_data['end_date']);
@@ -322,7 +322,7 @@ function getTimelineIconClass($status) {
                                 </span>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <button class="text-blue-600 hover:text-blue-900 view-booking-details-btn" data-id="<?php echo htmlspecialchars($booking['id']); ?>">View</button>
+                                <button class="text-blue-600 hover:text-blue-900 view-booking-details-btn" data-id="<?php echo $booking['id']; ?>">View</button>
                             </td>
                         </tr>
                     <?php endforeach; ?>
@@ -356,6 +356,7 @@ function getTimelineIconClass($status) {
                             <span class="sr-only">Previous</span>
                             <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                                 <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
                             </svg>
                         </button>
                         <?php for ($i = 1; $i <= $total_pages; $i++): ?>
@@ -368,7 +369,8 @@ function getTimelineIconClass($status) {
                                class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
                             <span class="sr-only">Next</span>
                             <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1
+                                0 01-1.414 0z" clip-rule="evenodd" />
                             </svg>
                         </button>
                     </nav>
@@ -396,7 +398,7 @@ function getTimelineIconClass($status) {
     </button>
     <?php if ($booking_detail_view_data): ?>
         <h2 class="text-2xl font-bold text-gray-800 mb-6">Booking #BK-<?php echo htmlspecialchars($booking_detail_view_data['booking_number']); ?> Details</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 pb-6 border-b border-gray-200">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6 pb-6 border-b border-gray-200">
             <div>
                 <p class="text-gray-600"><span class="font-medium">Customer:</span> <?php echo htmlspecialchars($booking_detail_view_data['first_name'] . ' ' . $booking_detail_view_data['last_name']); ?></p>
                 <p class="text-gray-600"><span class="font-medium">Customer Email:</span> <?php echo htmlspecialchars($booking_detail_view_data['email']); ?></p>
@@ -428,103 +430,151 @@ function getTimelineIconClass($status) {
             </div>
         </div>
 
-        <h3 class="text-xl font-semibold text-gray-700 mb-4">Service Details</h3>
-        <?php if ($booking_detail_view_data['service_type'] === 'equipment_rental'): ?>
-            <h4 class="font-semibold mt-4 mb-2 text-gray-800">Equipment Booked:</h4>
-            <?php if (!empty($booking_detail_view_data['equipment_details'])): ?>
-                <ul class="list-disc list-inside space-y-2 pl-4">
-                    <?php foreach ($booking_detail_view_data['equipment_details'] as $item): ?>
-                        <li><strong><?php echo htmlspecialchars($item['quantity']); ?>x</strong> <?php echo htmlspecialchars($item['equipment_name']); ?> (<?php echo htmlspecialchars($item['duration_days']); ?> days)</li>
-                        <?php if (!empty($item['specific_needs'])): ?>
-                            <p class="text-xs text-gray-600 ml-4">- Needs: <?php echo htmlspecialchars($item['specific_needs']); ?></p>
-                        <?php endif; ?>
-                    <?php endforeach; ?>
-                </ul>
-            <?php else: ?>
-                <p class="text-gray-600">No specific equipment details found for this booking.</p>
-            <?php endif; ?>
-        <?php elseif ($booking_detail_view_data['service_type'] === 'junk_removal'): ?>
-            <h4 class="font-semibold mt-4 mb-2 text-gray-800">Junk Removal Details:</h4>
-            <?php if (!empty($booking_detail_view_data['junk_details'])): ?>
-                <ul class="list-disc list-inside space-y-2 pl-4">
-                    <?php if (!empty($booking_detail_view_data['junk_details']['junkItems'])): ?>
-                        <?php foreach ($booking_detail_view_data['junk_details']['junkItems'] as $item): ?>
-                            <li><?php echo htmlspecialchars($item['itemType'] ?? 'N/A'); ?> (Qty: <?php echo htmlspecialchars($item['quantity'] ?? 'N/A'); ?>)</li>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <li>No specific junk items detailed.</li>
-                    <?php endif; ?>
-                    <?php if (!empty($booking_detail_view_data['junk_details']['recommendedDumpsterSize'])): ?>
-                        <li>Recommended Dumpster Size: <?php echo htmlspecialchars($booking_detail_view_data['junk_details']['recommendedDumpsterSize']); ?></li>
-                    <?php endif; ?>
-                    <?php if (!empty($booking_detail_view_data['junk_details']['additionalComment'])): ?>
-                        <li>Additional Comments: <?php echo htmlspecialchars($booking_detail_view_data['junk_details']['additionalComment']); ?></li>
-                    <?php endif; ?>
-                    <?php if (!empty($booking_detail_view_data['junk_details']['media_urls'])): ?>
-                        <h5 class="text-md font-semibold text-gray-700 mt-2">Uploaded Media:</h5>
-                        <div class="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
-                            <?php foreach ($booking_detail_view_data['junk_details']['media_urls'] as $media_url): ?>
-                                <?php $fileExtension = pathinfo($media_url, PATHINFO_EXTENSION); ?>
-                                <?php if (in_array(strtolower($fileExtension), ['jpg', 'jpeg', 'png', 'gif'])): ?>
-                                    <img src="<?php echo htmlspecialchars($media_url); ?>" class="w-full h-24 object-cover rounded-lg cursor-pointer" onclick="showImageModal('<?php echo htmlspecialchars($media_url); ?>')">
-                                <?php elseif (in_array(strtolower($fileExtension), ['mp4', 'webm', 'ogg'])): ?>
-                                    <video src="<?php echo htmlspecialchars($media_url); ?>" controls class="w-full h-24 object-cover rounded-lg"></video>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div>
+                <h3 class="text-xl font-semibold text-gray-700 mb-4">Service Details</h3>
+                <?php if ($booking_detail_view_data['service_type'] === 'equipment_rental'): ?>
+                    <h4 class="font-semibold mt-4 mb-2 text-gray-800">Equipment Booked:</h4>
+                    <?php if (!empty($booking_detail_view_data['equipment_details'])): ?>
+                        <ul class="list-disc list-inside space-y-2 pl-4">
+                            <?php foreach ($booking_detail_view_data['equipment_details'] as $item): ?>
+                                <li><strong><?php echo htmlspecialchars($item['quantity']); ?>x</strong> <?php echo htmlspecialchars($item['equipment_name']); ?> (<?php echo htmlspecialchars($item['duration_days']); ?> days)</li>
+                                <?php if (!empty($item['specific_needs'])): ?>
+                                    <p class="text-xs text-gray-600 ml-4">- Needs: <?php echo htmlspecialchars($item['specific_needs']); ?></p>
                                 <?php endif; ?>
                             <?php endforeach; ?>
+                        </ul>
+                    <?php else: ?>
+                        <p class="text-gray-600">No specific equipment details found for this booking.</p>
+                    <?php endif; ?>
+                <?php elseif ($booking_detail_view_data['service_type'] === 'junk_removal'): ?>
+                    <h4 class="font-semibold mt-4 mb-2 text-gray-800">Junk Removal Details:</h4>
+                    <?php if (!empty($booking_detail_view_data['junk_details'])): ?>
+                        <ul class="list-disc list-inside space-y-2 pl-4">
+                            <?php if (!empty($booking_detail_view_data['junk_details']['junkItems'])): ?>
+                                <?php foreach ($booking_detail_view_data['junk_details']['junkItems'] as $item): ?>
+                                    <li><?php echo htmlspecialchars($item['itemType'] ?? 'N/A'); ?> (Qty: <?php echo htmlspecialchars($item['quantity'] ?? 'N/A'); ?>)</li>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <li>No specific junk items detailed.</li>
+                            <?php endif; ?>
+                            <?php if (!empty($booking_detail_view_data['junk_details']['recommendedDumpsterSize'])): ?>
+                                <li>Recommended Dumpster Size: <?php echo htmlspecialchars($booking_detail_view_data['junk_details']['recommendedDumpsterSize']); ?></li>
+                            <?php endif; ?>
+                            <?php if (!empty($booking_detail_view_data['junk_details']['additionalComment'])): ?>
+                                <li>Additional Comments: <?php echo htmlspecialchars($booking_detail_view_data['junk_details']['additionalComment']); ?></li>
+                            <?php endif; ?>
+                            <?php if (!empty($booking_detail_view_data['junk_details']['media_urls'])): ?>
+                                <h5 class="text-md font-semibold text-gray-700 mt-2">Uploaded Media:</h5>
+                                <div class="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
+                                    <?php foreach ($booking_detail_view_data['junk_details']['media_urls'] as $media_url): ?>
+                                        <?php $fileExtension = pathinfo($media_url, PATHINFO_EXTENSION); ?>
+                                        <?php if (in_array(strtolower($fileExtension), ['jpg', 'jpeg', 'png', 'gif'])): ?>
+                                            <img src="<?php echo htmlspecialchars($media_url); ?>" class="w-full h-24 object-cover rounded-lg cursor-pointer" onclick="showImageModal('<?php echo htmlspecialchars($media_url); ?>')">
+                                        <?php elseif (in_array(strtolower($fileExtension), ['mp4', 'webm', 'ogg'])): ?>
+                                            <video src="<?php echo htmlspecialchars($media_url); ?>" controls class="w-full h-24 object-cover rounded-lg"></video>
+                                        <?php endif; ?>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php endif; ?>
+                        </ul>
+                    <?php else: ?>
+                        <p class="text-gray-600">No specific junk removal details found for this booking.</p>
+                    <?php endif; ?>
+                <?php endif; ?>
+
+                <h3 class="text-xl font-semibold text-gray-700 mb-4 mt-6">Financial Summary</h3>
+                <div class="space-y-2 text-gray-700">
+                    <div class="flex justify-between"><span>Initial Booking Price:</span><span>$<?php echo number_format($booking_detail_view_data['total_price'], 2); ?></span></div>
+                    <?php
+                    $total_additional_charges = 0;
+                    foreach ($booking_detail_view_data['additional_charges'] as $charge):
+                        $total_additional_charges += $charge['amount'];
+                    ?>
+                        <div class="flex justify-between text-sm text-gray-500 pl-4">
+                            <span><?php echo htmlspecialchars(ucwords(str_replace('_', ' ', $charge['charge_type']))); ?>:</span>
+                            <span>$<?php echo number_format($charge['amount'], 2); ?>
+                                <?php if(!empty($charge['invoice_id'])): ?>
+                                    (<a href="#" onclick="loadAdminSection('invoices', {invoice_id: <?php echo $charge['invoice_id']; ?>}); return false;" class="text-blue-500 hover:underline">View Invoice</a>)
+                                <?php endif; ?>
+                            </span>
+                        </div>
+                        <?php if (!empty($charge['description'])): ?>
+                            <p class="text-xs text-gray-500 ml-4">- <?php echo htmlspecialchars($charge['description']); ?></p>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
+                    <div class="flex justify-between font-bold border-t pt-2 mt-2">
+                        <span>Total Billed:</span>
+                        <span>$<?php echo number_format($booking_detail_view_data['total_price'] + $total_additional_charges, 2); ?></span>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <div class="bg-white p-6 rounded-lg shadow-md border border-gray-200 mb-6">
+                    <h3 class="text-xl font-semibold text-gray-700 mb-4">Actions</h3>
+                    <div class="mb-4">
+                        <label for="booking-status-select" class="block text-sm font-medium text-gray-700">Update Status</label>
+                        <select id="booking-status-select" class="mt-1 p-2 border border-gray-300 rounded-md w-full">
+                            <option value="pending" <?php echo ($booking_detail_view_data['status'] === 'pending') ? 'selected' : ''; ?>>Pending</option>
+                            <option value="scheduled" <?php echo ($booking_detail_view_data['status'] === 'scheduled') ? 'selected' : ''; ?>>Scheduled</option>
+                            <option value="assigned" <?php echo ($booking_detail_view_data['status'] === 'assigned') ? 'selected' : ''; ?>>Assigned</option>
+                            <option value="out_for_delivery" <?php echo ($booking_detail_view_data['status'] === 'out_for_delivery') ? 'selected' : ''; ?>>Out for Delivery</option>
+                            <option value="delivered" <?php echo ($booking_detail_view_data['status'] === 'delivered') ? 'selected' : ''; ?>>Delivered</option>
+                            <option value="in_use" <?php echo ($booking_detail_view_data['status'] === 'in_use') ? 'selected' : ''; ?>>In Use</option>
+                            <option value="awaiting_pickup" <?php echo ($booking_detail_view_data['status'] === 'awaiting_pickup') ? 'selected' : ''; ?>>Awaiting Pickup</option>
+                            <option value="completed" <?php echo ($booking_detail_view_data['status'] === 'completed') ? 'selected' : ''; ?>>Completed</option>
+                            <option value="cancelled" <?php echo ($booking_detail_view_data['status'] === 'cancelled') ? 'selected' : ''; ?>>Cancelled</option>
+                            <option value="relocation_requested" <?php echo ($booking_detail_view_data['status'] === 'relocation_requested') ? 'selected' : ''; ?>>Relocation Requested</option>
+                            <option value="swap_requested" <?php echo ($booking_detail_view_data['status'] === 'swap_requested') ? 'selected' : ''; ?>>Swap Requested</option>
+                            <option value="relocated" <?php echo ($booking_detail_view_data['status'] === 'relocated') ? 'selected' : ''; ?>>Relocated</option>
+                            <option value="swapped" <?php echo ($booking_detail_view_data['status'] === 'swapped') ? 'selected' : ''; ?>>Swapped</option>
+                            <option value="extended" <?php echo ($booking_detail_view_data['status'] === 'extended') ? 'selected' : ''; ?>>Extended</option>
+                        </select>
+                        <button type="button" id="update-booking-status-btn" class="mt-3 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold shadow-md" data-id="<?php echo htmlspecialchars($booking_detail_view_data['id']); ?>">
+                            <i class="fas fa-sync-alt mr-2"></i>Update Status
+                        </button>
+                    </div>
+
+                    <div class="mt-6 pt-4 border-t border-gray-200">
+                        <label for="assign-vendor-select" class="block text-sm font-medium text-gray-700">Assign Vendor</label>
+                        <select id="assign-vendor-select" class="mt-1 p-2 border border-gray-300 rounded-md w-full">
+                            <option value="">-- Select Vendor --</option>
+                            <?php foreach ($vendors as $vendor): ?>
+                                <option value="<?php echo htmlspecialchars($vendor['id']); ?>" <?php echo ($booking_detail_view_data['vendor_id'] == $vendor['id']) ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($vendor['name']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <button type="button" id="assign-vendor-btn" class="mt-3 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold shadow-md" data-id="<?php echo htmlspecialchars($booking_detail_view_data['id']); ?>">
+                            <i class="fas fa-truck-loading mr-2"></i>Assign Vendor
+                        </button>
+                    </div>
+
+                    <div class="mt-6 pt-4 border-t border-gray-200">
+                         <button type="button" id="add-charge-btn" class="w-full px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-semibold shadow-md" data-id="<?php echo htmlspecialchars($booking_detail_view_data['id']); ?>">
+                            <i class="fas fa-money-bill-wave mr-2"></i>Add Additional Charge
+                        </button>
+                    </div>
+                    <?php if ($booking_detail_view_data['extension_request_id'] && $booking_detail_view_data['extension_status'] === 'pending'): ?>
+                        <div class="mt-6 pt-4 border-t border-gray-200 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-center">
+                            <p class="text-sm font-medium text-yellow-800 mb-2"><i class="fas fa-exclamation-triangle mr-1"></i>Pending Extension Request</p>
+                            <p class="text-xs text-yellow-700">Customer requested <?php echo htmlspecialchars($booking_detail_view_data['extension_requested_days']); ?> more days.</p>
+                            <button type="button" id="approve-extension-btn" class="mt-3 px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 text-sm"
+                                    data-id="<?php echo htmlspecialchars($booking_detail_view_data['id']); ?>"
+                                    data-daily-rate="<?php echo htmlspecialchars($booking_detail_view_data['daily_rate'] ?? '0'); ?>"
+                                    data-requested-days="<?php echo htmlspecialchars($booking_detail_view_data['extension_requested_days'] ?? '0'); ?>"
+                                    data-request-id="<?php echo htmlspecialchars($booking_detail_view_data['extension_request_id']); ?>">
+                                Approve Extension
+                            </button>
                         </div>
                     <?php endif; ?>
-                </ul>
-            <?php else: ?>
-                <p class="text-gray-600">No specific junk removal details found for this booking.</p>
-            <?php endif; ?>
-        <?php endif; ?>
-
-        <h3 class="text-xl font-semibold text-gray-700 mb-4 mt-6">Financial Summary</h3>
-        <div class="space-y-2 text-gray-700">
-            <div class="flex justify-between"><span>Initial Booking Price:</span><span>$<?php echo number_format($booking_detail_view_data['total_price'], 2); ?></span></div>
-            <?php
-            $total_additional_charges = 0;
-            foreach ($booking_detail_view_data['additional_charges'] as $charge):
-                $total_additional_charges += $charge['amount'];
-            ?>
-                <div class="flex justify-between text-sm text-gray-500 pl-4">
-                    <span><?php echo htmlspecialchars(ucwords(str_replace('_', ' ', $charge['charge_type']))); ?>:</span>
-                    <span>$<?php echo number_format($charge['amount'], 2); ?>
-                        <?php if(!empty($charge['invoice_id'])): ?>
-                            (<a href="#" onclick="loadAdminSection('invoices', {invoice_id: <?php echo $charge['invoice_id']; ?>}); return false;" class="text-blue-500 hover:underline">View Invoice</a>)
-                        <?php endif; ?>
-                    </span>
                 </div>
-                <?php if (!empty($charge['description'])): ?>
-                    <p class="text-xs text-gray-500 ml-4">- <?php echo htmlspecialchars($charge['description']); ?></p>
-                <?php endif; ?>
-            <?php endforeach; ?>
-            <div class="flex justify-between font-bold border-t pt-2 mt-2">
-                <span>Total Billed:</span>
-                <span>$<?php echo number_format($booking_detail_view_data['total_price'] + $total_additional_charges, 2); ?></span>
             </div>
         </div>
 
-        <h3 class="text-xl font-semibold text-gray-700 mb-4 mt-6">Status History</h3>
-        <ol class="relative border-l-2 border-blue-200 ml-3">
-            <?php foreach ($booking_detail_view_data['status_history'] as $history): ?>
-                <li class="mb-6 ml-6">
-                    <span class="absolute flex items-center justify-center w-8 h-8 bg-blue-500 rounded-full -left-4 ring-4 ring-white">
-                        <i class="fas <?php echo getTimelineIconClass($history['status']); ?> text-white"></i>
-                    </span>
-                    <div class="ml-4">
-                        <h4 class="text-md font-semibold text-gray-900"><?php echo htmlspecialchars(ucwords(str_replace('_', ' ', $history['status']))); ?></h4>
-                        <time class="block mb-1 text-xs font-normal text-gray-400"><?php echo (new DateTime($history['status_time']))->format('F j, Y, g:i A'); ?></time>
-                        <?php if(!empty($history['notes'])): ?>
-                            <p class="text-sm font-normal text-gray-500"><?php echo htmlspecialchars($history['notes']); ?></p>
-                        <?php endif; ?>
-                    </div>
-                </li>
-            <?php endforeach; ?>
-        </ol>
-
     <?php else: ?>
-        <p class="text-center text-gray-600">Booking details not found or invalid ID.</p>
+        <p class="text-center text-red-500 py-8">The requested booking was not found.</p>
     <?php endif; ?>
 </div>
 

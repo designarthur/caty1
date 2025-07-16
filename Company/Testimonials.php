@@ -106,7 +106,7 @@ if (!$companyName) {
         }
 
         .hero-background {
-            background-image: url('https://placehold.co/1920x900/e0e9f5/1a73e8?text=Testimonials+Hero');
+            background-image: url('/assets/images/hero image for about us page.png');
             background-size: cover;
             background-position: center;
             position: relative;

@@ -621,8 +621,11 @@ if (!$companyName) {
                             <a href="#how-it-works-section" class="btn-secondary inline-block">How It Works</a>
                         </div>
                     </div>
-                    <div class="w-full max-w-lg mx-auto lg:mx-0 animate-on-scroll delay-200 flex items-center justify-center min-h-[300px] border border-dashed border-gray-300 rounded-2xl bg-gray-50 text-gray-500">
-                        <p class="text-lg text-center p-4">AI Chat Assistant will appear here or can be opened from the bottom right corner.</p>
+                    <!--<div class="w-full max-w-lg mx-auto lg:mx-0 animate-on-scroll delay-200 flex items-center justify-center min-h-[300px] border border-dashed border-gray-300 rounded-2xl bg-gray-50 text-gray-500">-->
+                    <!--    <p class="text-lg text-center p-4">AI Chat Assistant will appear here or can be opened from the bottom right corner.</p>-->
+                    <!--</div>-->
+                    <div class="w-full max-w-lg mx-auto lg:mx-0 animate-on-scroll delay-200 flex items-center justify-center">
+                        <img src="/assets/images/Group 1000002820.png" alt="AI Chat Interface">
                     </div>
                 </div>
             </div>
@@ -690,7 +693,7 @@ if (!$companyName) {
                 <div class="how-it-works-container">
                     <div class="how-it-works-row animate-on-scroll delay-100">
                         <div class="how-it-works-image-box">
-                            <img src="/assets/images/ai_chat_interface.png" alt="AI Chat Interface">
+                            <img src="/assets/images/Group 1000002812.png" alt="AI Chat Interface">
                         </div>
                         <div class="how-it-works-content">
                             <p class="how-it-works-step-number">Step 1</p>
@@ -702,7 +705,7 @@ if (!$companyName) {
 
                     <div class="how-it-works-row animate-on-scroll delay-300">
                         <div class="how-it-works-image-box">
-                            <img src="/assets/images/price_comparison.png" alt="Price Comparison">
+                            <img src="/assets/images/Group 1000002813.png" alt="Price Comparison">
                         </div>
                         <div class="how-it-works-content">
                             <p class="how-it-works-step-number">Step 2</p>
@@ -714,7 +717,7 @@ if (!$companyName) {
 
                     <div class="how-it-works-row animate-on-scroll delay-500">
                         <div class="how-it-works-image-box">
-                            <img src="/assets/images/dashboard_tracking.png" alt="Dashboard Tracking">
+                            <img src="/assets/images/Group 1000002814.png" alt="Dashboard Tracking">
                         </div>
                         <div class="how-it-works-content">
                             <p class="how-it-works-step-number">Step 3</p>
@@ -735,19 +738,19 @@ if (!$companyName) {
                 <h2 class="text-4xl md:text-5xl font-bold text-center text-gray-800 mb-20 animate-on-scroll">Our Core Rental Services</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
                     <div class="p-10 rounded-2xl shadow-xl flex flex-col items-center text-center card-hover-effect animate-on-scroll delay-100">
-                        <img src="/assets/images/dumpster_rental.png" alt="Dumpster Rentals" class="rounded-lg mb-6 shadow-md border border-gray-300">
+                        <img src="/assets/images/green-dump-truck-with-white-background 1.png" alt="Dumpster Rentals" class="rounded-lg mb-6 shadow-md border border-gray-300">
                         <h3 class="text-2xl font-semibold text-gray-800 mb-4">Dumpster Rentals</h3>
                         <p class="text-gray-600 leading-relaxed mb-6">From extensive home cleanouts to large-scale construction projects, easily find the perfect size dumpster to efficiently handle any waste disposal need, ensuring a clean and safe site for your operations.</p>
                         <a href="#" onclick="showAIChat('general'); return false;" class="text-blue-custom hover:underline font-medium flex items-center justify-center">Learn More & Get Quote <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg></a>
                     </div>
                     <div class="p-10 rounded-2xl shadow-xl flex flex-col items-center text-center card-hover-effect animate-on-scroll delay-200">
-                        <img src="/assets/images/portable_toilet.png" alt="Temporary Toilets" class="rounded-lg mb-6 shadow-md border border-gray-300">
+                        <img src="/assets/images/portable-toilets-woods-transparent-background 1.png" alt="Temporary Toilets" class="rounded-lg mb-6 shadow-md border border-gray-300">
                         <h3 class="text-2xl font-semibold text-gray-800 mb-4">Temporary Toilets</h3>
                         <p class="text-gray-600 leading-relaxed mb-6">Ensure comfort and sanitation with our clean, reliable, and regularly serviced portable toilets, ideal for events, busy job sites, and emergency situations requiring immediate facilities on demand.</p>
                         <a href="#" onclick="showAIChat('general'); return false;" class="text-blue-custom hover:underline font-medium flex items-center justify-center">Learn More & Get Quote <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg></a>
                     </div>
                     <div class="p-10 rounded-2xl shadow-xl flex flex-col items-center text-center card-hover-effect animate-on-scroll delay-300">
-                        <img src="/assets/images/storage_container.png" alt="Storage Containers" class="rounded-lg mb-6 shadow-md border border-gray-300">
+                        <img src="/assets/images/blue-cargo-container-transparent-background 1.png" alt="Storage Containers" class="rounded-lg mb-6 shadow-md border border-gray-300">
                         <h3 class="text-2xl font-semibold text-gray-800 mb-4">Storage Containers</h3>
                         <p class="text-gray-600 leading-relaxed mb-6">Secure your valuable equipment and materials with our robust, weatherproof on-site storage containers, conveniently delivered right to your specified location for maximum accessibility and protection.</p>
                         <a href="#" onclick="showAIChat('general'); return false;" class="text-blue-custom hover:underline font-medium flex items-center justify-center">Learn More & Get Quote <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg></a>
@@ -763,13 +766,13 @@ if (!$companyName) {
             <h2 class="text-4xl md:text-5xl font-bold text-center text-gray-800 mb-20 animate-on-scroll">Beyond Rentals: Comprehensive Solutions</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
                 <div class="p-10 rounded-2xl shadow-xl flex flex-col items-center text-center card-hover-effect animate-on-scroll delay-100">
-                    <img src="/assets/images/junk_removal.png" alt="Junk Removal Services" class="rounded-lg mb-6 shadow-md border border-gray-300">
+                    <img src="/assets/images/Group 1000002815.png" alt="Junk Removal Services" class="rounded-lg mb-6 shadow-md border border-gray-300">
                     <h3 class="text-2xl font-semibold text-gray-800 mb-4">Advanced Junk Removal Services</h3>
                     <p class="text-gray-600 leading-relaxed mb-6">For efficient junk removal, simply upload images and even videos of your items. Our advanced system analyzes the content to generate a precise, fair quote. If you're satisfied with the quotation, we'll generate an invoice for you to conveniently pay directly from your personalized dashboard.</p>
                     <a href="#" onclick="showAIChat('general'); return false;" class="text-blue-custom hover:underline font-medium flex items-center justify-center">Learn More & Get Quote <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg></a>
                 </div>
                 <div class="p-10 rounded-2xl shadow-xl flex flex-col items-center text-center card-hover-effect animate-on-scroll delay-200">
-                    <img src="/assets/images/relocation_swap.png" alt="Relocation & Swap Services" class="rounded-lg mb-6 shadow-md border border-gray-300">
+                    <img src="/assets/images/Group 1000002816.png" alt="Relocation & Swap Services" class="rounded-lg mb-6 shadow-md border border-gray-300">
                     <h3 class="text-2xl font-semibold text-gray-800 mb-4">Relocation & Swap Services</h3>
                     <p class="text-gray-600 leading-relaxed mb-6">Project running longer than expected? Need a different size unit for your evolving needs? We offer seamless relocation or swap services for your rental unit, ensuring your project stays on track and on budget without interruption.</p>
                     <a href="#" onclick="showAIChat('general'); return false;" class="text-blue-custom hover:underline font-medium flex items-center justify-center">Learn More & Get Quote <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg></a>
@@ -828,8 +831,8 @@ if (!$companyName) {
                     <a href="/customer/login.php" class="btn-primary inline-block">Login to Dashboard</a>
                 </div>
                 <div class="lg:w-1/2 flex justify-center items-center relative animate-on-scroll delay-300">
-                    <img src="/assets/images/mobile_app_screen_1.png" alt="Mobile App Screen 1" class="w-1/2 md:w-1/3 lg:w-auto max-w-xs rounded-xl shadow-2xl transform rotate-3 translate-x-8 z-10 border-4 border-gray-300">
-                    <img src="/assets/images/mobile_app_screen_2.png" alt="Mobile App Screen 2" class="w-1/2 md:w-1/3 lg:w-auto max-w-xs rounded-xl shadow-2xl transform -rotate-3 -translate-x-8 z-20 border-4 border-gray-300">
+                    <img src="/assets/images/Group 1000002797.png" alt="Mobile App Screen 1" class="w-1/2 md:w-1/3 lg:w-auto max-w-xs rounded-xl shadow-2xl transform rotate-3 translate-x-8 z-10 border-4 border-gray-300">
+                    <!--<img src="/assets/images/mobile_app_screen_2.png" alt="Mobile App Screen 2" class="w-1/2 md:w-1/3 lg:w-auto max-w-xs rounded-xl shadow-2xl transform -rotate-3 -translate-x-8 z-20 border-4 border-gray-300">-->
                 </div>
             </div>
         </section>
@@ -839,13 +842,13 @@ if (!$companyName) {
                 <h2 class="text-4xl md:text-5xl font-bold text-center text-gray-800 mb-20 animate-on-scroll">Your Personalized <?php echo htmlspecialchars($companyName); ?> Dashboard & Flexible Payments</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
                     <div class="p-10 rounded-2xl shadow-xl card-hover-effect animate-on-scroll delay-100">
-                        <img src="/assets/images/dashboard_mockup.png" alt="<?php echo htmlspecialchars($companyName); ?> Dashboard" class="rounded-lg mb-6 mx-auto shadow-md border border-gray-300">
+                        <img src="/assets/images/Group 1000002817.png" alt="<?php echo htmlspecialchars($companyName); ?> Dashboard" class="rounded-lg mb-6 mx-auto shadow-md border border-gray-300">
                         <h3 class="text-2xl font-semibold text-gray-800 mb-4">Total Control at Your Fingertips</h3>
                         <p class="text-gray-600 leading-relaxed mb-6">The <?php echo htmlspecialchars($companyName); ?> dashboard provides a centralized, intuitive hub for all your rental activities. Effortlessly track orders, manage service schedules, view detailed invoices, and communicate directly with suppliers, all from one convenient place. Access your complete rental history and reorder previous services with a single click, simplifying your workflow and saving you valuable time. <br><br> You can also track the delivery status of your rentals directly from your dashboard. If a partner allows live tracking, you'll see real-time updates. Otherwise, your driver will contact you directly with progress notifications.</p>
                         <a href="/customer/dashboard.php" class="text-blue-custom hover:underline font-medium flex items-center justify-center">Learn More about the My Dumpster Portal <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg></a>
                     </div>
                     <div class="p-10 rounded-2xl shadow-xl card-hover-effect animate-on-scroll delay-200">
-                        <img src="/assets/images/payment_options.png" alt="Flexible Payments" class="rounded-lg mb-6 mx-auto shadow-md border border-gray-300">
+                        <img src="/assets/images/Group 1000002819.png" alt="Flexible Payments" class="rounded-lg mb-6 mx-auto shadow-md border border-gray-300">
                         <h3 class="text-2xl font-semibold text-gray-800 mb-4">Flexible & Secure Payment Solutions</h3>
                         <p class="text-gray-600 leading-relaxed mb-6">We offer a wide variety of secure payment options to suit your preferences, including all major credit cards and ACH transfers. For larger or ongoing projects, we provide flexible financing plans designed to help you manage your budget effectively without delaying crucial work. Rest assured, your financial data is always protected with state-of-art, bank-level security measures, giving you complete peace of mind.</p>
                         <a href="/Resources/Pricing-Finance.php" class="text-blue-custom hover:underline font-medium flex items-center justify-center">Learn More about Payments & Financing <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg></a>
@@ -938,7 +941,7 @@ if (!$companyName) {
                 <div class="contact-grid">
                     <div class="contact-info-box animate-on-scroll delay-200">
                         <div class="flex items-center mb-6">
-                            <img src="/assets/images/icon_cd.png" alt="<?php echo htmlspecialchars($companyName); ?> Icon" class="h-10 w-10 mr-3 rounded-full">
+                            <img src="/assets/images/logocatdump.png" alt="<?php echo htmlspecialchars($companyName); ?> Icon" class="h-10 w-10 mr-3 rounded-full">
                             <span class="text-xl font-semibold"><?php echo htmlspecialchars($companyName); ?> Support</span>
                         </div>
                         <h2 class="text-white">Request a call with our <br> Equipment Experts</h2>

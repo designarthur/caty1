@@ -92,7 +92,7 @@ if (!$companyName) {
         }
 
         .hero-background {
-            background-image: url('/assets/images/how-it-works-hero.jpg'); /* Placeholder */
+            background-image: url('/assets/images/11328876_12212.png'); /* Placeholder */
             background-size: cover;
             background-position: center;
             position: relative;
@@ -230,7 +230,7 @@ if (!$companyName) {
                 <div class="how-it-works-container">
                     <div class="how-it-works-row">
                         <div class="how-it-works-image-box">
-                            <img src="/assets/images/ai_chat_interface.png" alt="AI Chat Interface">
+                            <img src="/assets/images/Group 1000002805.png" alt="AI Chat Interface">
                         </div>
                         <div class="how-it-works-content">
                             <p class="how-it-works-step-number">Step 1</p>
@@ -242,7 +242,7 @@ if (!$companyName) {
 
                     <div class="how-it-works-row">
                         <div class="how-it-works-image-box">
-                            <img src="/assets/images/price_comparison.png" alt="Price Comparison">
+                            <img src="/assets/images/Group 1000002803.png" alt="Price Comparison">
                         </div>
                         <div class="how-it-works-content">
                             <p class="how-it-works-step-number">Step 2</p>
@@ -254,7 +254,7 @@ if (!$companyName) {
 
                     <div class="how-it-works-row">
                         <div class="how-it-works-image-box">
-                            <img src="/assets/images/dashboard_tracking.png" alt="Dashboard Tracking">
+                            <img src="/assets/images/Group 1000002801.png" alt="Dashboard Tracking">
                         </div>
                         <div class="how-it-works-content">
                             <p class="how-it-works-step-number">Step 3</p>
@@ -266,7 +266,7 @@ if (!$companyName) {
 
                     <div class="how-it-works-row">
                         <div class="how-it-works-image-box">
-                             <img src="/assets/images/dashboard_mockup.png" alt="Project Management">
+                             <img src="/assets/images/Group 1000002800.png" alt="Project Management">
                         </div>
                         <div class="how-it-works-content">
                             <p class="how-it-works-step-number">Step 4</p>

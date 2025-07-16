@@ -26,7 +26,7 @@ $supportPhone = '+1 (555) 123-4567';
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
                 <div class="col-span-1 md:col-span-2 lg:col-span-2 flex flex-col items-center md:items-start text-center md:text-left">
                     <div class="flex items-center mb-5">
-                        <img src="/assets/images/logo.png" alt="<?php echo htmlspecialchars($companyName); ?> Logo" class="h-16 w-16 mr-4 rounded-full shadow-md">
+                       
                         <div class="text-5xl font-extrabold text-blue-custom"><?php echo htmlspecialchars($companyName); ?></div>
                     </div>
                     <p class="leading-relaxed text-gray-400 mb-4">Your premier marketplace for fast, easy, and affordable equipment rentals. We connect you with the best local deals for dumpsters, temporary toilets, storage, and heavy machinery, ensuring your projects run smoothly and efficiently.</p>
