@@ -18,8 +18,6 @@ generate_csrf_token();
 $csrf_token = $_SESSION['csrf_token'];
 
 $user_id = $_SESSION['user_id'];
-$junk_removal_requests = [];
-$junk_detail_view_data = null;
 
 // --- Fetch User Data for Autopopulation ---
 $stmt_user = $conn->prepare("SELECT first_name, last_name, email, phone_number FROM users WHERE id = ?");
@@ -107,7 +105,7 @@ if ($requested_quote_id_for_detail) {
         $params[] = $search_term;
         $params[] = $search_term;
         $params[] = $search_term;
-        $types .= "sss";
+        $types .= "ssss";
     }
 
     // Date Range Filter
@@ -202,6 +200,9 @@ function getStatusBadgeClass($status) {
 </div>
 
 <div id="junk-removal-form-section" class="hidden">
+    <button class="mb-4 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300" id="back-to-list-from-form-btn">
+        <i class="fas fa-arrow-left mr-2"></i>Back to Requests
+    </button>
     <div class="bg-white p-6 rounded-lg shadow-md border border-blue-200">
         <div class="flex justify-between items-center mb-4">
             <h2 class="text-xl font-semibold text-gray-700">New Junk Removal Quote</h2>
@@ -245,19 +246,25 @@ function getStatusBadgeClass($status) {
             </div>
 
             <h3 class="text-lg font-semibold text-gray-700 mt-6 mb-2">Junk Items</h3>
-            <table id="junk-items-table" class="min-w-full divide-y divide-gray-200 mb-4">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase">Item</th>
-                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase">Quantity</th>
-                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase">Estimated Dimensions</th>
-                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase">Estimated Weight</th>
-                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase"></th>
-                    </tr>
-                </thead>
-                <tbody id="junk-items-tbody">
-                </tbody>
-            </table>
+            <div class="hidden md:block overflow-x-auto">
+                <table id="junk-items-table" class="min-w-full divide-y divide-gray-200 mb-4">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase">Item</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase">Quantity</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase">Estimated Dimensions</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase">Estimated Weight</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="junk-items-tbody">
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="junk-items-card-view" class="md:hidden space-y-3 mb-4">
+                </div>
+
             <button type="button" id="add-junk-item-row" class="py-2 px-4 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors duration-200 text-sm">
                 <i class="fas fa-plus mr-2"></i>Add Item
             </button>
@@ -273,45 +280,57 @@ function getStatusBadgeClass($status) {
 <div class="bg-white p-6 rounded-lg shadow-md border border-blue-200 <?php echo $junk_detail_view_data ? 'hidden' : ''; ?>" id="junk-removal-list">
     <h2 class="text-xl font-semibold text-gray-700 mb-4 flex items-center"><i class="fas fa-history mr-2 text-blue-600"></i>Your Past Junk Removal Requests</h2>
     
-    <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div class="flex items-center gap-2">
-            <label for="status-filter" class="text-sm font-medium text-gray-700">Status:</label>
-            <select id="status-filter" onchange="window.applyJunkRemovalFilters()"
-                    class="p-2 border border-gray-300 rounded-md text-sm">
-                <option value="all" <?php echo $filter_status === 'all' ? 'selected' : ''; ?>>All</option>
-                <option value="customer_draft" <?php echo $filter_status === 'customer_draft' ? 'selected' : ''; ?>>Draft</option>
-                <option value="pending" <?php echo $filter_status === 'pending' ? 'selected' : ''; ?>>Pending</option>
-                <option value="quoted" <?php echo $filter_status === 'quoted' ? 'selected' : ''; ?>>Quoted</option>
-                <option value="accepted" <?php echo $filter_status === 'accepted' ? 'selected' : ''; ?>>Accepted</option>
-                <option value="rejected" <?php echo $filter_status === 'rejected' ? 'selected' : ''; ?>>Rejected</option>
-                <option value="converted_to_booking" <?php echo $filter_status === 'converted_to_booking' ? 'selected' : ''; ?>>Converted to Booking</option>
-            </select>
-        </div>
-
-        <div class="flex items-center gap-2">
-            <label for="start-date-filter" class="text-sm font-medium text-gray-700">From:</label>
-            <input type="date" id="start-date-filter" value="<?php echo htmlspecialchars($start_date_filter); ?>"
-                   class="p-2 border border-gray-300 rounded-md text-sm" onchange="window.applyJunkRemovalFilters()">
-            <label for="end-date-filter" class="text-sm font-medium text-gray-700">To:</label>
-            <input type="date" id="end-date-filter" value="<?php echo htmlspecialchars($end_date_filter); ?>"
-                   class="p-2 border border-gray-300 rounded-md text-sm" onchange="window.applyJunkRemovalFilters()">
-        </div>
-
-        <div class="flex-grow max-w-sm">
+    <div class="mb-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div class="flex-grow w-full sm:w-auto flex items-center gap-2">
             <input type="text" id="search-input" placeholder="Search by ID, location, items..."
                    class="p-2 border border-gray-300 rounded-md w-full text-sm"
                    value="<?php echo htmlspecialchars($search_query); ?>"
                    onkeydown="if(event.key === 'Enter') window.applyJunkRemovalFilters()">
+            <button id="toggle-filters-btn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-md md:hidden">
+                <i class="fas fa-filter"></i>
+            </button>
+            <button onclick="window.applyJunkRemovalFilters()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-md hidden md:block">
+                <i class="fas fa-search"></i>
+            </button>
         </div>
-        <button onclick="window.applyJunkRemovalFilters()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-md text-sm">
-            Apply Filters
+
+        <div id="filter-options-section" class="flex-col sm:flex-row gap-3 w-full md:flex hidden" style="max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out, opacity 0.3s ease-out; opacity: 0;">
+            <div class="flex items-center gap-2 flex-grow">
+                <label for="status-filter" class="text-sm font-medium text-gray-700">Status:</label>
+                <select id="status-filter" onchange="window.applyJunkRemovalFilters()"
+                        class="p-2 border border-gray-300 rounded-md text-sm flex-grow">
+                    <option value="all" <?php echo $filter_status === 'all' ? 'selected' : ''; ?>>All</option>
+                    <option value="customer_draft" <?php echo $filter_status === 'customer_draft' ? 'selected' : ''; ?>>Draft</option>
+                    <option value="pending" <?php echo $filter_status === 'pending' ? 'selected' : ''; ?>>Pending</option>
+                    <option value="quoted" <?php echo $filter_status === 'quoted' ? 'selected' : ''; ?>>Quoted</option>
+                    <option value="accepted" <?php echo $filter_status === 'accepted' ? 'selected' : ''; ?>>Accepted</option>
+                    <option value="rejected" <?php echo $filter_status === 'rejected' ? 'selected' : ''; ?>>Rejected</option>
+                    <option value="converted_to_booking" <?php echo $filter_status === 'converted_to_booking' ? 'selected' : ''; ?>>Converted to Booking</option>
+                </select>
+            </div>
+            <div class="flex items-center gap-2 w-full sm:w-auto">
+                <label for="start-date-filter" class="text-sm font-medium text-gray-700">From:</label>
+                <input type="date" id="start-date-filter" value="<?php echo htmlspecialchars($start_date_filter); ?>"
+                       class="p-2 border border-gray-300 rounded-md text-sm w-full flex-grow" onchange="window.applyJunkRemovalFilters()">
+                <label for="end-date-filter" class="text-sm font-medium text-gray-700">To:</label>
+                <input type="date" id="end-date-filter" value="<?php echo htmlspecialchars($end_date_filter); ?>"
+                       class="p-2 border border-gray-300 rounded-md text-sm w-full flex-grow" onchange="window.applyJunkRemovalFilters()">
+            </div>
+            <button onclick="window.applyJunkRemovalFilters()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-md w-full sm:w-auto md:hidden">
+                Apply Filters
+            </button>
+        </div>
+    </div>
+    <div class="flex justify-end mb-4">
+        <button id="bulk-delete-junk-requests-btn" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200 shadow-md hidden">
+            <i class="fas fa-trash-alt mr-2"></i>Delete Selected
         </button>
     </div>
 
     <?php if (empty($junk_removal_requests)): ?>
         <p class="text-gray-600 text-center p-4">No junk removal requests found for the selected filters or search query.</p>
     <?php else: ?>
-        <div class="overflow-x-auto">
+        <div class="hidden md:block overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-blue-50">
                     <tr>
@@ -360,6 +379,50 @@ function getStatusBadgeClass($status) {
                     <?php endforeach; ?>
                 </tbody>
             </table>
+        </div>
+
+        <div class="md:hidden space-y-4">
+            <?php foreach ($junk_removal_requests as $request): ?>
+                <div class="bg-white rounded-lg shadow-md border border-blue-200 p-4 relative">
+                    <div class="absolute top-3 right-3 flex space-x-2">
+                        <input type="checkbox" class="junk-request-checkbox h-4 w-4" value="<?php echo $request['quote_id']; ?>">
+                    </div>
+                    <p class="text-sm font-bold text-gray-800 mb-1">Request ID: #Q<?php echo htmlspecialchars($request['quote_id']); ?></p>
+                    <p class="text-xs text-gray-600 mb-2">Date Submitted: <?php echo (new DateTime($request['created_at']))->format('Y-m-d H:i'); ?></p>
+                    <div class="border-t border-b border-gray-200 py-2 mb-2">
+                        <p class="text-sm text-gray-700"><span class="font-medium">Location:</span> <?php echo htmlspecialchars($request['location']); ?></p>
+                        <p class="text-sm text-gray-700"><span class="font-medium">Items:</span> 
+                            <?php
+                            if (!empty($request['junk_items_json'])) {
+                                $item_types = array_column($request['junk_items_json'], 'itemType');
+                                echo htmlspecialchars(implode(', ', $item_types));
+                            } else {
+                                echo 'N/A';
+                            }
+                            ?>
+                        </p>
+                        <p class="text-sm text-gray-700 mt-1"><span class="font-medium">Status:</span> 
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <?php echo getStatusBadgeClass($request['status']); ?>">
+                                <?php echo htmlspecialchars(strtoupper(str_replace('_', ' ', $request['status']))); ?>
+                            </span>
+                        </p>
+                    </div>
+                    <div class="flex flex-wrap gap-2 justify-end mt-3">
+                        <button class="px-3 py-1 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 text-xs view-junk-request-details" data-quote-id="<?php echo htmlspecialchars($request['quote_id']); ?>">
+                            <i class="fas fa-eye mr-1"></i>Details
+                        </button>
+                        <?php if ($request['status'] === 'quoted'): ?>
+                            <button class="px-3 py-1 bg-green-100 text-green-700 rounded-md hover:bg-green-200 text-xs" onclick="window.loadCustomerSection('invoices', {quote_id: <?php echo $request['quote_id']; ?>});">
+                                <i class="fas fa-file-invoice-dollar mr-1"></i>Review Quote
+                            </button>
+                        <?php elseif ($request['status'] === 'customer_draft'): ?>
+                            <button class="px-3 py-1 bg-orange-100 text-orange-700 rounded-md hover:bg-orange-200 text-xs edit-junk-request-details" data-quote-id="<?php echo htmlspecialchars($request['quote_id']); ?>">
+                                <i class="fas fa-edit mr-1"></i>Edit Draft
+                            </button>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            <?php endforeach; ?>
         </div>
 
         <nav class="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3">
@@ -447,7 +510,7 @@ function getStatusBadgeClass($status) {
             <div id="junk-items-view-mode">
                 <h3 class="text-xl font-semibold text-gray-700 mb-4">Identified Junk Items</h3>
                 <?php if (!empty($junk_detail_view_data['junk_items_json'])): ?>
-                    <div class="overflow-x-auto mb-6">
+                    <div class="hidden md:block overflow-x-auto mb-6">
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
                                 <tr>
@@ -469,6 +532,16 @@ function getStatusBadgeClass($status) {
                             </tbody>
                         </table>
                     </div>
+                    <div class="md:hidden space-y-3 mb-4">
+                        <?php foreach ($junk_detail_view_data['junk_items_json'] as $item): ?>
+                            <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-sm">
+                                <p class="text-sm font-medium text-gray-800">Item: <span class="font-normal"><?php echo htmlspecialchars($item['itemType'] ?? 'Unknown Item'); ?></span></p>
+                                <p class="text-xs text-gray-600">Quantity: <?php echo htmlspecialchars($item['quantity'] ?? 'N/A'); ?></p>
+                                <p class="text-xs text-gray-600">Est. Dims: <?php echo htmlspecialchars($item['estDimensions'] ?? 'N/A'); ?></p>
+                                <p class="text-xs text-gray-600">Est. Wt: <?php echo htmlspecialchars($item['estWeight'] ?? 'N/A'); ?></p>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
                 <?php else: ?>
                     <p class="text-gray-600 mb-6">No specific junk items detailed.</p>
                 <?php endif; ?>
@@ -476,19 +549,24 @@ function getStatusBadgeClass($status) {
 
             <div id="junk-items-edit-mode" class="hidden">
                 <h3 class="text-xl font-semibold text-gray-700 mb-4">Edit Junk Items</h3>
-                <table class="min-w-full divide-y divide-gray-200 mb-4" id="editable-junk-items-table">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Item Type</th>
-                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase w-24">Qty</th>
-                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Est. Dims</th>
-                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Est. Wt.</th>
-                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase w-16"></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        </tbody>
-                </table>
+                <div class="hidden md:block overflow-x-auto mb-4">
+                    <table class="min-w-full divide-y divide-gray-200" id="editable-junk-items-table">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Item Type</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase w-24">Qty</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Est. Dims</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Est. Wt.</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase w-16"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="editable-junk-items-tbody">
+                            </tbody>
+                    </table>
+                </div>
+                <div id="editable-junk-items-card-view" class="md:hidden space-y-3 mb-4">
+                    </div>
+
                 <button type="button" id="add-junk-item-btn" class="mb-4 px-4 py-2 bg-blue-100 text-blue-700 rounded-lg text-sm hover:bg-blue-200">
                     <i class="fas fa-plus-circle mr-2"></i>Add Item
                 </button>
@@ -509,9 +587,9 @@ function getStatusBadgeClass($status) {
                             $isImage = in_array(strtolower($fileExtension), ['jpg', 'jpeg', 'png', 'gif']);
                             ?>
                             <?php if ($isImage): ?>
-                                <img src="<?php echo htmlspecialchars($media_url); ?>" alt="Junk item photo" class="w-full h-32 object-cover rounded-lg shadow-md cursor-pointer view-media-btn">
+                                <img src="<?php echo htmlspecialchars($media_url); ?>" alt="Junk item photo" class="w-full h-32 object-cover rounded-lg shadow-md cursor-pointer view-media-btn" loading="lazy">
                             <?php else: ?>
-                                <video controls src="<?php echo htmlspecialchars($media_url); ?>" class="w-full h-32 object-cover rounded-lg shadow-md"></video>
+                                <video controls src="<?php echo htmlspecialchars($media_url); ?>" class="w-full h-32 object-cover rounded-lg shadow-md" preload="none" loading="lazy"></video>
                             <?php endif; ?>
                             <div class="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg">
                                 <a href="<?php echo htmlspecialchars($media_url); ?>" target="_blank" class="text-white text-3xl hover:text-blue-300" title="Open Media">
@@ -746,7 +824,7 @@ function getStatusBadgeClass($status) {
             }
             // Handle "Add Item" button (edit mode)
             else if (event.target.id === 'add-junk-item-btn') {
-                addJunkItemRow(); // Add an empty row
+                addJunkItemRowToEditTable(); // Add an empty row to the *edit* table
             }
             // Handle "Save Changes" button (edit mode)
             else if (event.target.id === 'save-junk-items-btn') {
@@ -867,6 +945,39 @@ function getStatusBadgeClass($status) {
                 document.getElementById('ai-vision-upload').click();
                 window.hideModal('camera-options-modal');
             }
+            // Toggle filter section visibility on mobile (smooth transition)
+            else if (event.target.id === 'toggle-filters-btn') {
+                const filterOptionsSection = document.getElementById('filter-options-section');
+                if (filterOptionsSection) {
+                    if (filterOptionsSection.classList.contains('open')) {
+                        filterOptionsSection.style.maxHeight = '0';
+                        filterOptionsSection.style.opacity = '0';
+                        filterOptionsSection.classList.remove('open');
+                        filterOptionsSection.addEventListener('transitionend', () => {
+                            filterOptionsSection.classList.add('hidden');
+                            filterOptionsSection.classList.remove('flex'); // Remove flex after transition
+                        }, { once: true });
+                    } else {
+                        filterOptionsSection.classList.remove('hidden');
+                        filterOptionsSection.classList.add('flex'); // Add flex first
+                        // Trigger reflow to ensure transition works
+                        void filterOptionsSection.offsetHeight; 
+                        filterOptionsSection.style.maxHeight = filterOptionsSection.scrollHeight + 'px';
+                        filterOptionsSection.style.opacity = '1';
+                        filterOptionsSection.classList.add('open');
+                    }
+                }
+            }
+            // Handle back button from 'Create Quote' form
+            else if (event.target.id === 'back-to-list-from-form-btn') {
+                document.getElementById('junk-removal-form-section').classList.add('hidden');
+                document.getElementById('junk-removal-list').classList.remove('hidden');
+                document.getElementById('junk-removal-intro-section').classList.remove('hidden'); // Show intro section again
+                // Reset form fields after going back
+                document.getElementById('junk-removal-quote-form').reset();
+                document.getElementById('junk-items-tbody').innerHTML = ''; // Clear items from table
+                document.getElementById('junk-items-card-view').innerHTML = ''; // Clear items from card view
+            }
         });
 
         // Event delegation for general checkbox changes (for bulk delete button visibility)
@@ -882,36 +993,192 @@ function getStatusBadgeClass($status) {
 
         // --- Helper functions for GUI-based Editing ---
         function renderEditableJunkItems(items) {
-            const editableJunkItemsTableBody = document.getElementById('editable-junk-items-table')?.querySelector('tbody');
-            if (!editableJunkItemsTableBody) return;
-            editableJunkItemsTableBody.innerHTML = ''; // Clear existing rows
+            const editableJunkItemsTableBody = document.getElementById('editable-junk-items-tbody');
+            const editableJunkItemsCardView = document.getElementById('editable-junk-items-card-view');
+
+            if (!editableJunkItemsTableBody || !editableJunkItemsCardView) return;
+
+            editableJunkItemsTableBody.innerHTML = ''; // Clear existing rows in table
+            editableJunkItemsCardView.innerHTML = ''; // Clear existing items in card view
+
             items.forEach(item => {
-                addJunkItemRow(item);
+                addJunkItemRowToEditTable(item);
             });
         }
 
-        function addJunkItemRow(item = {}) {
-            const editableJunkItemsTableBody = document.getElementById('editable-junk-items-table')?.querySelector('tbody');
-            if (!editableJunkItemsTableBody) return;
-            const newRow = document.createElement('tr');
-            newRow.innerHTML = `
-                <td class="p-2"><input type="text" class="w-full p-2 border rounded" value="${item.itemType ?? ''}" placeholder="e.g., Sofa" required></td>
-                <td class="p-2"><input type="number" class="w-full p-2 border rounded" value="${item.quantity ?? 1}" min="1" required></td>
-                <td class="p-2"><input type="text" class="w-full p-2 border rounded" value="${item.estDimensions ?? ''}" placeholder="e.g., 6x3x3 ft"></td>
-                <td class="p-2"><input type="text" class="w-full p-2 border rounded" value="${item.estWeight ?? ''}" placeholder="e.g., 100 lbs"></td>
-                <td class="p-2 text-center"><button type="button" class="text-red-500 hover:text-red-700 remove-junk-item-btn">&times;</button></td>
+        // Function to add a row to the *edit* table (for existing quotes)
+        function addJunkItemRowToEditTable(item = {}) {
+            const editableJunkItemsTableBody = document.getElementById('editable-junk-items-tbody');
+            const editableJunkItemsCardView = document.getElementById('editable-junk-items-card-view');
+            const uniqueId = 'edit-item-' + Date.now() + Math.random().toString(36).substr(2, 9); // More unique ID
+
+            if (!editableJunkItemsTableBody || !editableJunkItemsCardView) return;
+
+            // Table Row (Desktop/Tablet)
+            const tableRow = document.createElement('tr');
+            tableRow.setAttribute('data-item-id', uniqueId);
+            tableRow.innerHTML = `
+                <td class="p-2"><input type="text" class="w-full p-2 border rounded" value="${item.itemType ?? ''}" placeholder="e.g., Sofa" required data-field="itemType"></td>
+                <td class="p-2"><input type="number" class="w-full p-2 border rounded" value="${item.quantity ?? 1}" min="1" required data-field="quantity"></td>
+                <td class="p-2"><input type="text" class="w-full p-2 border rounded" value="${item.estDimensions ?? ''}" placeholder="e.g., 6x3x3 ft" data-field="estDimensions"></td>
+                <td class="p-2"><input type="text" class="w-full p-2 border rounded" value="${item.estWeight ?? ''}" placeholder="e.g., 100 lbs" data-field="estWeight"></td>
+                <td class="p-2 text-center"><button type="button" class="text-red-500 hover:text-red-700 remove-editable-item-btn" data-remove-id="${uniqueId}"><i class="fas fa-trash"></i></button></td>
             `;
-            editableJunkItemsTableBody.appendChild(newRow);
-            // Attach listener for new remove button
-            newRow.querySelector('.remove-junk-item-btn')?.addEventListener('click', (e) => e.target.closest('tr').remove());
+            editableJunkItemsTableBody.appendChild(tableRow);
+
+            // Mobile Card (Mobile View)
+            const cardItem = document.createElement('div');
+            cardItem.classList.add('junk-item-card-instance', 'bg-white', 'p-4', 'rounded-lg', 'shadow', 'border', 'border-gray-200');
+            cardItem.setAttribute('data-item-id', uniqueId); // Link to table row via data-id
+            cardItem.innerHTML = `
+                <div class="flex justify-between items-center mb-2">
+                    <h4 class="font-bold text-gray-800">Item Details</h4>
+                    <button type="button" class="text-red-500 hover:text-red-700 remove-editable-item-btn" data-remove-id="${uniqueId}"><i class="fas fa-trash"></i></button>
+                </div>
+                <div class="space-y-2">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700">Item Type</label>
+                        <input type="text" class="w-full p-2 border border-gray-300 rounded-md text-sm" value="${item.itemType ?? ''}" placeholder="e.g., Sofa" required data-target-id="${uniqueId}" data-field="itemType">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700">Quantity</label>
+                        <input type="number" class="w-full p-2 border border-gray-300 rounded-md text-sm" value="${item.quantity ?? 1}" min="1" required data-target-id="${uniqueId}" data-field="quantity">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700">Est. Dimensions</label>
+                        <input type="text" class="w-full p-2 border border-gray-300 rounded-md text-sm" value="${item.estDimensions ?? ''}" placeholder="e.g., 6x3x3 ft" data-target-id="${uniqueId}" data-field="estDimensions">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700">Est. Weight</label>
+                        <input type="text" class="w-full p-2 border border-gray-300 rounded-md text-sm" value="${item.estWeight ?? ''}" placeholder="e.g., 100 lbs" data-target-id="${uniqueId}" data-field="estWeight">
+                    </div>
+                </div>
+            `;
+            editableJunkItemsCardView.appendChild(cardItem);
+
+            // Add input event listeners for synchronization (Card -> Table)
+            cardItem.querySelectorAll('input').forEach(input => {
+                input.addEventListener('input', (e) => {
+                    const targetId = e.target.dataset.targetId;
+                    const field = e.target.dataset.field;
+                    // Find corresponding input in the hidden table row
+                    const correspondingInput = document.querySelector(`#editable-junk-items-tbody tr[data-item-id="${targetId}"] input[data-field="${field}"]`);
+                    if (correspondingInput) {
+                        correspondingInput.value = e.target.value;
+                    }
+                });
+            });
+
+             // Add input event listeners for synchronization (Table -> Card)
+             tableRow.querySelectorAll('input[data-field]').forEach(input => {
+                input.addEventListener('input', (e) => {
+                    const targetId = tableRow.dataset.itemId;
+                    const field = e.target.dataset.field;
+                    // Find corresponding input in the card
+                    const correspondingInput = document.querySelector(`#editable-junk-items-card-view div[data-item-id="${targetId}"] input[data-field="${field}"]`);
+                    if (correspondingInput) {
+                        correspondingInput.value = e.target.value;
+                    }
+                });
+            });
         }
+
+        // --- NEW: Global function for adding items to the New Quote Form (both table & card view) ---
+        window.addJunkItemRowToNewQuoteTable = function(item = {}) { // Make it global
+            const tbody = document.getElementById('junk-items-tbody');
+            const cardView = document.getElementById('junk-items-card-view');
+            const uniqueId = 'new-item-' + Date.now() + Math.random().toString(36).substr(2, 9); // More unique ID
+
+            // Table Row
+            const tableRow = document.createElement('tr');
+            tableRow.setAttribute('data-item-id', uniqueId);
+            tableRow.innerHTML = `
+                <td class="p-2"><input type="text" class="w-full p-2 border rounded junk-item-name" placeholder="Item Name" value="${item.item || ''}" data-field="itemType"></td>
+                <td class="p-2"><input type="number" class="w-full p-2 border rounded junk-item-quantity" placeholder="1" value="${item.quantity || 1}" min="1" data-field="quantity"></td>
+                <td class="p-2"><input type="text" class="w-full p-2 border rounded junk-item-dims" placeholder="e.g., 6x3x3 ft" value="${item.estDimensions || ''}" data-field="estDimensions"></td>
+                <td class="p-2"><input type="text" class="w-full p-2 border rounded junk-item-weight" placeholder="e.g., 100 lbs" value="${item.estWeight || ''}" data-field="estWeight"></td>
+                <td class="p-2 text-center"><button type="button" class="text-red-500 hover:text-red-700 remove-new-item-btn" data-remove-id="${uniqueId}"><i class="fas fa-trash"></i></button></td>
+            `;
+            tbody.appendChild(tableRow);
+
+            // Mobile Card
+            const cardItem = document.createElement('div');
+            cardItem.classList.add('junk-item-card-instance', 'bg-white', 'p-4', 'rounded-lg', 'shadow', 'border', 'border-gray-200');
+            cardItem.setAttribute('data-item-id', uniqueId); // Link to table row via data-id
+            cardItem.innerHTML = `
+                <div class="flex justify-between items-center mb-2">
+                    <h4 class="font-bold text-gray-800">Item Details</h4>
+                    <button type="button" class="text-red-500 hover:text-red-700 remove-new-item-btn" data-remove-id="${uniqueId}"><i class="fas fa-trash"></i></button>
+                </div>
+                <div class="space-y-2">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700">Item Type</label>
+                        <input type="text" class="w-full p-2 border border-gray-300 rounded-md text-sm" value="${item.item || ''}" placeholder="e.g., Sofa" required data-target-id="${uniqueId}" data-field="itemType">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700">Quantity</label>
+                        <input type="number" class="w-full p-2 border border-gray-300 rounded-md text-sm" value="${item.quantity || 1}" min="1" required data-target-id="${uniqueId}" data-field="quantity">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700">Est. Dimensions</label>
+                        <input type="text" class="w-full p-2 border border-gray-300 rounded-md text-sm" value="${item.estDimensions || ''}" placeholder="e.g., 6x3x3 ft" data-target-id="${uniqueId}" data-field="estDimensions">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700">Est. Weight</label>
+                        <input type="text" class="w-full p-2 border border-gray-300 rounded-md text-sm" value="${item.estWeight || ''}" placeholder="e.g., 100 lbs" data-target-id="${uniqueId}" data-field="estWeight">
+                    </div>
+                </div>
+            `;
+            cardView.appendChild(cardItem);
+
+            // Add input event listeners for synchronization (Card -> Table)
+            cardItem.querySelectorAll('input').forEach(input => {
+                input.addEventListener('input', (e) => {
+                    const targetId = e.target.dataset.targetId;
+                    const field = e.target.dataset.field;
+                    // Find corresponding input in the hidden table row
+                    const correspondingInput = document.querySelector(`#junk-items-tbody tr[data-item-id="${targetId}"] input[data-field="${field}"]`);
+                    if (correspondingInput) {
+                        correspondingInput.value = e.target.value;
+                    }
+                });
+            });
+
+             // Add input event listeners for synchronization (Table -> Card)
+             tableRow.querySelectorAll('input[data-field]').forEach(input => {
+                input.addEventListener('input', (e) => {
+                    const targetId = tableRow.dataset.itemId;
+                    const field = e.target.dataset.field;
+                    // Find corresponding input in the card
+                    const correspondingInput = document.querySelector(`#junk-items-card-view div[data-item-id="${targetId}"] input[data-field="${field}"]`);
+                    if (correspondingInput) {
+                        correspondingInput.value = e.target.value;
+                    }
+                });
+            });
+        }
+
 
         function collectEditedJunkItems() {
             const items = [];
-            const editableJunkItemsTableBody = document.getElementById('editable-junk-items-table')?.querySelector('tbody');
-            if (!editableJunkItemsTableBody) return items;
+            // Collect items from the editable-junk-items-tbody as it's the source of truth for saving edits.
+            const editableJunkItemsTableBody = document.getElementById('editable-junk-items-tbody'); 
+            if (!editableJunkItemsTableBody) { // Fallback if in 'New Quote' form
+                 document.querySelectorAll('#junk-items-tbody tr').forEach(row => {
+                    const inputs = row.querySelectorAll('input[data-field]');
+                    items.push({
+                        itemType: inputs[0].value.trim(),
+                        quantity: parseInt(inputs[1].value) || 1,
+                        estDimensions: inputs[2].value.trim(),
+                        estWeight: inputs[3].value.trim()
+                    });
+                });
+                return items;
+            }
+
             editableJunkItemsTableBody.querySelectorAll('tr').forEach(row => {
-                const inputs = row.querySelectorAll('input');
+                // Select inputs using data-field attribute to be robust
+                const inputs = row.querySelectorAll('input[data-field]');
                 items.push({
                     itemType: inputs[0].value.trim(),
                     quantity: parseInt(inputs[1].value) || 1,
@@ -927,19 +1194,14 @@ function getStatusBadgeClass($status) {
             document.getElementById('junk-removal-intro-section').classList.add('hidden');
             document.getElementById('junk-removal-list').classList.add('hidden');
             document.getElementById('junk-removal-form-section').classList.remove('hidden');
+            // Clear items when opening new quote form
+            document.getElementById('junk-items-tbody').innerHTML = ''; // Clear items from table
+            document.getElementById('junk-items-card-view').innerHTML = ''; // Clear items from card view
+            window.addJunkItemRowToNewQuoteTable(); // Add a default empty row/card for convenience
         });
 
         document.getElementById('add-junk-item-row').addEventListener('click', () => {
-            const tbody = document.getElementById('junk-items-tbody');
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td class="p-2"><input type="text" class="w-full p-2 border rounded junk-item-name" placeholder="Item Name"></td>
-                <td class="p-2"><input type="number" class="w-full p-2 border rounded junk-item-quantity" placeholder="1" value="1" min="1"></td>
-                <td class="p-2"><input type="text" class="w-full p-2 border rounded junk-item-dims" placeholder="e.g., 6x3x3 ft"></td>
-                <td class="p-2"><input type="text" class="w-full p-2 border rounded junk-item-weight" placeholder="e.g., 100 lbs"></td>
-                <td class="p-2 text-center"><button type="button" class="text-red-500 hover:text-red-700" onclick="this.closest('tr').remove()">&times;</button></td>
-            `;
-            tbody.appendChild(row);
+            window.addJunkItemRowToNewQuoteTable(); // Call the global function
         });
 
         document.getElementById('ai-vision-upload').addEventListener('change', async (event) => {
@@ -983,17 +1245,12 @@ function getStatusBadgeClass($status) {
 
                 if (result.success && result.items) {
                     const tbody = document.getElementById('junk-items-tbody');
-                    tbody.innerHTML = ''; // Clear existing items
+                    const cardView = document.getElementById('junk-items-card-view');
+                    tbody.innerHTML = ''; // Clear existing items in table
+                    cardView.innerHTML = ''; // Clear existing items in card view
+                    
                     result.items.forEach(item => {
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                                <td class="p-2"><input type="text" class="w-full p-2 border rounded junk-item-name" value="${item.item || ''}"></td>
-                                <td class="p-2"><input type="number" class="w-full p-2 border rounded junk-item-quantity" value="1" min="1"></td>
-                                <td class="p-2"><input type="text" class="w-full p-2 border rounded junk-item-dims" value="${item.estDimensions || ''}"></td>
-                                <td class="p-2"><input type="text" class="w-full p-2 border rounded junk-item-weight" value="${item.estWeight || ''}"></td>
-                                <td class="p-2 text-center"><button type="button" class="text-red-500 hover:text-red-700" onclick="this.closest('tr').remove()">&times;</button></td>
-                            `;
-                        tbody.appendChild(row);
+                        window.addJunkItemRowToNewQuoteTable(item); // Add to table and card view
                     });
                     window.showToast('Items detected and added to the list!', 'success');
                 } else {
@@ -1007,16 +1264,8 @@ function getStatusBadgeClass($status) {
 
         function handleFormSubmission(action) {
             const form = document.getElementById('junk-removal-quote-form');
-            const junkItems = [];
-            document.querySelectorAll('#junk-items-tbody tr').forEach(row => {
-                const inputs = row.querySelectorAll('input');
-                junkItems.push({
-                    itemType: inputs[0].value,
-                    quantity: inputs[1].value,
-                    estDimensions: inputs[2].value,
-                    estWeight: inputs[3].value
-                });
-            });
+            // Collect items directly from the hidden table inputs, as they are always in sync.
+            const junkItems = collectEditedJunkItems(); 
 
             const formData = new FormData(form);
             formData.append('junk_items', JSON.stringify(junkItems));
@@ -1049,6 +1298,9 @@ function getStatusBadgeClass($status) {
         function isMobileDevice() {
             return /Mobi|Android|iPhone|iPad|iPod|Windows Phone|BlackBerry/i.test(navigator.userAgent);
         }
+
+        // Initial check for bulk delete button visibility on page load
+        document.addEventListener('DOMContentLoaded', toggleBulkDeleteButtonVisibility);
 
     })(); // End of IIFE
 </script>
