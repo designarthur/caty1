@@ -193,14 +193,6 @@ $conn->close();
     .custom-scroll::-webkit-scrollbar-thumb:hover {
         background: #6a7ecc; /* Slightly darker blue on hover */
     }
-    /* Hide scrollbar for junk removal steps (if used directly in pages) */
-    .scroll-hidden::-webkit-scrollbar {
-        display: none;
-    }
-    .scroll-hidden {
-        -ms-overflow-style: none; /* IE and Edge */
-        scrollbar-width: none; /* Firefox */
-    }
 
     /* Toast styles */
     #toast-container {
@@ -269,7 +261,7 @@ $conn->close();
     #ai-chat-modal .chat-bubble {
         padding: 0.75rem 1.25rem;
         border-radius: 1.25rem;
-        max-width: 80%;
+        max-w-80%;
         line-height: 1.5;
         word-wrap: break-word;
         box-shadow: 0 2px 5px rgba(0,0,0,0.05);
@@ -420,7 +412,7 @@ $conn->close();
             if (currentContentArea) {
                 currentContentArea.innerHTML = htmlContent;
             }
-            
+
             // Update active class for desktop links
             currentNavLinksDesktop.forEach(link => link.classList.remove('bg-blue-700', 'text-white'));
             const activeLinkDesktop = document.querySelector(`.nav-link-desktop[data-section="${sectionId}"]`);
@@ -446,6 +438,11 @@ $conn->close();
                     newScript.appendChild(document.createTextNode(oldScript.innerHTML));
                     oldScript.parentNode.replaceChild(newScript, oldScript);
                 });
+            }
+
+            // Call updateNotificationBell after content is loaded and scripts re-run
+            if (window.updateNotificationBell) {
+                window.updateNotificationBell();
             }
 
         } catch (error) {
@@ -548,13 +545,13 @@ $conn->close();
                             if (file.type.startsWith('video/')) {
                                 showToast(`Processing video: ${file.name}...`, 'info');
                                 try {
-                                    const frames = await extractFramesFromVideo(file, 10); // Extract 10 frames
+                                    const frames = await extractFramesFromVideo(file, 10); // Extracts 10 frames
                                     frames.forEach((frame, index) => {
                                         // Convert data URL to Blob/File object to send via FormData
                                         const blob = dataURLtoBlob(frame);
                                         processedFiles.push(new File([blob], `frame_${file.name}_${index}.jpeg`, { type: 'image/jpeg' }));
                                     });
-                                    showToast(`Extracted ${frames.length} frames from ${file.name}.`, 'success');
+                                    showToast(`Extracted ${frames.length} frames from video.`, 'success');
                                 } catch (error) {
                                     console.error('Error extracting frames:', error);
                                     showToast(`Failed to extract frames from ${file.name}.`, 'error');
