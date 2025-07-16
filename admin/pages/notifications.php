@@ -7,16 +7,21 @@ if (session_status() == PHP_SESSION_NONE) {
 }
 require_once __DIR__ . '/../../includes/db.php';
 require_once __DIR__ . '/../../includes/session.php'; // For has_role and user_id
+require_once __DIR__ . '/../../includes/functions.php'; // Required for generate_csrf_token()
 
 if (!is_logged_in() || !has_role('admin')) {
     echo '<div class="text-red-500 text-center p-8">Unauthorized access.</div>';
     exit;
 }
 
+// Generate CSRF token for this page
+generate_csrf_token();
+$csrf_token = $_SESSION['csrf_token'];
+
 $admin_user_id = $_SESSION['user_id'];
 $notifications = [];
 
-// --- Pagination & Filter Variables ---
+// --- Pagination Variables ---
 $items_per_page_options = [10, 25, 50, 100];
 $items_per_page = filter_input(INPUT_GET, 'per_page', FILTER_VALIDATE_INT);
 if (!in_array($items_per_page, $items_per_page_options)) {
@@ -129,7 +134,7 @@ function getNotificationIcon($type) {
                     </div>
                     <div class="flex-grow">
                         <p class="text-sm text-gray-500 mb-1"><?php echo (new DateTime($notification['created_at']))->format('M d, Y H:i A'); ?></p>
-                        <p class="<?php echo $notification['is_read'] ? 'text-gray-700' : 'text-gray-800 font-medium'; ?> mb-2">
+                        <p class="<?php echo $notification['is_read'] ? 'text-gray-700' : 'text-gray-800'; ?> mb-2">
                             <?php echo htmlspecialchars($notification['message']); ?>
                         </p>
                         <?php if (!empty($notification['link'])): ?>
@@ -153,6 +158,7 @@ function getNotificationIcon($type) {
                 </div>
             <?php endforeach; ?>
         </div>
+        
         <nav class="mt-4 flex items-center justify-between flex-wrap gap-4">
             <div>
                 <p class="text-sm text-gray-700">
@@ -206,7 +212,11 @@ function getNotificationIcon($type) {
         const currentParams = new URLSearchParams(window.location.search);
         const newParams = {
             page: currentParams.get('page') || 1,
-            per_page: currentParams.get('per_page') || 25, // Default as in PHP
+            per_page: currentParams.get('per_page') || <?php echo $items_per_page; ?>,
+            status: currentParams.get('status') || 'all',
+            search: currentParams.get('search') || '',
+            start_date: currentParams.get('start_date') || '',
+            end_date: currentParams.get('end_date') || '',
             ...params
         };
         window.loadAdminSection('notifications', newParams);
@@ -214,6 +224,9 @@ function getNotificationIcon($type) {
 
     // --- Event listener for notification actions ---
     document.addEventListener('click', async function(event) {
+        // Define csrfToken here, as it's within the script scope
+        const csrfToken = '<?php echo $csrf_token; ?>';
+
         // Mark individual notification as read
         if (event.target.closest('.mark-read-btn')) {
             const button = event.target.closest('.mark-read-btn');
@@ -225,6 +238,7 @@ function getNotificationIcon($type) {
                 const formData = new FormData();
                 formData.append('action', 'mark_read');
                 formData.append('id', notificationId);
+                formData.append('csrf_token', csrfToken); // Include CSRF token
 
                 const response = await fetch('/api/admin/notifications.php', {
                     method: 'POST',
@@ -250,7 +264,7 @@ function getNotificationIcon($type) {
             const notificationItem = button.closest('.notification-item');
             const notificationId = notificationItem.dataset.id;
 
-            showConfirmationModal(
+            window.showConfirmationModal(
                 'Delete Notification',
                 'Are you sure you want to delete this notification? This cannot be undone.',
                 async (confirmed) => {
@@ -260,6 +274,7 @@ function getNotificationIcon($type) {
                             const formData = new FormData();
                             formData.append('action', 'delete');
                             formData.append('id', notificationId);
+                            formData.append('csrf_token', csrfToken); // Include CSRF token
 
                             const response = await fetch('/api/admin/notifications.php', {
                                 method: 'POST',
@@ -295,6 +310,7 @@ function getNotificationIcon($type) {
                 const formData = new FormData();
                 formData.append('action', 'mark_read');
                 formData.append('id', notificationId);
+                formData.append('csrf_token', csrfToken); // Include CSRF token
                 await fetch('/api/admin/notifications.php', { method: 'POST', body: formData });
             } catch (error) {
                 console.error('Failed to mark notification as read on link click (admin):', error);
@@ -320,7 +336,9 @@ function getNotificationIcon($type) {
     const markAllReadBtn = document.getElementById('mark-all-read-btn');
     if (markAllReadBtn) {
         markAllReadBtn.addEventListener('click', async function() {
-            showConfirmationModal(
+            // Define csrfToken here, as it's within the script scope
+            const csrfToken = '<?php echo $csrf_token; ?>';
+            window.showConfirmationModal(
                 'Mark All as Read',
                 'Are you sure you want to mark all notifications as read?',
                 async (confirmed) => {
@@ -330,6 +348,7 @@ function getNotificationIcon($type) {
                             const formData = new FormData();
                             formData.append('action', 'mark_read');
                             formData.append('id', 'all');
+                            formData.append('csrf_token', csrfToken); // Include CSRF token
 
                             const response = await fetch('/api/admin/notifications.php', {
                                 method: 'POST',
@@ -358,7 +377,9 @@ function getNotificationIcon($type) {
     const deleteAllBtn = document.getElementById('delete-all-btn');
     if (deleteAllBtn) {
         deleteAllBtn.addEventListener('click', async function() {
-            showConfirmationModal(
+            // Define csrfToken here, as it's within the script scope
+            const csrfToken = '<?php echo $csrf_token; ?>';
+            window.showConfirmationModal(
                 'Delete All Notifications',
                 'Are you sure you want to delete all notifications? This cannot be undone.',
                 async (confirmed) => {
@@ -368,6 +389,7 @@ function getNotificationIcon($type) {
                             const formData = new FormData();
                             formData.append('action', 'delete');
                             formData.append('id', 'all');
+                            formData.append('csrf_token', csrfToken); // Include CSRF token
 
                             const response = await fetch('/api/admin/notifications.php', {
                                 method: 'POST',
