@@ -208,6 +208,11 @@ if (!$companyName) {
                     document.body.appendChild(newScript).parentNode.removeChild(newScript);
                 });
 
+                // Update notification bell after content load
+                if (window.updateAdminNotificationBell) {
+                    window.updateAdminNotificationBell();
+                }
+
             } catch (error) {
                 console.error('Error loading admin section:', error);
                 mainContentArea.innerHTML = `<div class="text-red-500 p-8 text-center">Failed to load content. Please try again.</div>`;
