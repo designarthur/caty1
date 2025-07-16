@@ -4,7 +4,7 @@
 // It uses variables set in the session to display user-specific info.
 
 $userName = $_SESSION['user_first_name'] ?? 'Customer';
-$notificationCount = 0; // Will be fetched dynamically from DB later
+// $notificationCount = 0; // This will now be handled client-side by JS
 
 // You might fetch notification count here from the database if you want it real-time
 // global $conn;
@@ -32,3 +32,31 @@ $notificationCount = 0; // Will be fetched dynamically from DB later
         </button>
         </div>
 </header>
+
+<script>
+    // This function fetches the unread notification count and updates the bell icon
+    window.updateNotificationBell = async function() {
+        try {
+            const response = await fetch('/api/customer/notifications.php?action=get_unread_count');
+            const data = await response.json();
+            const bellSpan = document.querySelector('#notification-bell span'); // Use document.querySelector as this script runs in the main window
+            if (data.success && bellSpan) {
+                if (data.unread_count > 0) {
+                    bellSpan.textContent = data.unread_count;
+                    bellSpan.style.display = 'inline-flex';
+                } else {
+                    bellSpan.style.display = 'none';
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching unread notification count:', error);
+            const bellSpan = document.querySelector('#notification-bell span');
+            if (bellSpan) {
+                bellSpan.style.display = 'none'; // Hide bell on error
+            }
+        }
+    };
+
+    // Initial call to update the bell when the header loads
+    document.addEventListener('DOMContentLoaded', window.updateNotificationBell);
+</script>
