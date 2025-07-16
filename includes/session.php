@@ -52,4 +52,3 @@ function logout() {
     session_destroy();
     redirect('/customer/login.php'); // Redirect to login page after logout
 }
-?>
