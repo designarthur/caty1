@@ -5,9 +5,9 @@
 if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
-require_once __DIR__ . '/../../includes/db.php';
-require_once __DIR__ . '/../../includes/session.php'; // For has_role and user_id
-require_once __DIR__ . '/../../includes/functions.php'; // For CSRF token
+require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/db.php';
+require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/session.php'; // For has_role and user_id
+require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/functions.php'; // For CSRF token
 
 if (!is_logged_in()) {
     echo '<div class="text-red-500 text-center p-8">You must be logged in to view this content.</div>';
@@ -197,38 +197,49 @@ function getStatusBadgeClass($status) {
     <div class="bg-white p-6 rounded-lg shadow-md border border-blue-200">
         <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-3">
             <h2 class="text-xl font-semibold text-gray-700 flex-grow"><i class="fas fa-file-invoice-dollar mr-2 text-blue-600"></i>Your Invoices</h2>
-            
-            <div class="flex items-center gap-2 w-full sm:w-auto">
-                <label for="status-filter" class="text-sm font-medium text-gray-700">Status:</label>
-                <select id="status-filter" onchange="applyFilters()"
-                        class="p-2 border border-gray-300 rounded-md text-sm flex-grow">
-                    <option value="all" <?php echo $filter_status === 'all' ? 'selected' : ''; ?>>All</option>
-                    <option value="pending" <?php echo $filter_status === 'pending' ? 'selected' : ''; ?>>Pending</option>
-                    <option value="paid" <?php echo $filter_status === 'paid' ? 'selected' : ''; ?>>Paid</option>
-                    <option value="partially_paid" <?php echo $filter_status === 'partially_paid' ? 'selected' : ''; ?>>Partially Paid</option>
-                    <option value="cancelled" <?php echo $filter_status === 'cancelled' ? 'selected' : ''; ?>>Cancelled</option>
-                </select>
-            </div>
-            <div class="flex items-center gap-2 w-full sm:w-auto">
-                <label for="start-date-filter" class="text-sm font-medium text-gray-700">From:</label>
-                <input type="date" id="start-date-filter" value="<?php echo htmlspecialchars($start_date_filter); ?>"
-                       class="p-2 border border-gray-300 rounded-md text-sm flex-grow" onchange="applyFilters()">
-                <label for="end-date-filter" class="text-sm font-medium text-gray-700">To:</label>
-                <input type="date" id="end-date-filter" value="<?php echo htmlspecialchars($end_date_filter); ?>"
-                       class="p-2 border border-gray-300 rounded-md text-sm flex-grow" onchange="applyFilters()">
-            </div>
-            <div class="flex-grow w-full sm:w-auto">
+        </div>
+
+        <div class="mb-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div class="flex-grow w-full sm:w-auto flex items-center gap-2">
                 <input type="text" id="search-input" placeholder="Search invoice # or address..."
                        class="p-2 border border-gray-300 rounded-md w-full text-sm"
                        value="<?php echo htmlspecialchars($search_query); ?>"
                        onkeydown="if(event.key === 'Enter') applyFilters()">
+                <button id="toggle-filters-btn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-md md:hidden">
+                    <i class="fas fa-filter"></i>
+                </button>
+                <button onclick="applyFilters()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-md hidden md:block">
+                    <i class="fas fa-search"></i>
+                </button>
             </div>
-            <button onclick="applyFilters()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-md text-sm w-full sm:w-auto">
-                Apply Filters
-            </button>
+
+            <div id="filter-options-section" class="flex-col sm:flex-row gap-3 w-full md:flex hidden">
+                <div class="flex items-center gap-2 flex-grow">
+                    <label for="status-filter" class="text-sm font-medium text-gray-700">Status:</label>
+                    <select id="status-filter" onchange="applyFilters()"
+                            class="p-2 border border-gray-300 rounded-md text-sm flex-grow">
+                        <option value="all" <?php echo $filter_status === 'all' ? 'selected' : ''; ?>>All</option>
+                        <option value="pending" <?php echo $filter_status === 'pending' ? 'selected' : ''; ?>>Pending</option>
+                        <option value="paid" <?php echo $filter_status === 'paid' ? 'selected' : ''; ?>>Paid</option>
+                        <option value="partially_paid" <?php echo $filter_status === 'partially_paid' ? 'selected' : ''; ?>>Partially Paid</option>
+                        <option value="cancelled" <?php echo $filter_status === 'cancelled' ? 'selected' : ''; ?>>Cancelled</option>
+                    </select>
+                </div>
+                <div class="flex items-center gap-2 w-full sm:w-auto">
+                    <label for="start-date-filter" class="text-sm font-medium text-gray-700">From:</label>
+                    <input type="date" id="start-date-filter" value="<?php echo htmlspecialchars($start_date_filter); ?>"
+                           class="p-2 border border-gray-300 rounded-md text-sm w-full flex-grow" onchange="applyFilters()">
+                    <label for="end-date-filter" class="text-sm font-medium text-gray-700">To:</label>
+                    <input type="date" id="end-date-filter" value="<?php echo htmlspecialchars($end_date_filter); ?>"
+                           class="p-2 border border-gray-300 rounded-md text-sm w-full flex-grow" onchange="applyFilters()">
+                </div>
+                <button onclick="applyFilters()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-md w-full sm:w-auto md:hidden">
+                    Apply Filters
+                </button>
+            </div>
         </div>
         <div class="flex justify-end mb-4">
-             <button id="bulk-delete-invoices-btn" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200 shadow-md hidden">
+             <button id="bulk-delete-invoices-btn" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200 shadow-md hidden md:inline-flex items-center">
                 <i class="fas fa-trash-alt mr-2"></i>Delete Selected
             </button>
         </div>
@@ -236,7 +247,7 @@ function getStatusBadgeClass($status) {
         <?php if (empty($invoices)): ?>
             <p class="text-center text-gray-500 py-4">No invoices found for the selected filters or search query.</p>
         <?php else: ?>
-            <div class="overflow-x-auto">
+            <div class="hidden md:block overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-blue-50">
                         <tr>
@@ -260,7 +271,7 @@ function getStatusBadgeClass($status) {
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><?php echo (new DateTime($invoice['created_at']))->format('Y-m-d'); ?></td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$<?php echo number_format($invoice['amount'], 2); ?></td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <?php echo getStatusBadgeClass($invoice['status']); ?>"><?php echo htmlspecialchars(strtoupper(str_replace('_', ' ', $invoice['status']))); ?></span>
+                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <?php echo getStatusBadgeClass($invoice['status']); ?>"><?php echo htmlspecialchars(strtoupper(str_replace('_', ' ', (string)($invoice['status'] ?? '')))); ?></span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-right">
                                     <button class="text-blue-600 hover:text-blue-900 view-invoice-details" data-invoice-id="<?php echo htmlspecialchars($invoice['id']); ?>">View</button>
@@ -273,6 +284,39 @@ function getStatusBadgeClass($status) {
                     </tbody>
                 </table>
             </div>
+
+            <div class="md:hidden space-y-4">
+                <?php foreach ($invoices as $invoice): ?>
+                    <div class="bg-white rounded-lg shadow-md border border-blue-200 p-4 relative">
+                        <div class="absolute top-3 right-3 flex space-x-2">
+                            <input type="checkbox" class="invoice-checkbox h-4 w-4" value="<?php echo $invoice['id']; ?>">
+                        </div>
+                        <div class="mb-2">
+                            <p class="text-sm font-bold text-gray-800">Invoice ID: #<?php echo htmlspecialchars($invoice['invoice_number']); ?></p>
+                            <p class="text-xs text-gray-600">Date: <?php echo (new DateTime($invoice['created_at']))->format('Y-m-d'); ?></p>
+                        </div>
+                        <div class="border-t border-b border-gray-200 py-2 mb-2">
+                            <p class="text-lg font-bold text-gray-700"><span class="font-medium">Amount:</span> $<?php echo number_format($invoice['amount'], 2); ?></p>
+                            <p class="text-sm text-gray-700"><span class="font-medium">Status:</span> 
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <?php echo getStatusBadgeClass($invoice['status']); ?>">
+                                    <?php echo htmlspecialchars(strtoupper(str_replace('_', ' ', (string)($invoice['status'] ?? '')))); ?>
+                                </span>
+                            </p>
+                        </div>
+                        <div class="flex flex-wrap gap-2 justify-end mt-3">
+                            <button class="px-3 py-1 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 text-xs view-invoice-details" data-invoice-id="<?php echo htmlspecialchars($invoice['id']); ?>">
+                                <i class="fas fa-eye mr-1"></i>View
+                            </button>
+                            <?php if ($invoice['status'] == 'pending' || $invoice['status'] == 'partially_paid'): ?>
+                                <button class="px-3 py-1 bg-green-100 text-green-700 rounded-md hover:bg-green-200 text-xs pay-invoice-btn" data-invoice-id="<?php echo htmlspecialchars($invoice['id']); ?>" data-amount="<?php echo htmlspecialchars($invoice['amount']); ?>">
+                                    <i class="fas fa-dollar-sign mr-1"></i>Pay Now
+                                </button>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+
             <nav class="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3">
                 <div>
                     <p class="text-sm text-gray-700">
@@ -336,7 +380,7 @@ function getStatusBadgeClass($status) {
             <div>
                 <p class="text-gray-600"><span class="font-medium">Invoice Date:</span> <span id="detail-invoice-date"><?php echo (new DateTime($invoice_detail['created_at']))->format('Y-m-d'); ?></span></p>
                 <p class="text-gray-600"><span class="font-medium">Due Date:</span> <?php echo $invoice_detail['due_date'] ? (new DateTime($invoice_detail['due_date']))->format('Y-m-d') : 'N/A'; ?></p>
-                <p class="text-gray-600"><span class="font-medium">Status:</span> <span id="detail-invoice-status" class="font-semibold <?php echo getStatusBadgeClass($invoice_detail['status']); ?>"><?php echo htmlspecialchars(strtoupper(str_replace('_', ' ', $invoice_detail['status']))); ?></span></p>
+                <p class="text-gray-600"><span class="font-medium">Status:</span> <span id="detail-invoice-status" class="font-semibold <?php echo getStatusBadgeClass($invoice_detail['status']); ?>"><?php echo htmlspecialchars(strtoupper(str_replace('_', ' ', (string)($invoice_detail['status'] ?? '')))); ?></span></p>
                 <p class="text-gray-600"><span class="font-medium">Transaction ID:</span> <?php echo htmlspecialchars($invoice_detail['transaction_id'] ?? 'N/A'); ?></p>
                 <p class="text-gray-600"><span class="font-medium">Payment Method:</span> <?php echo htmlspecialchars($invoice_detail['payment_method'] ?? 'N/A'); ?></p>
                 <?php if (!empty($invoice_detail['booking_start_date'])): ?>
@@ -400,7 +444,7 @@ function getStatusBadgeClass($status) {
             <?php endif; ?>
         </div>
     <?php else: ?>
-        <p class="text-center text-gray-600">Invoice details not found or invalid invoice ID.</p>
+        <p class="text-center text-gray-600 py-8">Invoice details not found or invalid invoice ID.</p>
     <?php endif; ?>
 </div>
 
@@ -471,15 +515,21 @@ function getStatusBadgeClass($status) {
         window.loadCustomerInvoices({}); // Load list view
     };
 
+    // Robustified hidePaymentForm function
     window.hidePaymentForm = function() {
+        const paymentFormView = document.getElementById('payment-form-view');
         const invoiceDetailView = document.getElementById('invoice-detail-view');
-        const isDetailViewVisible = !invoiceDetailView.classList.contains('hidden');
 
-        document.getElementById('payment-form-view').classList.add('hidden');
-        if (isDetailViewVisible) {
+        if (paymentFormView) {
+            paymentFormView.classList.add('hidden');
+        }
+
+        if (invoiceDetailView && !invoiceDetailView.classList.contains('hidden')) {
+            // If detail view is visible, show it again
             invoiceDetailView.classList.remove('hidden');
         } else {
-            window.loadCustomerInvoices({}); // Load list view
+            // Otherwise, go back to the list view
+            window.loadCustomerInvoices({});
         }
     };
 
@@ -495,6 +545,9 @@ function getStatusBadgeClass($status) {
         const saveNewCardCheckbox = document.getElementById('save-new-card');
         const setNewCardDefaultSection = document.getElementById('set-new-card-default-section');
         const paymentMethodTokenInput = document.getElementById('payment-method-token-hidden');
+        const toggleFiltersBtn = document.getElementById('toggle-filters-btn'); // Get the toggle button
+        const filterOptionsSection = document.getElementById('filter-options-section'); // Get the filter options div
+
 
         // Helper function to get safe filter values
         const getSafeFilterValues = () => {
@@ -723,6 +776,14 @@ function getStatusBadgeClass($status) {
             const viewButton = event.target.closest('.view-invoice-details');
             if(viewButton){
                  window.showInvoiceDetails(viewButton.dataset.invoiceId);
+            }
+
+            // Toggle filter section visibility on mobile
+            if (event.target.id === 'toggle-filters-btn') {
+                if (filterOptionsSection) {
+                    filterOptionsSection.classList.toggle('hidden');
+                    filterOptionsSection.classList.toggle('flex'); // Also toggle flex for layout
+                }
             }
 
             // --- Bulk Delete Functionality ---
