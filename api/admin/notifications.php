@@ -5,6 +5,7 @@
 session_start();
 require_once __DIR__ . '/../../includes/db.php';
 require_once __DIR__ . '/../../includes/session.php'; // For is_logged_in() and has_role()
+require_once __DIR__ . '/../../includes/functions.php'; // For validate_csrf_token()
 
 header('Content-Type: application/json');
 
@@ -16,25 +17,46 @@ if (!is_logged_in() || !has_role('admin')) {
 
 $admin_user_id = $_SESSION['user_id'];
 $notification_id = $_POST['id'] ?? null; // Can be a single ID or 'all'
-$action = $_POST['action'] ?? ''; // Expected actions: 'mark_read', 'delete'
+$action = $_REQUEST['action'] ?? ''; // Use $_REQUEST to handle GET or POST actions
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    switch ($action) {
-        case 'mark_read':
-            handleMarkRead($conn, $notification_id);
-            break;
-        case 'delete':
-            handleDeleteNotification($conn, $notification_id);
-            break;
-        default:
-            echo json_encode(['success' => false, 'message' => 'Invalid action.']);
-            break;
+try {
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        // CSRF token validation
+        validate_csrf_token();
+
+        switch ($action) {
+            case 'mark_read':
+                handleMarkRead($conn, $notification_id);
+                break;
+            case 'delete':
+                handleDeleteNotification($conn, $notification_id);
+                break;
+            default:
+                echo json_encode(['success' => false, 'message' => 'Invalid POST action.']);
+                break;
+        }
+    } elseif ($_SERVER['REQUEST_METHOD'] === 'GET' && $action === 'get_unread_count') {
+        handleGetUnreadCount($conn, $admin_user_id);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Invalid request method.']);
     }
-} else {
-    echo json_encode(['success' => false, 'message' => 'Invalid request method.']);
+} catch (Exception $e) {
+    http_response_code(400); // Bad Request for most client-side errors
+    error_log("Admin Notification API Error: " . $e->getMessage());
+    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+} finally {
+    if (isset($conn) && $conn->ping()) {
+        $conn->close();
+    }
 }
 
-$conn->close(); // Close DB connection at the end of script execution
+function handleGetUnreadCount($conn, $admin_user_id) {
+    $stmt = $conn->prepare("SELECT COUNT(*) as unread_count FROM notifications WHERE is_read = FALSE");
+    $stmt->execute();
+    $result = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    echo json_encode(['success' => true, 'unread_count' => $result['unread_count'] ?? 0]);
+}
 
 function handleMarkRead($conn, $notification_id) {
     if ($notification_id === null) {
@@ -91,3 +113,4 @@ function handleDeleteNotification($conn, $notification_id) {
     }
     $stmt->close();
 }
+?>
