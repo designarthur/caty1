@@ -148,23 +148,8 @@ function getNotificationIcon($type) {
 <script>
     (function() {
         // Function to update the notification bell count in the header
-        async function updateNotificationBell() {
-            try {
-                const response = await fetch('/api/customer/notifications.php?action=get_unread_count');
-                const data = await response.json();
-                const bellSpan = window.parent.document.querySelector('#notification-bell span');
-                if (data.success && bellSpan) {
-                    if (data.unread_count > 0) {
-                        bellSpan.textContent = data.unread_count;
-                        bellSpan.style.display = 'inline-flex';
-                    } else {
-                        bellSpan.style.display = 'none';
-                    }
-                }
-            } catch (error) {
-                console.error('Error fetching unread notification count:', error);
-            }
-        }
+        // This function is now defined globally in customer/includes/header.php
+        // so it no longer needs to be defined here.
 
         // --- Event Delegation for Notification Actions ---
         const notificationsContainer = document.getElementById('notifications-list');
@@ -243,6 +228,7 @@ function getNotificationIcon($type) {
         }
         
         // Initial call to update bell count when the page loads
-        updateNotificationBell();
+        // This call is now redundant as it's handled globally by customer/includes/header.php
+        // updateNotificationBell(); 
     })();
 </script>
