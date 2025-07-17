@@ -389,7 +389,7 @@ if (!$companyName) {
                 <h2 class="text-4xl md:text-5xl font-bold text-center text-gray-800 mb-16 animate-on-scroll">Our Mission & Values: Driving Your Success</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
                     <div class="animate-on-scroll delay-100">
-                        <img src="https://placehold.co/600x400/eef2f6/34a853?text=Our+Mission+Image" alt="Our Mission" class="rounded-2xl shadow-xl w-full h-auto">
+                        <img src="/assets/images/5001295_5244712.png" alt="Our Mission" class="rounded-2xl shadow-xl w-full h-auto">
                     </div>
                     <div class="animate-on-scroll delay-200">
                         <h3 class="text-3xl font-bold text-gray-800 mb-6">Our Mission</h3>

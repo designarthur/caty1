@@ -7,6 +7,7 @@ if (session_status() == PHP_SESSION_NONE) {
 }
 require_once __DIR__ . '/../../includes/db.php';
 require_once __DIR__ . '/../../includes/session.php';
+require_once __DIR__ . '/../../includes/functions.php'; // Required for getSystemSetting() and other utilities
 
 if (!is_logged_in()) {
     echo '<div class="text-red-500 text-center p-8">You must be logged in to view this content.</div>';
@@ -17,35 +18,28 @@ $user_id = $_SESSION['user_id'];
 
 // Fetch saved payment methods from the database
 $saved_payment_methods = [];
-// Select all necessary fields to pass to frontend for editing
 $stmt = $conn->prepare("SELECT id, braintree_payment_token, card_type, last_four, expiration_month, expiration_year, cardholder_name, is_default, billing_address FROM user_payment_methods WHERE user_id = ? ORDER BY is_default DESC, created_at DESC");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $result = $stmt->get_result();
 while($row = $result->fetch_assoc()) {
-    // Ensure expiration_month and expiration_year are not null before substr/htmlspecialchars
     $expMonth = htmlspecialchars($row['expiration_month'] ?? '');
-    // Using ?? '' before substr for safety, then htmlspecialchars for output
     $expYearFull = htmlspecialchars($row['expiration_year'] ?? '');
     $expYearLastTwo = substr($expYearFull, -2);
     $row['expiry_display'] = $expMonth . '/' . $expYearLastTwo;
-
-    // Ensure last_four is not null for card_last_four display
     $row['card_last_four'] = htmlspecialchars($row['last_four'] ?? '');
-    // Add raw expiry parts for populating edit form
+    // Ensure raw data for editing is also passed
     $row['raw_expiration_month'] = htmlspecialchars($row['expiration_month'] ?? '');
     $row['raw_expiration_year'] = htmlspecialchars($row['expiration_year'] ?? '');
     $row['raw_billing_address'] = htmlspecialchars($row['billing_address'] ?? '');
 
-    $row['status'] = $row['is_default'] ? 'Default' : 'Active'; // Convert boolean to string status
-    $row['token'] = $row['braintree_payment_token']; // Use Braintree token as frontend identifier
     $saved_payment_methods[] = $row;
 }
 $stmt->close();
-
-// Close DB connection if not needed further on this page
-// $conn->close(); // Keep connection open until script ends
+$conn->close();
 ?>
+
+<script src="https://js.stripe.com/v3/"></script>
 
 <h1 class="text-3xl font-bold text-gray-800 mb-8">Payment Methods</h1>
 
@@ -67,18 +61,21 @@ $stmt->close();
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
                     <?php foreach ($saved_payment_methods as $method): ?>
-                        <tr data-id="<?php echo htmlspecialchars($method['id']); ?>"
+                        <tr
+                            data-id="<?php echo htmlspecialchars($method['id']); ?>"
+                            data-stripe-pm-id="<?php echo htmlspecialchars($method['braintree_payment_token']); ?>"
                             data-cardholder-name="<?php echo htmlspecialchars($method['cardholder_name']); ?>"
                             data-last-four="<?php echo htmlspecialchars($method['card_last_four']); ?>"
                             data-exp-month="<?php echo htmlspecialchars($method['raw_expiration_month']); ?>"
                             data-exp-year="<?php echo htmlspecialchars($method['raw_expiration_year']); ?>"
                             data-billing-address="<?php echo htmlspecialchars($method['raw_billing_address']); ?>"
-                            data-is-default="<?php echo htmlspecialchars($method['is_default'] ? 'true' : 'false'); ?>">
+                            data-is-default="<?php echo $method['is_default'] ? 'true' : 'false'; ?>"
+                        >
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"><?php echo htmlspecialchars($method['cardholder_name']); ?></td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><?php echo htmlspecialchars($method['card_type']); ?> ending in **** <?php echo htmlspecialchars($method['card_last_four']); ?></td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><?php echo htmlspecialchars($method['expiry_display']); ?></td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <?php echo $method['status'] === 'Default' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'; ?>"><?php echo htmlspecialchars($method['status']); ?></span>
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <?php echo $method['is_default'] ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'; ?>"><?php echo $method['is_default'] ? 'Default' : 'Active'; ?></span>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                 <button class="text-indigo-600 hover:text-indigo-900 mr-2 edit-payment-btn" data-id="<?php echo htmlspecialchars($method['id']); ?>">Edit</button>
@@ -102,20 +99,11 @@ $stmt->close();
             <label for="new-cardholder-name" class="block text-sm font-medium text-gray-700 mb-2">Cardholder Name</label>
             <input type="text" id="new-cardholder-name" name="cardholder_name" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" required>
         </div>
-        <!-- Reverted to standard input fields for card number and CVV -->
         <div class="mb-5">
-            <label for="new-card-number" class="block text-sm font-medium text-gray-700 mb-2">Card Number</label>
-            <input type="text" id="new-card-number" name="card_number" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="**** **** **** ****" required pattern="[0-9\s]{13,19}" maxlength="19">
-        </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
-            <div>
-                <label for="new-expiry-date" class="block text-sm font-medium text-gray-700 mb-2">Expiration Date (MM/YY)</label>
-                <input type="text" id="new-expiry-date" name="expiry_date" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="MM/YY" required pattern="(0[1-9]|1[0-2])\/[0-9]{2}">
-            </div>
-            <div>
-                <label for="new-cvv" class="block text-sm font-medium text-gray-700 mb-2">CVV</label>
-                <input type="text" id="new-cvv" name="cvv" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="***" required pattern="[0-9]{3,4}">
-            </div>
+            <label for="new-card-element" class="block text-sm font-medium text-gray-700 mb-2">Credit or debit card</label>
+            <div id="new-card-element" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" style="min-height: 40px; padding: 12px;">
+                </div>
+            <div id="new-card-errors" role="alert" class="text-red-500 text-sm mt-2"></div>
         </div>
         <div class="mb-5">
             <label for="new-billing-address" class="block text-sm font-medium text-gray-700 mb-2">Billing Address</label>
@@ -126,7 +114,7 @@ $stmt->close();
             <label for="set-default" class="ml-2 block text-sm text-gray-900">Set as default payment method</label>
         </div>
         <div class="text-right">
-            <button type="submit" class="py-3 px-6 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-lg font-semibold">
+            <button type="submit" id="add-card-submit-btn" class="py-3 px-6 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-lg font-semibold">
                 <i class="fas fa-plus mr-2"></i>Add Payment Method
             </button>
         </div>
@@ -174,13 +162,80 @@ $stmt->close();
 </div>
 
 
-<!-- Removed Braintree SDK scripts -->
 <script>
     // IIFE to encapsulate the script and prevent global variable conflicts
     (function() {
-        // Removed braintreeInstance and initializeBraintree function
+        // Define stripe and elements in the outer scope
+        let stripeInstance;
+        let elementsInstance;
+        let newCardElementInstance; // To hold the card element instance
 
-        // Client-side validation for expiration date (MM/YY)
+        // Function to initialize Stripe elements and form handling
+        function initializeStripeElements() {
+            // Check if Stripe is actually loaded before proceeding
+            if (typeof Stripe === 'undefined') {
+                console.warn('Stripe.js not yet loaded. Retrying initialization...');
+                setTimeout(initializeStripeElements, 100); // Retry after 100ms
+                return;
+            }
+
+            // Get Stripe Publishable Key from PHP environment variable
+            const stripePublishableKey = '<?php echo $_ENV['STRIPE_PUBLISHABLE_KEY'] ?? getenv('STRIPE_PUBLISHABLE_KEY'); ?>';
+
+            // Check if the key is present
+            if (!stripePublishableKey || stripePublishableKey.includes('your_publishable_key')) {
+                console.error('Stripe Publishable Key is not configured. Please set STRIPE_PUBLISHABLE_KEY in your .env file.');
+                // Optionally display a user-friendly message
+                window.showToast('Payment system not fully configured. Please contact support.', 'error');
+                return; // Stop initialization if key is missing
+            }
+
+
+            stripeInstance = Stripe(stripePublishableKey);
+            elementsInstance = stripeInstance.elements();
+
+            // Custom styling for Stripe Elements
+            const style = {
+                base: {
+                    color: '#32325d',
+                    fontFamily: 'Inter, sans-serif',
+                    fontSmoothing: 'antialiased',
+                    fontSize: '16px',
+                    '::placeholder': {
+                        color: '#aab7c4'
+                    },
+                    // Explicitly set height and line-height for better rendering consistency
+                    lineHeight: '1.5em', // Adjust as needed based on your input height
+                    height: '1.5em',     // Adjust as needed based on your input height
+                },
+                invalid: {
+                    color: '#fa755a',
+                    iconColor: '#fa755a'
+                }
+            };
+
+            // Create an instance of the card Element for adding new methods
+            newCardElementInstance = elementsInstance.create('card', { style: style });
+            newCardElementInstance.mount('#new-card-element'); // Mount it to the div for new cards
+
+            // Handle real-time validation errors from the card Element for new cards.
+            newCardElementInstance.addEventListener('change', function(event) {
+                const displayError = document.getElementById('new-card-errors');
+                if (event.error) {
+                    displayError.textContent = event.error.message;
+                } else {
+                    displayError.textContent = '';
+                }
+            });
+        }
+
+        // Call the initialization function directly (without DOMContentLoaded)
+        // This ensures the Stripe elements are mounted immediately when the script runs
+        // as the dynamic content is loaded.
+        initializeStripeElements();
+
+
+        // --- Client-side validation for expiration date (MM/YY) ---
         function isValidExpiryDate(month, year) {
             if (!/^(0[1-9]|1[0-2])$/.test(month) || !/^\d{4}$/.test(year)) {
                 return false;
@@ -203,48 +258,56 @@ $stmt->close();
 
         // --- Add Payment Method Form Handling ---
         const addPaymentMethodForm = document.getElementById('add-payment-method-form');
+        const addCardSubmitBtn = document.getElementById('add-card-submit-btn');
+
         if (addPaymentMethodForm) {
             addPaymentMethodForm.addEventListener('submit', async function(event) {
                 event.preventDefault(); // Prevent default form submission
 
+                addCardSubmitBtn.disabled = true; // Disable button to prevent double submission
+                window.showToast('Adding new payment method...', 'info');
+
                 const cardholderName = document.getElementById('new-cardholder-name').value.trim();
-                const cardNumber = document.getElementById('new-card-number').value.trim();
-                const expiryDate = document.getElementById('new-expiry-date').value.trim(); // MM/YY format
-                const cvv = document.getElementById('new-cvv').value.trim();
                 const billingAddress = document.getElementById('new-billing-address').value.trim();
                 const setDefault = document.getElementById('set-default').checked;
 
-                // Client-side validation
-                if (!cardholderName || !cardNumber || !expiryDate || !cvv || !billingAddress) {
-                    window.showToast('Please fill in all fields.', 'error');
-                    return;
-                }
-                if (!/^\d{13,16}$/.test(cardNumber.replace(/\s/g, ''))) { // Remove spaces for validation
-                    window.showToast('Please enter a valid card number (13-16 digits).', 'error');
-                    return;
-                }
-
-                const expiryParts = expiryDate.split('/');
-                if (expiryParts.length !== 2 || !isValidExpiryDate(expiryParts[0], '20' + expiryParts[1])) { // Assuming YY is 2-digit, convert to 4
-                    window.showToast('Please enter a valid expiration date (MM/YY) that is not expired.', 'error');
-                    return;
-                }
-                if (!/^\d{3,4}$/.test(cvv)) {
-                    window.showToast('Please enter a valid CVV (3 or 4 digits).', 'error');
+                // Create a PaymentMethod from the card Element
+                // Ensure stripeInstance and newCardElementInstance are defined
+                if (!stripeInstance || !newCardElementInstance) {
+                    window.showToast('Payment system not ready. Please try again.', 'error');
+                    addCardSubmitBtn.disabled = false;
                     return;
                 }
 
-                window.showToast('Adding new payment method...', 'info');
+                const { paymentMethod, error } = await stripeInstance.createPaymentMethod({
+                    type: 'card',
+                    card: newCardElementInstance, // Use the mounted element
+                    billing_details: {
+                        name: cardholderName,
+                        address: {
+                            line1: billingAddress.split(',')[0]?.trim(),
+                            city: billingAddress.split(',')[1]?.trim(),
+                            state: billingAddress.split(',')[2]?.trim().split(' ')[0],
+                            postal_code: billingAddress.split(',')[2]?.trim().split(' ')[1]
+                        },
+                    },
+                });
 
-                const formData = new FormData(this); // Get all form data
+                if (error) {
+                    document.getElementById('new-card-errors').textContent = error.message;
+                    window.showToast('Failed to add card: ' + error.message, 'error');
+                    addCardSubmitBtn.disabled = false;
+                    return;
+                }
+
+                // Send the PaymentMethod ID and other form data to your backend
+                const formData = new FormData();
                 formData.append('action', 'add_method');
-                // No payment_method_nonce needed as Braintree is removed from client-side
+                formData.append('payment_method_id', paymentMethod.id); // Send Stripe's PaymentMethod ID
                 formData.append('cardholder_name', cardholderName);
-                formData.append('card_number', cardNumber); // Send raw card number
-                formData.append('expiry_date', expiryDate); // Send raw expiry date
-                formData.append('cvv', cvv); // Send raw CVV
                 formData.append('billing_address', billingAddress);
                 formData.append('set_default', setDefault ? 'on' : 'off');
+                // No need to send raw card number, expiry, cvv. Stripe handles that.
 
                 try {
                     const response = await fetch('/api/customer/payment_methods.php', {
@@ -257,6 +320,8 @@ $stmt->close();
                     if (result.success) {
                         window.showToast(result.message || 'Payment method added successfully!', 'success');
                         addPaymentMethodForm.reset(); // Clear form
+                        newCardElementInstance.clear(); // Clear Stripe Element
+                        document.getElementById('new-card-errors').textContent = '';
                         window.loadCustomerSection('payment-methods'); // Reload the section to show the new method in the list
                     } else {
                         window.showToast(result.message || 'Failed to add payment method.', 'error');
@@ -264,6 +329,8 @@ $stmt->close();
                 } catch (error) {
                     console.error('Add payment method API Error:', error);
                     window.showToast('An error occurred while adding payment method. Please try again.', 'error');
+                } finally {
+                    addCardSubmitBtn.disabled = false; // Re-enable button
                 }
             });
         }
@@ -378,6 +445,8 @@ $stmt->close();
             // Handle "Delete" button click
             if (event.target.classList.contains('delete-payment-btn')) {
                 const methodId = event.target.dataset.id;
+                const stripePmId = event.target.closest('tr').dataset.stripePmId; // Retrieve Stripe PM ID
+
                 window.showConfirmationModal(
                     'Delete Payment Method',
                     'Are you sure you want to delete this payment method? This action cannot be undone.',
@@ -387,6 +456,7 @@ $stmt->close();
                             const formData = new FormData();
                             formData.append('action', 'delete_method');
                             formData.append('id', methodId);
+                            formData.append('stripe_pm_id', stripePmId); // Send Stripe PM ID
 
                             try {
                                 const response = await fetch('/api/customer/payment_methods.php', {

@@ -40,6 +40,7 @@ function hashPassword($password) {
 
 /**
  * Verifies a plain text password against a stored hash.
+ *
  * @param string $password The plain text password.
  * @param string $hash The hashed password from the database.
  * @return bool True if the passwords match, false otherwise.
@@ -183,6 +184,83 @@ function get_admin_notification_counts() {
     return $counts;
 }
 
+/**
+ * Ensures a Stripe Customer exists for the user. If not, it creates one and updates the DB.
+ * If the existing Stripe Customer ID is invalid, it attempts to recreate a new one.
+ * @param mysqli $conn The database connection.
+ * @param int $user_id The ID of the user.
+ * @return string The valid Stripe Customer ID.
+ * @throws Exception If customer cannot be created/retrieved after multiple attempts.
+ */
+function ensureStripeCustomerExists(mysqli $conn, int $user_id): string {
+    $max_attempts = 2; // Try to retrieve/create customer a couple of times
+    for ($attempt = 1; $attempt <= $max_attempts; $attempt++) {
+        // 1. Get stripe_customer_id from local DB
+        $stripe_customer_id = null;
+        $user_email = null;
+        $user_name = null;
+
+        $stmt_user_info = $conn->prepare("SELECT stripe_customer_id, email, first_name, last_name FROM users WHERE id = ?");
+        $stmt_user_info->bind_param("i", $user_id);
+        $stmt_user_info->execute();
+        $user_data = $stmt_user_info->get_result()->fetch_assoc();
+        $stmt_user_info->close();
+
+        if ($user_data) {
+            $stripe_customer_id = $user_data['stripe_customer_id'];
+            $user_email = $user_data['email'];
+            $user_name = trim($user_data['first_name'] . ' ' . $user_data['last_name']);
+        } else {
+            throw new Exception("User not found in local database.");
+        }
+
+        // 2. If local ID exists, try to retrieve it from Stripe
+        if ($stripe_customer_id) {
+            try {
+                \Stripe\Customer::retrieve($stripe_customer_id);
+                return $stripe_customer_id; // Existing customer is valid
+            } catch (\Stripe\Exception\InvalidRequestException $e) {
+                // "No such customer" error - local ID is invalid, try to recreate
+                error_log("Stripe customer ID '{$stripe_customer_id}' for user {$user_id} is invalid. Attempting to recreate. Error: " . $e->getMessage());
+                $stripe_customer_id = null; // Mark as invalid, proceed to creation
+            } catch (Exception $e) {
+                // Other Stripe API errors when retrieving customer
+                error_log("Stripe API error retrieving customer '{$stripe_customer_id}' for user {$user_id}: " . $e->getMessage());
+                throw new Exception("Failed to verify Stripe customer: " . $e->getMessage());
+            }
+        }
+
+        // 3. If local ID is missing or invalid, create a new Stripe Customer
+        if (!$stripe_customer_id) {
+            try {
+                $customer = \Stripe\Customer::create([
+                    'email' => $user_email,
+                    'name' => $user_name,
+                    'metadata' => ['database_user_id' => $user_id]
+                ]);
+                $new_stripe_customer_id = $customer->id;
+
+                // Update local DB with new Stripe Customer ID
+                $stmt_update_user_stripe_id = $conn->prepare("UPDATE users SET stripe_customer_id = ? WHERE id = ?");
+                $stmt_update_user_stripe_id->bind_param("si", $new_stripe_customer_id, $user_id);
+                $stmt_update_user_stripe_id->execute();
+                $stmt_update_user_stripe_id->close();
+                
+                return $new_stripe_customer_id; // Successfully created and updated
+            } catch (Exception $e) {
+                error_log("Stripe API error creating new customer for user {$user_id}: " . $e->getMessage());
+                if ($attempt < $max_attempts) {
+                    // Log and retry if not last attempt
+                    usleep(100000); // Small delay before retry
+                    continue;
+                }
+                throw new Exception("Failed to create Stripe customer: " . $e->getMessage());
+            }
+        }
+    }
+    throw new Exception("Failed to ensure a valid Stripe customer after multiple attempts.");
+}
+
 
 /**
  * Centralized function to create a booking after a successful payment.
@@ -297,21 +375,24 @@ function createBookingFromInvoice(mysqli $conn, int $invoice_id): ?int {
     $live_load_requested_int = (int)($data['live_load_needed'] ?? 0);
     $is_urgent_int = (int)($data['is_urgent'] ?? 0);
 
+    // Define the literal 'scheduled' as a variable to pass by reference
+    $status_scheduled = 'scheduled'; // Fix for bind_param Argument #6 error
+
     $stmt_booking = $conn->prepare("
         INSERT INTO bookings (invoice_id, user_id, booking_number, service_type, status, start_date, end_date, delivery_location, delivery_instructions, live_load_requested, is_urgent, total_price, equipment_details, junk_details)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ");
-    // Corrected bind_param types to include end_date (s) and correctly pass all parameters
+    // Corrected bind_param types and arguments: "iissssssiisdss" for 14 variables
     $stmt_booking->bind_param(
-        "iissssssiidsdss",
+        "iissssssiisdss", // Corrected from "iissssssiidsdss" to match 14 variables
         $invoice_id,
         $data['user_id'],
         $booking_number,
         $data['service_type'],
-        'scheduled', // Initial status when booking is created from paid invoice
+        $status_scheduled, // Use the variable here
         $start_date,
         $end_date, // This will now be correctly calculated or be null/same as start_date
-        $data['location'], // Use quote location for delivery_location
+        $data['location'],
         $data['driver_instructions'],
         $live_load_requested_int, 
         $is_urgent_int,           

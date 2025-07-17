@@ -93,7 +93,7 @@
         }
 
         .hero-background {
-            background-image: url('https://placehold.co/1920x900/e0e7ee/1a73e8?text=Junk+Removal+Hero');
+            background-image: url('/assets/images/junk removal.png');
             background-size: cover;
             background-position: center;
             position: relative;
@@ -445,7 +445,7 @@
                 <div class="how-it-works-container">
                     <div class="how-it-works-row animate-on-scroll delay-100">
                         <div class="how-it-works-image-box">
-                            <img src="https://placehold.co/300x200/e0e7ff/1a73e8?text=Upload+Junk+Photos" alt="Upload Junk Photos">
+                            <img src="/assets/images/Group 1000002841.png" alt="Upload Junk Photos">
                         </div>
                         <div class="how-it-works-content">
                             <p class="how-it-works-step-number">Step 1</p>
@@ -457,7 +457,7 @@
 
                     <div class="how-it-works-row animate-on-scroll delay-300">
                         <div class="how-it-works-image-box">
-                            <img src="https://placehold.co/300x200/e0e7ff/34a853?text=AI+Quote+Analysis" alt="AI Quote Analysis">
+                            <img src="/assets/images/Group 1000002840.png" alt="AI Quote Analysis">
                         </div>
                         <div class="how-it-works-content">
                             <p class="how-it-works-step-number">Step 2</p>
@@ -469,7 +469,7 @@
 
                     <div class="how-it-works-row animate-on-scroll delay-500">
                         <div class="how-it-works-image-box">
-                            <img src="https://placehold.co/300x200/e0e7ff/1a73e8?text=Schedule+Junk+Pickup" alt="Schedule Junk Pickup">
+                            <img src="/assets/images/Group 1000002839.png" alt="Schedule Junk Pickup">
                         </div>
                         <div class="how-it-works-content">
                             <p class="how-it-works-step-number">Step 3</p>

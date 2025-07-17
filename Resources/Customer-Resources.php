@@ -92,7 +92,7 @@
         }
 
         .hero-background {
-            background-image: url('/assets/images/hero image for about us page.png');
+            background-image: url('/assets/images/hero image for customer support  page.png');
             background-size: cover;
             background-position: center;
             position: relative;
@@ -381,37 +381,37 @@
                 <h2 class="text-4xl md:text-5xl font-bold text-center text-gray-800 mb-20 animate-on-scroll">Your Go-To Hub for All Things Catdump</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
                     <div class="resource-card animate-on-scroll delay-100">
-                        <div class="icon-large">📚</div>
+                        <div class="icon-large" style="justify-content:center; display:flex;"><img src="/assets/images/Mask group14.png" width="80" height="80"></div>
                         <h3>Guides & How-Tos</h3>
                         <p>Detailed articles and step-by-step guides on choosing equipment, optimizing your rental period, managing waste, and more.</p>
                         <a href="/Resources/Blog.php" class="text-blue-custom hover:underline font-medium mt-4 inline-block">Read Guides &rarr;</a>
                     </div>
                     <div class="resource-card animate-on-scroll delay-200">
-                        <div class="icon-large">❓</div>
+                        <div class="icon-large" style="justify-content:center; display:flex;"><img src="/assets/images/Mask group15.png" width="80" height="80"></div>
                         <h3>FAQs & Help Center</h3>
                         <p>Find quick answers to common questions about pricing, delivery, payments, specific equipment, and troubleshooting tips.</p>
                         <a href="/Resources/FAQs.php" class="text-blue-custom hover:underline font-medium mt-4 inline-block">Visit Help Center &rarr;</a>
                     </div>
                     <div class="resource-card animate-on-scroll delay-300">
-                        <div class="icon-large">📞</div>
+                        <div class="icon-large" style="justify-content:center; display:flex;"><img src="/assets/images/Mask group16.png" width="80" height="80"></div>
                         <h3>Direct Support</h3>
                         <p>Connect with our friendly and knowledgeable support team via chat, email, or phone for personalized assistance with your rentals.</p>
                         <a href="#" onclick="showAIChat('create-booking'); return false;" class="text-blue-custom hover:underline font-medium mt-4 inline-block">Chat with AI Assistant &rarr;</a>
                     </div>
                     <div class="resource-card animate-on-scroll delay-400">
-                        <div class="icon-large">📊</div>
+                        <div class="icon-large" style="justify-content:center; display:flex;"><img src="/assets/images/Mask group17.png" width="80" height="80"></div>
                         <h3>Pricing & Financing Details</h3>
                         <p>Understand our transparent pricing model, explore flexible payment options, and learn about financing solutions for larger projects.</p>
                         <a href="/Resources/Pricing-Finance.php" class="text-blue-custom hover:underline font-medium mt-4 inline-block">View Pricing & Finance &rarr;</a>
                     </div>
                     <div class="resource-card animate-on-scroll delay-500">
-                        <div class="icon-large">✍️</div>
+                        <div class="icon-large" style="justify-content:center; display:flex;"><img src="/assets/images/Mask group18.png" width="80" height="80"></div>
                         <h3>Blog & News</h3>
                         <p>Stay updated with the latest industry trends, company news, expert tips, and insights on equipment rental and waste management.</p>
                         <a href="/Resources/Blog.php" class="text-blue-custom hover:underline font-medium mt-4 inline-block">Explore Blog &rarr;</a>
                     </div>
                     <div class="resource-card animate-on-scroll delay-600">
-                        <div class="icon-large">📄</div>
+                        <div class="icon-large" style="justify-content:center; display:flex;"><img src="/assets/images/Mask group19.png" width="80" height="80"></div>
                         <h3>Terms & Policies</h3>
                         <p>Access our comprehensive terms and conditions, privacy policy, and other legal documents for full transparency and understanding.</p>
                         <a href="/Terms and Conditions.html" class="text-blue-custom hover:underline font-medium mt-4 inline-block">Read Policies &rarr;</a>

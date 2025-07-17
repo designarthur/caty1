@@ -106,7 +106,7 @@ if (!$companyName) {
         }
 
         .hero-background {
-            background-image: url('/assets/images/hero image for about us page.png');
+            background-image: url('/assets/images/hero image for testimonials page.png');
             background-size: cover;
             background-position: center;
             position: relative;

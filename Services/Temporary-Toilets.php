@@ -93,7 +93,7 @@
         }
 
         .hero-background {
-            background-image: url('https://placehold.co/1920x900/e0f2f7/1a73e8?text=Temporary+Toilets+Hero');
+            background-image: url('/assets/images/toilet.png');
             background-size: cover;
             background-position: center;
             position: relative;

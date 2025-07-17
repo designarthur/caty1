@@ -1,145 +1,304 @@
 <?php
-// api/customer/invoices.php - Handles customer actions for invoices, like payment and bulk deletion
+// api/payments.php - Handles Stripe payment processing and booking creation/updates
 
-// Production-safe error reporting for API endpoint
+// --- Production-Ready Error Handling ---
 ini_set('display_errors', 0);
-ini_set('display_startup_errors', 0);
-error_reporting(E_ALL & ~E_NOTICE & ~E_DEPRECATED & ~E_STRICT);
+error_reporting(E_ALL);
+ini_set('error_log', __DIR__ . '/../logs/php_errors.log');
 
+register_shutdown_function(function () {
+    $error = error_get_last();
+    if ($error !== null && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
+        if (!headers_sent()) {
+            header('Content-Type: application/json');
+            http_response_code(500);
+        }
+        error_log("Fatal Error: " . $error['message'] . " in " . $error['file'] . " on line " . $error['line']);
+        echo json_encode(['success' => false, 'message' => 'A critical server error occurred. Our team has been notified.']);
+    }
+});
+
+
+// Start the session and include all necessary files.
 session_start();
-require_once __DIR__ . '/../../includes/db.php';
-require_once __DIR__ . '/../../includes/session.php'; // For is_logged_in() and $_SESSION['user_id']
-require_once __DIR__ . '/../../includes/functions.php'; // For validate_csrf_token()
+require_once __DIR__ . '/../includes/db.php';
+require_once __DIR__ . '/../includes/session.php';
+require_once __DIR__ . '/../includes/functions.php';
+require_once __DIR__ . '/../vendor/autoload.php';
 
 header('Content-Type: application/json');
 
-// Check if user is logged in
 if (!is_logged_in()) {
     echo json_encode(['success' => false, 'message' => 'Unauthorized access. Please log in.']);
     exit;
 }
 
-$user_id = $_SESSION['user_id'];
-$request_method = $_SERVER['REQUEST_METHOD'];
-$action = $_POST['action'] ?? ''; // Use $_POST for actions
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    echo json_encode(['success' => false, 'message' => 'Invalid request method.']);
+    exit;
+}
 
-// CSRF token validation
+$user_id = $_SESSION['user_id'];
+
+// --- Initialize Stripe API ---
 try {
-    // Only validate if it's a POST request and not a GET (like get_unread_count)
-    if ($request_method === 'POST') {
-        validate_csrf_token();
-    }
+    // Set your secret key. Remember to switch to your live secret key in production.
+    // See your keys here: https://dashboard.stripe.com/apikeys
+    \Stripe\Stripe::setApiKey($_ENV['STRIPE_SECRET_KEY'] ?? getenv('STRIPE_SECRET_KEY'));
 } catch (Exception $e) {
-    http_response_code(403);
-    echo json_encode(['success' => false, 'message' => 'Invalid security token. Please refresh the page and try again.']);
+    error_log("Stripe API initialization failed: " . $e->getMessage());
+    echo json_encode(['success' => false, 'message' => 'Payment system configuration error.']);
+    exit;
+}
+
+// --- Input Validation ---
+$invoiceNumber      = trim($_POST['invoice_number'] ?? '');
+$amountToPay        = filter_var($_POST['amount'] ?? 0, FILTER_VALIDATE_FLOAT);
+$paymentMethodId    = $_POST['payment_method_id'] ?? null; // Coming from Stripe.js
+$saveCard           = filter_var($_POST['save_card'] ?? false, FILTER_VALIDATE_BOOLEAN);
+$originalPaymentMethodId = $_POST['original_payment_method_id'] ?? null; // To check if an existing method was used
+
+
+if (empty($invoiceNumber) || $amountToPay <= 0) {
+    echo json_encode(['success' => false, 'message' => 'Invalid invoice details or amount.']);
+    exit;
+}
+
+if (empty($paymentMethodId) && empty($originalPaymentMethodId)) {
+    echo json_encode(['success' => false, 'message' => 'A valid payment method is required.']);
     exit;
 }
 
 
-if ($request_method === 'POST') {
-    switch ($action) {
-        // ... (existing payment related actions if any, not shown in the provided context for this API) ...
-        case 'delete_bulk':
-            handleDeleteBulk($conn, $user_id);
-            break;
-        default:
-            echo json_encode(['success' => false, 'message' => 'Invalid POST action.']);
-            break;
+$conn->begin_transaction();
+
+try {
+    // 1. Fetch the invoice from the database to verify it exists and belongs to the user.
+    $stmt_invoice = $conn->prepare("SELECT id, quote_id, booking_id FROM invoices WHERE invoice_number = ? AND user_id = ? AND status IN ('pending', 'partially_paid')");
+    $stmt_invoice->bind_param("si", $invoiceNumber, $user_id);
+    $stmt_invoice->execute();
+    $result_invoice = $stmt_invoice->get_result();
+    if ($result_invoice->num_rows === 0) {
+        throw new Exception("Invoice not found, already paid, or you are not authorized to pay it.");
     }
-} else {
-    echo json_encode(['success' => false, 'message' => 'Invalid request method.']);
+    $invoice_data = $result_invoice->fetch_assoc();
+    $invoice_id = $invoice_data['id'];
+    $quote_id = $invoice_data['quote_id'];
+    $booking_id_from_invoice = $invoice_data['booking_id'];
+    $stmt_invoice->close();
+
+    // Ensure Stripe customer exists (this function handles creation/validation)
+    // This function is defined in api/customer/payment_methods.php, assuming it's available or in functions.php
+    $stripe_customer_id = ensureStripeCustomerExists($conn, $user_id); 
+    
+    $final_payment_method_id = $paymentMethodId; // Use the new payment method by default
+
+    // If a saved card token was sent, retrieve the actual Stripe Payment Method ID from your DB
+    if ($originalPaymentMethodId) {
+        $stmt_get_saved_pm = $conn->prepare("SELECT braintree_payment_token FROM user_payment_methods WHERE id = ? AND user_id = ?"); // 'braintree_payment_token' now stores Stripe PM ID
+        $stmt_get_saved_pm->bind_param("ii", $originalPaymentMethodId, $user_id);
+        $stmt_get_saved_pm->execute();
+        $saved_pm_data = $stmt_get_saved_pm->get_result()->fetch_assoc();
+        if ($saved_pm_data && !empty($saved_pm_data['braintree_payment_token'])) {
+            $final_payment_method_id = $saved_pm_data['braintree_payment_token'];
+        } else {
+             throw new Exception("Saved payment method not found or not authorized.");
+        }
+        $stmt_get_saved_pm->close();
+    }
+
+
+    // --- FIX: Add check for positive amount before Stripe PaymentIntent creation ---
+    $amount_in_cents = (int)($amountToPay * 100);
+    if ($amount_in_cents <= 0) {
+        throw new Exception("Payment amount must be greater than zero.");
+    }
+    // --- END FIX ---
+
+    // --- Debugging Log: Log the payload just before sending to Stripe ---
+    error_log("Stripe PaymentIntent creation payload for Invoice: {$invoiceNumber}, User: {$user_id}:");
+    error_log("Amount (cents): " . $amount_in_cents);
+    error_log("Currency: usd");
+    error_log("Customer ID: " . $stripe_customer_id);
+    error_log("Payment Method ID: " . $final_payment_method_id);
+    error_log("Raw POST data: " . print_r($_POST, true)); 
+    // --- END Debugging Log ---
+
+    // 2. Create a PaymentIntent
+    $paymentIntent = \Stripe\PaymentIntent::create([
+        'amount' => $amount_in_cents, // Amount in cents
+        'currency' => 'usd', // Adjust currency as needed
+        'customer' => $stripe_customer_id,
+        'payment_method' => $final_payment_method_id,
+        'off_session' => true, // Indicates it's a customer-initiated payment and might be off-session
+        'confirm' => true, // Confirm the payment immediately
+        'metadata' => [
+            'invoice_id' => $invoice_id,
+            'invoice_number' => $invoiceNumber,
+            'user_id' => $user_id
+        ],
+        'error_on_requires_action' => true, // Fail if 3D Secure is required and not handled client-side
+    ]);
+
+    // 3. Handle PaymentIntent status
+    if ($paymentIntent->status == 'succeeded') {
+        $transaction_id = $paymentIntent->id;
+        $payment_method_type = $paymentIntent->payment_method_types[0] ?? 'card'; // e.g., 'card'
+        $card_last4 = '';
+        if (isset($paymentIntent->charges->data[0]->payment_method_details->card->last4)) {
+            $card_last4 = $paymentIntent->charges->data[0]->payment_method_details->card->last4;
+        }
+        $payment_method_used = ucfirst($payment_method_type) . " ending in " . $card_last4;
+
+        // If 'save_card' is true and a new payment method was used, attach it to the customer
+        if ($saveCard && $paymentMethodId && !$originalPaymentMethodId) {
+            // Attach the PaymentMethod to the Customer
+            \Stripe\PaymentMethod::retrieve($paymentMethodId)->attach(['customer' => $stripe_customer_id]);
+
+            // Save the Stripe Payment Method ID in your database for future use
+            // The 'braintree_payment_token' column will now store Stripe Payment Method IDs
+            $stmt_save_token = $conn->prepare(
+                "INSERT INTO user_payment_methods (user_id, braintree_payment_token, card_type, last_four, expiration_month, expiration_year, cardholder_name, billing_address, is_default)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            );
+            $stmt_save_token->bind_param("issssssis",
+                $user_id,
+                $paymentMethodId, // Store the Stripe Payment Method ID here
+                $paymentIntent->charges->data[0]->payment_method_details->card->brand ?? 'Unknown',
+                $card_last4,
+                $paymentIntent->charges->data[0]->payment_method_details->card->exp_month ?? '',
+                $paymentIntent->charges->data[0]->payment_method_details->card->exp_year ?? '',
+                $_POST['cardholder_name'] ?? '',
+                $_POST['billing_address'] ?? '',
+                false // Not setting as default during add; user can do that in payment methods page
+            );
+            $stmt_save_token->execute();
+            $stmt_save_token->close();
+        }
+
+        // 4. Update the invoice status in our database to 'paid'.
+        $stmt_update_invoice = $conn->prepare("UPDATE invoices SET status = 'paid', payment_method = ?, transaction_id = ? WHERE id = ?");
+        $stmt_update_invoice->bind_param("ssi", $payment_method_used, $transaction_id, $invoice_id);
+        if (!$stmt_update_invoice->execute()) {
+            throw new Exception("Failed to update invoice status in the database.");
+        }
+        $stmt_update_invoice->close();
+
+        // 5. Check if this payment is for an extension, relocation, swap, or a new booking.
+        $final_booking_id = null;
+        $is_extension_invoice = strpos($invoiceNumber, 'INV-EXT-') === 0;
+        $is_relocation_invoice = strpos($invoiceNumber, 'INV-REL-') === 0;
+        $is_swap_invoice = strpos($invoiceNumber, 'INV-SWA-') === 0;
+
+        if ($is_extension_invoice && $booking_id_from_invoice) {
+            // --- THIS IS A RENTAL EXTENSION PAYMENT ---
+            $final_booking_id = $booking_id_from_invoice;
+
+            // Get the requested extension days
+            $stmt_ext = $conn->prepare("SELECT requested_days FROM booking_extension_requests WHERE invoice_id = ? AND status = 'approved'");
+            $stmt_ext->bind_param("i", $invoice_id);
+            $stmt_ext->execute();
+            $ext_data = $stmt_ext->get_result()->fetch_assoc();
+            $stmt_ext->close();
+            
+            if ($ext_data && $ext_data['requested_days'] > 0) {
+                // Update the booking's end date
+                $stmt_update_end_date = $conn->prepare("UPDATE bookings SET end_date = DATE_ADD(end_date, INTERVAL ? DAY) WHERE id = ?");
+                $stmt_update_end_date->bind_param("ii", $ext_data['requested_days'], $final_booking_id);
+                $stmt_update_end_date->execute();
+                $stmt_update_end_date->close();
+
+                // Log the status history for the extension payment
+                $notes = "Booking extended by {$ext_data['requested_days']} days due to paid invoice #{$invoiceNumber}.";
+                $stmt_log_ext = $conn->prepare("INSERT INTO booking_status_history (booking_id, status, notes) VALUES (?, 'extended', ?)");
+                $stmt_log_ext->bind_param("is", $final_booking_id, $notes);
+                $stmt_log_ext->execute();
+                $stmt_log_ext->close();
+            }
+
+        } elseif (($is_relocation_invoice || $is_swap_invoice) && $booking_id_from_invoice) {
+            // --- THIS IS A RELOCATION OR SWAP SERVICE PAYMENT ---
+            $final_booking_id = $booking_id_from_invoice;
+            $new_booking_status = $is_relocation_invoice ? 'relocated' : 'swapped';
+            $service_name = $is_relocation_invoice ? 'Relocation' : 'Swap';
+
+            // Update the booking status to 'relocated' or 'swapped'
+            $stmt_update_booking_status = $conn->prepare("UPDATE bookings SET status = ? WHERE id = ?");
+            $stmt_update_booking_status->bind_param("si", $new_booking_status, $final_booking_id);
+            $stmt_update_booking_status->execute();
+            $stmt_update_booking_status->close();
+
+            // Log the status history
+            $notes = "{$service_name} service paid via invoice #{$invoiceNumber}. Booking status updated to '{$new_booking_status}'.";
+            $stmt_log_service = $conn->prepare("INSERT INTO booking_status_history (booking_id, status, notes) VALUES (?, ?, ?)");
+            $stmt_log_service->bind_param("iss", $final_booking_id, $new_booking_status, $notes);
+            $stmt_log_service->execute();
+            $stmt_log_service->close();
+
+        } elseif ($quote_id) {
+            // --- THIS IS A NEW BOOKING FROM A QUOTE ---
+            $final_booking_id = createBookingFromInvoice($conn, $invoice_id);
+            if (!$final_booking_id) {
+                throw new Exception("Booking could not be created after successful payment.");
+            }
+        } else {
+            // This is some other type of charge that doesn't create a new booking or update an existing one's core status.
+            // It might be a manual charge added by admin.
+            $final_booking_id = $booking_id_from_invoice; // Keep the existing booking ID if present
+        }
+
+        $conn->commit();
+        echo json_encode([
+            'success'        => true,
+            'message'        => 'Payment successful and booking confirmed!',
+            'transaction_id' => $transaction_id,
+            'booking_id'     => $final_booking_id
+        ]);
+
+    } elseif ($paymentIntent->status == 'requires_action' || $paymentIntent->status == 'requires_source_action') {
+        // This means 3D Secure or other authentication is required.
+        // The client-side will need to handle this.
+        $conn->rollback(); // Rollback DB changes as payment isn't complete yet
+        echo json_encode([
+            'success' => false,
+            'message' => 'Payment requires additional action (e.g., 3D Secure).',
+            'requires_action' => true,
+            'payment_intent_client_secret' => $paymentIntent->client_secret
+        ]);
+    } else {
+        // Other non-succeeded statuses
+        $conn->rollback();
+        throw new Exception("Payment processing failed with status: " . $paymentIntent->status);
+    }
+
+} catch (\Stripe\Exception\CardException $e) {
+    $conn->rollback();
+    error_log("Stripe Card Error: " . $e->getError()->message);
+    echo json_encode(['success' => false, 'message' => $e->getError()->message]);
+} catch (\Stripe\Exception\RateLimitException $e) {
+    $conn->rollback();
+    error_log("Stripe Rate Limit Error: " . $e->getError()->message);
+    echo json_encode(['success' => false, 'message' => 'Too many requests. Please try again shortly.']);
+} catch (\Stripe\Exception\InvalidRequestException $e) {
+    $conn->rollback();
+    error_log("Stripe Invalid Request Error: " . $e->getError()->message);
+    echo json_encode(['success' => false, 'message' => 'Invalid payment request. Please check details.']);
+} catch (\Stripe\Exception\AuthenticationException $e) {
+    $conn->rollback();
+    error_log("Stripe Authentication Error: " . $e->getError()->message);
+    echo json_encode(['success' => false, 'message' => 'Payment gateway authentication failed. Please contact support.']);
+} catch (\Stripe\Exception\ApiConnectionException $e) {
+    $conn->rollback();
+    error_log("Stripe API Connection Error: " . $e->getError()->message);
+    echo json_encode(['success' => false, 'message' => 'Cannot connect to payment gateway. Please check your internet connection and try again.']);
+} catch (\Stripe\Exception\ApiErrorException $e) {
+    $conn->rollback();
+    error_log("Stripe API Error: " . $e->getError()->message);
+    echo json_encode(['success' => false, 'message' => $e->getError()->message]);
+} catch (Exception $e) {
+    $conn->rollback();
+    error_log("Payment processing failed for Invoice: $invoiceNumber, User: $user_id. Error: " . $e->getMessage());
+    echo json_encode(['success' => false, 'message' => 'Payment failed: ' . $e->getMessage()]);
 }
 
 $conn->close();
-
-/**
- * Handles bulk deletion of invoices for a specific customer.
- * This function ensures that only invoices belonging to the logged-in user are deleted.
- * It also handles the deletion of associated bookings to maintain referential integrity.
- *
- * @param mysqli $conn The database connection object.
- * @param int $user_id The ID of the currently logged-in user.
- * @throws Exception If no invoice IDs are provided, or a database error occurs.
- */
-function handleDeleteBulk($conn, $user_id) {
-    $invoice_ids = $_POST['invoice_ids'] ?? [];
-    
-    // Ensure invoice_ids is an array and not empty
-    if (empty($invoice_ids) || !is_array($invoice_ids)) {
-        echo json_encode(['success' => false, 'message' => 'No invoice IDs provided for bulk deletion.']);
-        return;
-    }
-
-    $conn->begin_transaction();
-
-    try {
-        // Filter invoice IDs to ensure they belong to the current user
-        $placeholders = implode(',', array_fill(0, count($invoice_ids), '?'));
-        $types = str_repeat('i', count($invoice_ids));
-
-        $stmt_check_ownership = $conn->prepare("SELECT id FROM invoices WHERE id IN ($placeholders) AND user_id = ?");
-        // Bind parameters: first the invoice IDs, then the user_id
-        $params_with_user_id = array_merge($invoice_ids, [$user_id]);
-        $stmt_check_ownership->bind_param($types . 'i', ...$params_with_user_id);
-        $stmt_check_ownership->execute();
-        $result_ownership = $stmt_check_ownership->get_result();
-        $filtered_invoice_ids = [];
-        while ($row = $result_ownership->fetch_assoc()) {
-            $filtered_invoice_ids[] = $row['id'];
-        }
-        $stmt_check_ownership->close();
-
-        if (empty($filtered_invoice_ids)) {
-            // If no invoices are found after filtering by user_id, it means
-            // either invalid IDs were sent, or they don't belong to the user.
-            throw new Exception("No valid invoices found for deletion or you do not have permission to delete these invoices.");
-        }
-
-        // Use the filtered IDs for deletion
-        $delete_placeholders = implode(',', array_fill(0, count($filtered_invoice_ids), '?'));
-        $delete_types = str_repeat('i', count($filtered_invoice_ids));
-        
-        // 1. Get booking IDs associated with these invoices
-        $stmt_fetch_bookings = $conn->prepare("SELECT id FROM bookings WHERE invoice_id IN ($delete_placeholders)");
-        $stmt_fetch_bookings->bind_param($delete_types, ...$filtered_invoice_ids);
-        $stmt_fetch_bookings->execute();
-        $result_bookings = $stmt_fetch_bookings->get_result();
-        $booking_ids_to_delete = [];
-        while($row = $result_bookings->fetch_assoc()) {
-            $booking_ids_to_delete[] = $row['id'];
-        }
-        $stmt_fetch_bookings->close();
-
-        // 2. If there are associated bookings, delete them
-        if (!empty($booking_ids_to_delete)) {
-            $booking_placeholders = implode(',', array_fill(0, count($booking_ids_to_delete), '?'));
-            $booking_types = str_repeat('i', count($booking_ids_to_delete));
-            
-            // Delete bookings (this should cascade to booking_charges, status_history, reviews)
-            $stmt_delete_bookings = $conn->prepare("DELETE FROM bookings WHERE id IN ($booking_placeholders)");
-            $stmt_delete_bookings->bind_param($booking_types, ...$booking_ids_to_delete);
-            if (!$stmt_delete_bookings->execute()) {
-                throw new Exception("Failed to delete associated bookings: " . $stmt_delete_bookings->error);
-            }
-            $stmt_delete_bookings->close();
-        }
-
-        // 3. Delete the invoices themselves
-        // This should cascade delete from invoice_items
-        $stmt_delete_invoices = $conn->prepare("DELETE FROM invoices WHERE id IN ($delete_placeholders) AND user_id = ?");
-        $final_invoice_params = array_merge($filtered_invoice_ids, [$user_id]);
-        $stmt_delete_invoices->bind_param($delete_types . 'i', ...$final_invoice_params);
-        if (!$stmt_delete_invoices->execute()) {
-            throw new Exception("Failed to delete invoices: " . $stmt_delete_invoices->error);
-        }
-        $stmt_delete_invoices->close();
-
-        $conn->commit();
-        echo json_encode(['success' => true, 'message' => 'Selected invoices and their associated data have been deleted.']);
-
-    } catch (Exception $e) {
-        $conn->rollback();
-        error_log("Customer bulk delete invoices error: " . $e->getMessage());
-        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
-    }
-}

@@ -117,7 +117,7 @@ $supportPhone = '+1 (555) 123-4567';
         }
 
         .hero-background {
-            background-image: url('/assets/images/hero image for about us page.png');
+            background-image: url('/assets/images/hero image for support center page.png');
             background-size: cover;
             background-position: center;
             position: relative;
@@ -688,13 +688,13 @@ $supportPhone = '+1 (555) 123-4567';
                 </p>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-12 max-w-4xl mx-auto">
                     <div class="support-option-card animate-on-scroll delay-200">
-                        <div class="icon-large">📚</div>
+                        <div class="icon-large"><img src="/assets/images/Mask group6.png" width="80" height="80" style="justify-content:center; display:flex;"></div>
                         <h3>In-Depth Guides & Blog</h3>
                         <p>Access detailed articles and expert guides on a variety of topics, from choosing the right equipment to optimizing waste management and troubleshooting common issues.</p>
                         <a href="/Resources/Blog.php" class="text-blue-custom font-semibold mt-4 inline-block">Explore Our Blog &rarr;</a>
                     </div>
                     <div class="support-option-card animate-on-scroll delay-300">
-                        <div class="icon-large">🗣️</div>
+                        <div class="icon-large"><img src="/assets/images/Mask group7.png" width="80" height="80" style="justify-content:center; display:flex;"></div>
                         <h3>Community Forum & Feedback</h3>
                         <p>Join our growing community to ask questions, share experiences, and get tips from other <?php echo htmlspecialchars($companyName); ?> users. Your feedback helps us improve!</p>
                         <a href="#" onclick="showAIChat('support'); return false;" class="text-blue-custom font-semibold mt-4 inline-block">Join the Community &rarr;</a>

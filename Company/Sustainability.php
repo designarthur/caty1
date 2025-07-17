@@ -93,7 +93,7 @@
         }
 
         .hero-background {
-            background-image: url('/assets/images/hero image for about us page.png');
+            background-image: url('/assets/images/hero image for sustainability page.png');
             background-size: cover;
             background-position: center;
             position: relative;
@@ -381,32 +381,32 @@
                 <h2 class="text-4xl md:text-5xl font-bold text-center text-gray-800 mb-20 animate-on-scroll">Driving Environmental Responsibility</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
                     <div class="sustainability-card animate-on-scroll delay-100">
-                        <div class="icon-large">♻️</div>
+                        <div class="icon-large" style="justify-content:center; display:flex;"><img src="/assets/images/Mask group.png" height="80" width="80"></div>
                         <h3>Advanced Recycling Programs</h3>
                         <p>We work with partners who prioritize recycling and proper sorting of materials collected through our dumpster and junk removal services, diverting waste from landfills.</p>
                     </div>
                     <div class="sustainability-card animate-on-scroll delay-200">
-                        <div class="icon-large">🌱</div>
+                        <div class="icon-large" style="justify-content:center; display:flex;"><img src="/assets/images/Mask group3.png" height="80" width="80"></div>
                         <h3>Promoting Reusability & Donation</h3>
                         <p>Usable items from junk removal are channeled to local charities and donation centers, extending their lifespan and supporting community initiatives.</p>
                     </div>
                     <div class="sustainability-card animate-on-scroll delay-300">
-                        <div class="icon-large">⚡</div>
+                        <div class="icon-large" style="justify-content:center; display:flex;"><img src="/assets/images/Mask group1.png" height="80" width="80"></div>
                         <h3>Energy-Efficient Equipment</h3>
                         <p>We encourage our network of suppliers to utilize modern, well-maintained equipment that is more fuel-efficient and produces lower emissions.</p>
                     </div>
                     <div class="sustainability-card animate-on-scroll delay-400">
-                        <div class="icon-large">📊</div>
+                        <div class="icon-large" style="justify-content:center; display:flex;"><img src="/assets/images/Mask group5.png" height="80" width="80"></div>
                         <h3>Transparent Waste Tracking</h3>
                         <p>Our platform aims to provide insights into waste diversion rates, allowing customers to understand the environmental impact of their projects.</p>
                     </div>
                     <div class="sustainability-card animate-on-scroll delay-500">
-                        <div class="icon-large">🗺️</div>
+                        <div class="icon-large" style="justify-content:center; display:flex;"><img src="/assets/images/Mask group2.png" height="80" width="80"></div>
                         <h3>Optimized Logistics</h3>
                         <p>AI-driven route optimization for deliveries and pickups reduces fuel consumption and carbon emissions, contributing to cleaner air and less traffic.</p>
                     </div>
                     <div class="sustainability-card animate-on-scroll delay-600">
-                        <div class="icon-large">🤝</div>
+                        <div class="icon-large" style="justify-content:center; display:flex;"><img src="/assets/images/Mask group44.png" height="80" width="80"></div>
                         <h3>Sustainable Partnerships</h3>
                         <p>We actively seek out and collaborate with suppliers who share our commitment to environmental stewardship and implement green practices.</p>
                     </div>
@@ -419,7 +419,7 @@
                 <h2 class="text-4xl md:text-5xl font-bold text-gray-800 mb-20 animate-on-scroll">Your Role in a Greener Future</h2>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
                     <div class="animate-on-scroll delay-100">
-                        <img src="https://placehold.co/600x400/34a853/ffffff?text=Green+Future" alt="Green Future Initiative" class="rounded-2xl shadow-xl w-full h-auto">
+                        <img src="/assets/images/227783898_dbd3dc5a-8218-4e87-bc25-099a97dd82fa 1.png" alt="Green Future Initiative" class="rounded-2xl shadow-xl w-full h-auto">
                     </div>
                     <div class="text-left animate-on-scroll delay-200">
                         <p class="text-xl text-gray-700 mb-8 leading-relaxed">

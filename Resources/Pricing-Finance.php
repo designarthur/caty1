@@ -106,7 +106,7 @@ if (!$companyName) {
         }
 
         .hero-background {
-            background-image: url('/assets/images/hero image for about us page.png');
+            background-image: url('/assets/images/hero image for pricing and finance  page.png');
             background-size: cover;
             background-position: center;
             position: relative;
@@ -444,7 +444,7 @@ if (!$companyName) {
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
                     <div class="feature-card animate-on-scroll delay-200">
                         <div class="icon-wrapper">
-                            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2-1.343-2-3-2z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.105A9.763 9.763 0 0112 4c4.97 0 9 3.582 9 8z"></path></svg>
+                            <img src="/assets/images/Mask group8.png" width="80" height="80">
                         </div>
                         <h4>AI-Driven Best Price Guarantee</h4>
                         <p>Our intelligent system uses advanced algorithms to source the most competitive quotes from our network of local suppliers, ensuring you always get the best price available.</p>
@@ -452,7 +452,7 @@ if (!$companyName) {
 
                     <div class="feature-card animate-on-scroll delay-300">
                         <div class="icon-wrapper">
-                            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <img src="/assets/images/Mask group9.png" width="80" height="80">
                         </div>
                         <h4>No Hidden Fees</h4>
                         <p>What you see is what you pay. We pride ourselves on transparent pricing with no surprise charges, so you can budget with confidence.</p>
@@ -460,7 +460,7 @@ if (!$companyName) {
 
                     <div class="feature-card animate-on-scroll delay-400">
                         <div class="icon-wrapper">
-                            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 100 4m-4 12a2 2 0 100-4m14-4a2 2 0 100-4m-4 4a2 2 0 100 4m-6-4a2 2 0 100 4m-2 2a2 2 0 100 4m0-12a2 2 0 100 4"></path></svg>
+                            <img src="/assets/images/Mask group10.png" width="80" height="80">
                         </div>
                         <h4>Customized Solutions</h4>
                         <p>Every project is unique. Our pricing adapts to your specific requirements, from rental duration to equipment type and quantity, ensuring optimal value.</p>
@@ -468,7 +468,7 @@ if (!$companyName) {
 
                     <div class="feature-card animate-on-scroll delay-500">
                         <div class="icon-wrapper">
-                            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                            <img src="/assets/images/Mask group11.png" width="80" height="80">
                         </div>
                         <h4>Flexible Payment Options</h4>
                         <p>We accept all major credit cards and offer secure ACH transfers. For larger projects, inquire about our flexible financing plans to ease your cash flow.</p>
@@ -476,7 +476,7 @@ if (!$companyName) {
 
                     <div class="feature-card animate-on-scroll delay-600">
                         <div class="icon-wrapper">
-                            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5s3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18s-3.332.477-4.5 1.253"></path></svg>
+                            <img src="/assets/images/Mask group12.png" width="80" height="80">
                         </div>
                         <h4>Managed from Your Dashboard</h4>
                         <p>View all your quotes, invoices, and payment history in one secure, intuitive customer dashboard. Pay with confidence and track your budget effortlessly.</p>
@@ -584,14 +584,14 @@ if (!$companyName) {
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
                     <div class="feature-card animate-on-scroll delay-200">
                         <div class="icon-wrapper">
-                            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 4.016M2.944 12A11.955 11.955 0 014.016 3.382 11.955 11.955 0 0112 2.944c3.382.01 6.353.974 8.618 4.016A11.955 11.955 0 0121.056 12H21m-9 0c.834 0 1.5.666 1.5 1.5s-.666 1.5-1.5 1.5-1.5-.666-1.5-1.5.666-1.5 1.5-1.5zm-5 0c.834 0 1.5.666 1.5 1.5s-.666 1.5-1.5 1.5-1.5-.666-1.5-1.5.666-1.5 1.5-1.5zm-5 0c.834 0 1.5.666 1.5 1.5s-.666 1.5-1.5 1.5-1.5-.666-1.5-1.5.666-1.5 1.5-1.5z"></path></svg>
+                            <img src="/assets/images/Mask group11.png" width="80" height="80">
                         </div>
                         <h4>Flexible Payment Plans</h4>
                         <p>Spread the cost of your large rentals over time with customizable payment schedules that align with your project's cash flow.</p>
                     </div>
                     <div class="feature-card animate-on-scroll delay-300">
                         <div class="icon-wrapper">
-                            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                            <img src="/assets/images/Mask group13.png" width="80" height="80">
                         </div>
                         <h4>Streamlined Application</h4>
                         <p>Our simple application process for financing ensures quick approvals, so you can get the equipment you need without unnecessary delays.</p>
