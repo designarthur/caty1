@@ -1,10 +1,14 @@
 <?php
 // customer/pages/bookings.php
 
-if (session_status() == PHP_SESSION_NONE) { session_start(); }
-require_once __DIR__ . '/../../includes/db.php';
-require_once __DIR__ . '/../../includes/session.php';
-require_once __DIR__ . '/../../includes/functions.php';
+// Ensure session is started and user is logged in as a customer
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
+// Using $_SERVER['DOCUMENT_ROOT'] for absolute paths for robustness
+require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/db.php';
+require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/session.php';
+require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/functions.php';
 
 if (!is_logged_in()) {
     echo '<div class="text-red-500 text-center p-8">You must be logged in to view this content.</div>';
@@ -137,7 +141,7 @@ if ($requested_booking_id) {
         $types .= "s";
     }
 
-    // Search Query (Booking Number or Location)
+    // Search Query (Booking # or Location)
     if (!empty($search_query)) {
         $search_term = '%' . $search_query . '%';
         $base_query .= " AND (b.booking_number LIKE ? OR b.delivery_location LIKE ?)";
@@ -248,48 +252,59 @@ function getTimelineIconClass($status) {
     <div class="bg-white p-6 rounded-lg shadow-md border border-gray-200">
         <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-3">
             <h2 class="text-xl font-semibold text-gray-700 flex-grow"><i class="fas fa-book-open mr-2 text-blue-600"></i>All Your Bookings</h2>
-            
-            <div class="flex items-center gap-2 w-full sm:w-auto">
-                <label for="status-filter" class="text-sm font-medium text-gray-700">Status:</label>
-                <select id="status-filter" onchange="applyFilters()"
-                        class="p-2 border border-gray-300 rounded-md text-sm flex-grow">
-                    <option value="all" <?php echo $filter_status === 'all' ? 'selected' : ''; ?>>All</option>
-                    <option value="pending" <?php echo $filter_status === 'pending' ? 'selected' : ''; ?>>Pending</option>
-                    <option value="scheduled" <?php echo $filter_status === 'scheduled' ? 'selected' : ''; ?>>Scheduled</option>
-                    <option value="assigned" <?php echo $filter_status === 'assigned' ? 'selected' : ''; ?>>Assigned</option>
-                    <option value="out_for_delivery" <?php echo $filter_status === 'out_for_delivery' ? 'selected' : ''; ?>>Out for Delivery</option>
-                    <option value="delivered" <?php echo $filter_status === 'delivered' ? 'selected' : ''; ?>>Delivered</option>
-                    <option value="in_use" <?php echo $filter_status === 'in_use' ? 'selected' : ''; ?>>In Use</option>
-                    <option value="awaiting_pickup" <?php echo $filter_status === 'awaiting_pickup' ? 'selected' : ''; ?>>Awaiting Pickup</option>
-                    <option value="completed" <?php echo $filter_status === 'completed' ? 'selected' : ''; ?>>Completed</option>
-                    <option value="cancelled" <?php echo $filter_status === 'cancelled' ? 'selected' : ''; ?>>Cancelled</option>
-                    <option value="relocation_requested" <?php echo $filter_status === 'relocation_requested' ? 'selected' : ''; ?>>Relocation Requested</option>
-                    <option value="swap_requested" <?php echo $filter_status === 'swap_requested' ? 'selected' : ''; ?>>Swap Requested</option>
-                    <option value="relocated" <?php echo $filter_status === 'relocated' ? 'selected' : ''; ?>>Relocated</option>
-                    <option value="swapped" <?php echo $filter_status === 'swapped' ? 'selected' : ''; ?>>Swapped</option>
-                    <option value="extended" <?php echo $filter_status === 'extended' ? 'selected' : ''; ?>>Extended</option>
-                </select>
-            </div>
-            <div class="flex items-center gap-2 w-full sm:w-auto">
-                <label for="start-date-filter" class="text-sm font-medium text-gray-700">From:</label>
-                <input type="date" id="start-date-filter" value="<?php echo htmlspecialchars($start_date_filter); ?>"
-                       class="p-2 border border-gray-300 rounded-md text-sm flex-grow" onchange="applyFilters()">
-                <label for="end-date-filter" class="text-sm font-medium text-gray-700">To:</label>
-                <input type="date" id="end-date-filter" value="<?php echo htmlspecialchars($end_date_filter); ?>"
-                       class="p-2 border border-gray-300 rounded-md text-sm flex-grow" onchange="applyFilters()">
-            </div>
-            <div class="flex-grow w-full sm:w-auto">
+        </div>
+
+        <div class="mb-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div class="flex-grow w-full sm:w-auto flex items-center gap-2">
                 <input type="text" id="search-input" placeholder="Search booking # or address..."
-                       class="p-2 border border-gray-300 rounded-md w-full text-sm"
-                       value="<?php echo htmlspecialchars($search_query); ?>"
-                       onkeydown="if(event.key === 'Enter') applyFilters()">
+                    class="p-2 border border-gray-300 rounded-md w-full text-sm"
+                    value="<?php echo htmlspecialchars($search_query); ?>"
+                    onkeydown="if(event.key === 'Enter') applyFilters()">
+                <button id="toggle-filters-btn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-md md:hidden">
+                    <i class="fas fa-filter"></i>
+                </button>
+                 <button onclick="applyFilters()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-md hidden md:block">
+                    <i class="fas fa-search"></i>
+                </button>
             </div>
-            <button onclick="applyFilters()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-md text-sm w-full sm:w-auto">
-                Apply Filters
-            </button>
+
+            <div id="filter-options-section" class="flex-col sm:flex-row gap-3 w-full md:flex hidden">
+                <div class="flex items-center gap-2 flex-grow">
+                    <label for="status-filter" class="text-sm font-medium text-gray-700">Status:</label>
+                    <select id="status-filter" onchange="applyFilters()"
+                            class="p-2 border border-gray-300 rounded-md text-sm flex-grow">
+                        <option value="all" <?php echo $filter_status === 'all' ? 'selected' : ''; ?>>All</option>
+                        <option value="pending" <?php echo $filter_status === 'pending' ? 'selected' : ''; ?>>Pending</option>
+                        <option value="scheduled" <?php echo $filter_status === 'scheduled' ? 'selected' : ''; ?>>Scheduled</option>
+                        <option value="assigned" <?php echo $filter_status === 'assigned' ? 'selected' : ''; ?>>Assigned</option>
+                        <option value="out_for_delivery" <?php echo $filter_status === 'out_for_delivery' ? 'selected' : ''; ?>>Out for Delivery</option>
+                        <option value="delivered" <?php echo $filter_status === 'delivered' ? 'selected' : ''; ?>>Delivered</option>
+                        <option value="in_use" <?php echo $filter_status === 'in_use' ? 'selected' : ''; ?>>In Use</option>
+                        <option value="awaiting_pickup" <?php echo $filter_status === 'awaiting_pickup' ? 'selected' : ''; ?>>Awaiting Pickup</option>
+                        <option value="completed" <?php echo $filter_status === 'completed' ? 'selected' : ''; ?>>Completed</option>
+                        <option value="cancelled" <?php echo $filter_status === 'cancelled' ? 'selected' : ''; ?>>Cancelled</option>
+                        <option value="relocation_requested" <?php echo $filter_status === 'relocation_requested' ? 'selected' : ''; ?>>Relocation Requested</option>
+                        <option value="swap_requested" <?php echo $filter_status === 'swap_requested' ? 'selected' : ''; ?>>Swap Requested</option>
+                        <option value="relocated" <?php echo $filter_status === 'relocated' ? 'selected' : ''; ?>>Relocated</option>
+                        <option value="swapped" <?php echo $filter_status === 'swapped' ? 'selected' : ''; ?>>Swapped</option>
+                        <option value="extended" <?php echo $filter_status === 'extended' ? 'selected' : ''; ?>>Extended</option>
+                    </select>
+                </div>
+                <div class="flex items-center gap-2 w-full sm:w-auto">
+                    <label for="start-date-filter" class="text-sm font-medium text-gray-700">From:</label>
+                    <input type="date" id="start-date-filter" value="<?php echo htmlspecialchars($start_date_filter); ?>"
+                           class="p-2 border border-gray-300 rounded-md text-sm w-full flex-grow" onchange="applyFilters()">
+                    <label for="end-date-filter" class="text-sm font-medium text-gray-700">To:</label>
+                    <input type="date" id="end-date-filter" value="<?php echo htmlspecialchars($end_date_filter); ?>"
+                           class="p-2 border border-gray-300 rounded-md text-sm w-full flex-grow" onchange="applyFilters()">
+                </div>
+                <button onclick="applyFilters()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-md w-full sm:w-auto md:hidden">
+                    Apply Filters
+                </button>
+            </div>
         </div>
         <div class="flex justify-end mb-4">
-             <button id="bulk-delete-bookings-btn" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200 shadow-md hidden">
+             <button id="bulk-delete-bookings-btn" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200 shadow-md hidden md:inline-flex items-center">
                 <i class="fas fa-trash-alt mr-2"></i>Delete Selected
             </button>
         </div>
@@ -297,7 +312,7 @@ function getTimelineIconClass($status) {
         <?php if (empty($bookings_list)): ?>
             <p class="text-center text-gray-500 py-4">No bookings found for the selected filters or search query.</p>
         <?php else: ?>
-            <div class="overflow-x-auto">
+            <div class="hidden md:block overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">
                      <thead class="bg-blue-50">
                         <tr>
@@ -329,6 +344,34 @@ function getTimelineIconClass($status) {
                     </tbody>
                 </table>
             </div>
+
+            <div class="md:hidden space-y-4">
+                <?php foreach ($bookings_list as $booking): ?>
+                    <div class="bg-white rounded-lg shadow-md border border-blue-200 p-4 relative">
+                        <div class="absolute top-3 right-3 flex space-x-2">
+                            <input type="checkbox" class="booking-checkbox h-4 w-4" value="<?php echo $booking['id']; ?>">
+                        </div>
+                        <div class="mb-2">
+                            <p class="text-sm font-bold text-gray-800">Booking ID: #<?php echo htmlspecialchars($booking['booking_number']); ?></p>
+                            <p class="text-xs text-gray-600">Service: <?php echo htmlspecialchars(ucwords(str_replace('_', ' ', $booking['service_type']))); ?></p>
+                        </div>
+                        <div class="border-t border-b border-gray-200 py-2 mb-2">
+                            <p class="text-sm text-gray-700"><span class="font-medium">Date:</span> <?php echo htmlspecialchars($booking['start_date']); ?></p>
+                            <p class="text-sm text-gray-700"><span class="font-medium">Status:</span> 
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <?php echo getStatusBadgeClass($booking['status']); ?>">
+                                    <?php echo htmlspecialchars(ucwords(str_replace('_', ' ', $booking['status']))); ?>
+                                </span>
+                            </p>
+                        </div>
+                        <div class="flex justify-end mt-3">
+                            <button class="px-3 py-1 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 text-xs view-details-btn" data-booking-id="<?php echo $booking['id']; ?>">
+                                <i class="fas fa-eye mr-1"></i>View Details
+                            </button>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+
             <nav class="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3">
                 <div>
                     <p class="text-sm text-gray-700">
@@ -842,7 +885,6 @@ function getTimelineIconClass($status) {
         });
     }
 
-
     contentArea.addEventListener('click', function(event) {
         const target = event.target.closest('button');
         if (!target) return;
@@ -852,6 +894,22 @@ function getTimelineIconClass($status) {
         }
         if (target.classList.contains('back-to-list-btn')) {
             hideBookingDetails();
+        }
+
+        // Toggle filter section visibility on mobile
+        if (target.id === 'toggle-filters-btn') {
+            const filterOptionsSection = document.getElementById('filter-options-section');
+            if (filterOptionsSection) {
+                filterOptionsSection.classList.toggle('hidden');
+                filterOptionsSection.classList.toggle('flex'); // Also toggle flex for layout
+                // On toggle, if showing, remove block from filter inputs if present and ensure full width
+                if (filterOptionsSection.classList.contains('flex')) {
+                    const dateInputs = filterOptionsSection.querySelectorAll('input[type="date"]');
+                    dateInputs.forEach(input => {
+                        input.classList.add('w-full', 'flex-grow'); // Ensure they take full width
+                    });
+                }
+            }
         }
         
         const bookingId = target.dataset.bookingId;
@@ -870,7 +928,7 @@ function getTimelineIconClass($status) {
                 chargeTextParagraph.innerHTML = `This service is included in your original quote.`;
                 submitButton.textContent = 'Submit Request';
                 submitButton.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
-                submitButton.classList.add('bg-green-600', 'hover:bg-green-700');
+                submitButton.classList.add('bg-green-600', 'hover:bg-green-600');
             } else {
                 chargeTextParagraph.innerHTML = `A one-time charge for this service will be applied: <span class="font-bold text-blue-600">$${charge}</span>`;
                 submitButton.textContent = 'Proceed to Payment';
@@ -894,7 +952,7 @@ function getTimelineIconClass($status) {
                 chargeTextParagraph.innerHTML = `This service is included in your original quote. Are you sure you want to proceed with the swap?`;
                 submitButton.textContent = 'Submit Request';
                 submitButton.classList.remove('bg-purple-600', 'hover:bg-purple-700');
-                submitButton.classList.add('bg-green-600', 'hover:bg-green-700');
+                submitButton.classList.add('bg-green-600', 'hover:bg-green-600');
             } else {
                 chargeTextParagraph.innerHTML = `A one-time charge of <span class="font-bold text-purple-600">$${charge}</span> will be applied to swap your equipment. Are you sure you want to proceed?`;
                 submitButton.textContent = 'Yes, Proceed to Payment';
