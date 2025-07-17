@@ -18,25 +18,34 @@ $user_id = $_SESSION['user_id'];
 
 // Fetch saved payment methods from the database
 $saved_payment_methods = [];
+// Select all necessary fields to pass to frontend for editing
 $stmt = $conn->prepare("SELECT id, braintree_payment_token, card_type, last_four, expiration_month, expiration_year, cardholder_name, is_default, billing_address FROM user_payment_methods WHERE user_id = ? ORDER BY is_default DESC, created_at DESC");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $result = $stmt->get_result();
 while($row = $result->fetch_assoc()) {
+    // Ensure expiration_month and expiration_year are not null before substr/htmlspecialchars
     $expMonth = htmlspecialchars($row['expiration_month'] ?? '');
+    // Using ?? '' before substr for safety, then htmlspecialchars for output
     $expYearFull = htmlspecialchars($row['expiration_year'] ?? '');
     $expYearLastTwo = substr($expYearFull, -2);
     $row['expiry_display'] = $expMonth . '/' . $expYearLastTwo;
+
+    // Ensure last_four is not null for card_last_four display
     $row['card_last_four'] = htmlspecialchars($row['last_four'] ?? '');
-    // Ensure raw data for editing is also passed
+    // Add raw expiry parts for populating edit form
     $row['raw_expiration_month'] = htmlspecialchars($row['expiration_month'] ?? '');
     $row['raw_expiration_year'] = htmlspecialchars($row['expiration_year'] ?? '');
     $row['raw_billing_address'] = htmlspecialchars($row['billing_address'] ?? '');
 
+    $row['status'] = $row['is_default'] ? 'Default' : 'Active'; // Convert boolean to string status
+    $row['token'] = $row['braintree_payment_token']; // Use Stripe Payment Method ID as frontend identifier
     $saved_payment_methods[] = $row;
 }
 $stmt->close();
-$conn->close();
+
+// Close DB connection if not needed further on this page
+// $conn->close(); // Keep connection open until script ends
 ?>
 
 <script src="https://js.stripe.com/v3/"></script>
@@ -61,21 +70,12 @@ $conn->close();
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
                     <?php foreach ($saved_payment_methods as $method): ?>
-                        <tr
-                            data-id="<?php echo htmlspecialchars($method['id']); ?>"
-                            data-stripe-pm-id="<?php echo htmlspecialchars($method['braintree_payment_token']); ?>"
-                            data-cardholder-name="<?php echo htmlspecialchars($method['cardholder_name']); ?>"
-                            data-last-four="<?php echo htmlspecialchars($method['card_last_four']); ?>"
-                            data-exp-month="<?php echo htmlspecialchars($method['raw_expiration_month']); ?>"
-                            data-exp-year="<?php echo htmlspecialchars($method['raw_expiration_year']); ?>"
-                            data-billing-address="<?php echo htmlspecialchars($method['raw_billing_address']); ?>"
-                            data-is-default="<?php echo $method['is_default'] ? 'true' : 'false'; ?>"
-                        >
+                        <tr>
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"><?php echo htmlspecialchars($method['cardholder_name']); ?></td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><?php echo htmlspecialchars($method['card_type']); ?> ending in **** <?php echo htmlspecialchars($method['card_last_four']); ?></td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><?php echo htmlspecialchars($method['expiry_display']); ?></td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <?php echo $method['is_default'] ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'; ?>"><?php echo $method['is_default'] ? 'Default' : 'Active'; ?></span>
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <?php echo $method['status'] === 'Default' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'; ?>"><?php echo htmlspecialchars($method['status']); ?></span>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                 <button class="text-indigo-600 hover:text-indigo-900 mr-2 edit-payment-btn" data-id="<?php echo htmlspecialchars($method['id']); ?>">Edit</button>
@@ -229,11 +229,9 @@ $conn->close();
             });
         }
 
-        // Call the initialization function directly (without DOMContentLoaded)
-        // This ensures the Stripe elements are mounted immediately when the script runs
-        // as the dynamic content is loaded.
-        initializeStripeElements();
-
+        // Call the initialization function when the DOM is ready
+        // This ensures the Stripe elements are mounted after the DOM is available
+        document.addEventListener('DOMContentLoaded', initializeStripeElements);
 
         // --- Client-side validation for expiration date (MM/YY) ---
         function isValidExpiryDate(month, year) {

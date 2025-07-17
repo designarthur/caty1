@@ -115,9 +115,9 @@ if ($requested_invoice_id || $requested_quote_id) {
     // Search Query (Invoice Number or User Address)
     if (!empty($search_query)) {
         $search_term = '%' . $search_query . '%';
-        $where_clauses[] = "(i.invoice_number LIKE ? OR u.first_name LIKE ? OR u.last_name LIKE ?)";
-        array_push($params, $search_term, $search_term, $search_term);
-        $types .= "sss";
+        $where_clauses[] = "(i.invoice_number LIKE ? OR u.address LIKE ? OR u.city LIKE ? OR u.state LIKE ? OR u.zip_code LIKE ?)";
+        array_push($params, $search_term, $search_term, $search_term, $search_term, $search_term);
+        $types .= "sssss";
     }
 
     // Date Range Filter
@@ -148,9 +148,9 @@ if ($requested_invoice_id || $requested_quote_id) {
 
     $total_pages = ceil($total_invoices_count / $items_per_page);
 
-    // Main query for invoices list - FIX: Qualify ambiguous columns and add user names
+    // Main query for invoices list - FIX: Qualify ambiguous columns
     $list_query = "
-        SELECT i.id, i.invoice_number, i.amount, i.status, i.created_at, i.due_date, u.first_name, u.last_name
+        SELECT i.id, i.invoice_number, i.amount, i.status, i.created_at, i.due_date
     " . $base_query . $where_sql . "
     ORDER BY i.created_at DESC
     LIMIT ? OFFSET ?";
@@ -192,10 +192,9 @@ function getStatusBadgeClass($status) {
 }
 ?>
 
-<script src="https://js.stripe.com/v3/"></script>
+<h1 class="text-3xl font-bold text-gray-800 mb-8">Invoices</h1>
 
-<div id="invoice-list-view" class="<?php echo $invoice_detail ? 'hidden' : ''; ?>">
-    <h1 class="text-3xl font-bold text-gray-800 mb-8">Invoices</h1>
+<div id="invoice-list" class="<?php echo $invoice_detail ? 'hidden' : ''; ?>">
     <div class="bg-white p-6 rounded-lg shadow-md border border-blue-200">
         <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-3">
             <h2 class="text-xl font-semibold text-gray-700 flex-grow"><i class="fas fa-file-invoice-dollar mr-2 text-blue-600"></i>Your Invoices</h2>
@@ -203,14 +202,14 @@ function getStatusBadgeClass($status) {
 
         <div class="mb-4 flex flex-col sm:flex-row items-center justify-between gap-3">
             <div class="flex-grow w-full sm:w-auto flex items-center gap-2">
-                <input type="text" id="search-input" placeholder="Search invoice # or customer name..."
+                <input type="text" id="search-input" placeholder="Search invoice # or address..."
                        class="p-2 border border-gray-300 rounded-md w-full text-sm"
                        value="<?php echo htmlspecialchars($search_query); ?>"
                        onkeydown="if(event.key === 'Enter') applyFilters()">
                 <button id="toggle-filters-btn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-md md:hidden">
                     <i class="fas fa-filter"></i>
                 </button>
-                 <button id="apply-filters-btn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-md hidden md:block">
+                 <button onclick="applyFilters()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-md hidden md:block">
                     <i class="fas fa-search"></i>
                 </button>
             </div>
@@ -218,7 +217,8 @@ function getStatusBadgeClass($status) {
             <div id="filter-options-section" class="flex-col sm:flex-row gap-3 w-full md:flex hidden">
                 <div class="flex items-center gap-2 flex-grow">
                     <label for="status-filter" class="text-sm font-medium text-gray-700">Status:</label>
-                    <select id="status-filter" class="p-2 border border-gray-300 rounded-md text-sm flex-grow">
+                    <select id="status-filter" onchange="applyFilters()"
+                            class="p-2 border border-gray-300 rounded-md text-sm flex-grow">
                         <option value="all" <?php echo $filter_status === 'all' ? 'selected' : ''; ?>>All</option>
                         <option value="pending" <?php echo $filter_status === 'pending' ? 'selected' : ''; ?>>Pending</option>
                         <option value="paid" <?php echo $filter_status === 'paid' ? 'selected' : ''; ?>>Paid</option>
@@ -256,7 +256,6 @@ function getStatusBadgeClass($status) {
                                 <input type="checkbox" id="select-all-invoices" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
                             </th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Invoice ID</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Customer</th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Date</th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Amount</th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Status</th>
@@ -270,7 +269,6 @@ function getStatusBadgeClass($status) {
                                     <input type="checkbox" class="invoice-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" value="<?php echo htmlspecialchars($invoice['id']); ?>">
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"><?php echo htmlspecialchars($invoice['invoice_number']); ?></td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><?php echo htmlspecialchars($invoice['first_name'] . ' ' . $invoice['last_name']); ?></td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><?php echo (new DateTime($invoice['created_at']))->format('Y-m-d'); ?></td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$<?php echo number_format($invoice['amount'], 2); ?></td>
                                 <td class="px-6 py-4 whitespace-nowrap">
@@ -279,7 +277,7 @@ function getStatusBadgeClass($status) {
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-right">
                                     <button class="text-blue-600 hover:text-blue-900 view-invoice-details" data-invoice-id="<?php echo htmlspecialchars($invoice['id']); ?>">View</button>
                                     <?php if ($invoice['status'] == 'pending' || $invoice['status'] == 'partially_paid'): ?>
-                                        <button class="ml-3 text-green-600 hover:text-green-900 pay-invoice-btn" data-invoice-id="<?php echo htmlspecialchars($invoice['id']); ?>" data-invoice-number="<?php echo htmlspecialchars($invoice['invoice_number']); ?>" data-amount="<?php echo htmlspecialchars($invoice['amount']); ?>">Pay Now</button>
+                                        <button class="ml-3 text-green-600 hover:text-green-900 pay-invoice-btn" data-invoice-id="<?php echo htmlspecialchars($invoice['id']); ?>" data-amount="<?php echo htmlspecialchars($invoice['amount']); ?>">Pay Now</button>
                                     <?php endif; ?>
                                 </td>
                             </tr>
@@ -296,7 +294,6 @@ function getStatusBadgeClass($status) {
                         </div>
                         <div class="mb-2">
                             <p class="text-sm font-bold text-gray-800">Invoice ID: #<?php echo htmlspecialchars($invoice['invoice_number']); ?></p>
-                            <p class="text-xs text-gray-600">Customer: <?php echo htmlspecialchars($invoice['first_name'] . ' ' . $invoice['last_name']); ?></p>
                             <p class="text-xs text-gray-600">Date: <?php echo (new DateTime($invoice['created_at']))->format('Y-m-d'); ?></p>
                         </div>
                         <div class="border-t border-b border-gray-200 py-2 mb-2">
@@ -312,7 +309,7 @@ function getStatusBadgeClass($status) {
                                 <i class="fas fa-eye mr-1"></i>View
                             </button>
                             <?php if ($invoice['status'] == 'pending' || $invoice['status'] == 'partially_paid'): ?>
-                                <button class="px-3 py-1 bg-green-100 text-green-700 rounded-md hover:bg-green-200 text-xs pay-invoice-btn" data-invoice-id="<?php echo htmlspecialchars($invoice['id']); ?>" data-invoice-number="<?php echo htmlspecialchars($invoice['invoice_number']); ?>" data-amount="<?php echo htmlspecialchars($invoice['amount']); ?>">
+                                <button class="px-3 py-1 bg-green-100 text-green-700 rounded-md hover:bg-green-200 text-xs pay-invoice-btn" data-invoice-id="<?php echo htmlspecialchars($invoice['id']); ?>" data-amount="<?php echo htmlspecialchars($invoice['amount']); ?>">
                                     <i class="fas fa-dollar-sign mr-1"></i>Pay Now
                                 </button>
                             <?php endif; ?>
@@ -442,7 +439,7 @@ function getStatusBadgeClass($status) {
 
         <div id="payment-actions" class="flex justify-end mt-6">
             <?php if ($invoice_detail['status'] == 'pending' || $invoice_detail['status'] == 'partially_paid'): ?>
-                <button class="py-2 px-5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 show-payment-form-btn pay-now-detail-btn" data-invoice-id="<?php echo htmlspecialchars($invoice_detail['id']); ?>" data-invoice-number="<?php echo htmlspecialchars($invoice_detail['invoice_number']); ?>" data-amount="<?php echo htmlspecialchars($invoice_detail['amount']); ?>">
+                <button class="py-2 px-5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 show-payment-form-btn pay-now-detail-btn" data-invoice-id="<?php echo htmlspecialchars($invoice_detail['id']); ?>" data-amount="<?php echo htmlspecialchars($invoice_detail['amount']); ?>">
                 <i class="fas fa-dollar-sign mr-2"></i>Pay Now
             </button>
             <?php endif; ?>
@@ -452,14 +449,19 @@ function getStatusBadgeClass($status) {
     <?php endif; ?>
 </div>
 
-<div id="payment-form-view" class="bg-white p-6 rounded-lg shadow-md border border-blue-200 mt-8 hidden">
-    <button class="mb-4 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 back-to-details-btn"><i class="fas fa-arrow-left mr-2"></i>Back to Invoice</button>
-    <h2 class="text-2xl font-bold text-gray-800 mb-6">Pay Invoice <span id="payment-invoice-id-display"></span></h2>
-    <form id="payment-form">
-        <input type="hidden" name="invoice_id" id="payment-form-invoice-id">
-        <input type="hidden" name="invoice_number" id="payment-form-invoice-number">
-        <input type="hidden" name="amount" id="payment-form-amount">
+<div id="payment-form-view" class="bg-white p-6 rounded-lg shadow-md border border-blue-200 hidden mt-8">
+    <button class="mb-4 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300" onclick="window.hidePaymentForm()">
+        <i class="fas fa-arrow-left mr-2"></i>Back to Invoice Details
+    </button>
+    <h2 class="text-2xl font-bold text-gray-800 mb-6">Process Payment for <span id="payment-invoice-id"></span></h2>
+
+    <form id="payment-form" data-original-details="">
+        <input type="hidden" name="action" value="process_payment">
+        <input type="hidden" name="invoice_id" id="payment-form-invoice-id-hidden">
+        <input type="hidden" name="payment_method_id" id="payment-method-id-hidden">
+        <input type="hidden" name="original_payment_method_id" id="original-payment-method-id-hidden">
         <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+
         <div class="mb-5">
             <label for="saved-cards-select" class="block text-sm font-medium text-gray-700 mb-2">Use Saved Card</label>
             <select id="saved-cards-select" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
@@ -477,14 +479,12 @@ function getStatusBadgeClass($status) {
                 $stmt_user_stripe_id->close();
 
                 if ($user_stripe_customer_id) {
-                    $stmt_saved_methods = $conn->prepare("SELECT id, braintree_payment_token, card_type, last_four, expiration_month, expiration_year, cardholder_name, is_default, billing_address FROM user_payment_methods WHERE user_id = ? ORDER BY is_default DESC, created_at DESC");
+                    $stmt_saved_methods = $conn->prepare("SELECT id, card_type, last_four, expiration_month, expiration_year FROM user_payment_methods WHERE user_id = ? ORDER BY is_default DESC, created_at DESC");
                     $stmt_saved_methods->bind_param("i", $user_id);
                     $stmt_saved_methods->execute();
                     $result_saved_methods = $stmt_saved_methods->get_result();
                     while ($method = $result_saved_methods->fetch_assoc()) {
-                        $expiry_display = htmlspecialchars($method['expiration_month'] ?? '') . '/' . substr(htmlspecialchars($method['expiration_year'] ?? ''), -2);
-                        $is_default_attr = $method['is_default'] ? 'data-is-default="true"' : 'data-is-default="false"';
-                        echo '<option value="' . htmlspecialchars($method['id']) . '" data-card-brand="' . htmlspecialchars($method['card_type']) . '" data-last-four="' . htmlspecialchars($method['last_four']) . '" data-exp-month="' . htmlspecialchars($method['expiration_month']) . '" data-exp-year="' . htmlspecialchars($method['expiration_year']) . '" ' . $is_default_attr . ' data-stripe-pm-id="' . htmlspecialchars($method['braintree_payment_token']) . '">' . htmlspecialchars($method['card_type']) . ' ending in ' . htmlspecialchars($method['last_four']) . ' (Expires ' . $expiry_display . ')' . ($method['is_default'] ? ' (Default)' : '') . '</option>';
+                        echo '<option value="' . htmlspecialchars($method['id']) . '" data-card-brand="' . htmlspecialchars($method['card_type']) . '" data-last-four="' . htmlspecialchars($method['last_four']) . '" data-exp-month="' . htmlspecialchars($method['expiration_month']) . '" data-exp-year="' . htmlspecialchars($method['expiration_year']) . '">' . htmlspecialchars($method['card_type']) . ' ending in ' . htmlspecialchars($method['last_four']) . ' (Expires ' . htmlspecialchars($method['expiration_month']) . '/' . substr(htmlspecialchars($method['expiration_year']), -2) . ')</option>';
                     }
                     $stmt_saved_methods->close();
                 }
@@ -499,7 +499,7 @@ function getStatusBadgeClass($status) {
             </div>
             <div class="mb-5">
                 <label for="card-element" class="block text-sm font-medium text-gray-700 mb-2">Credit or debit card</label>
-                <div id="card-element" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" style="min-height: 40px; padding: 12px;">
+                <div id="card-element" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
                     </div>
                 <div id="card-errors" role="alert" class="text-red-500 text-sm mt-2"></div>
             </div>
@@ -526,230 +526,333 @@ function getStatusBadgeClass($status) {
 <script src="https://js.stripe.com/v3/"></script>
 
 <script>
-(function() {
-    let stripe, elements, cardElement; // Declare them here for broader scope within the IIFE
-
-    // This object defines functions that need to be globally accessible.
-    // They are attached to `window` for Dashboard's central event handling.
-    window.loadCustomerInvoices = function(params = {}) {
-        const currentParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
-        const newParams = {
-            page: params.page || (currentParams.get('page') ? parseInt(currentParams.get('page')) : 1),
-            per_page: params.per_page || (currentParams.get('per_page') ? parseInt(currentParams.get('per_page')) : 25),
-            status: params.status || currentParams.get('status') || 'all',
-            search: params.search || currentParams.get('search') || '',
-            start_date: params.start_date || currentParams.get('start_date') || '',
-            end_date: params.end_date || currentParams.get('end_date') || '',
-            invoice_id: params.invoice_id || '' // For detail view
-        };
-        window.loadCustomerSection('invoices', newParams);
-    };
-
+    // These functions are specific to invoices.php and are made global for onclick attributes.
     window.showInvoiceDetails = function(invoiceId) {
         window.loadCustomerInvoices({ invoice_id: invoiceId });
     };
 
     window.hideInvoiceDetails = function() {
+        window.loadCustomerInvoices({}); // Load list view
+    };
+
+    // Robustified hidePaymentForm function
+    window.hidePaymentForm = function() {
         const paymentFormView = document.getElementById('payment-form-view');
         const invoiceDetailView = document.getElementById('invoice-detail-view');
 
-        if (paymentFormView && !paymentFormView.classList.contains('hidden')) {
+        if (paymentFormView) {
             paymentFormView.classList.add('hidden');
-            if (invoiceDetailView) {
-                invoiceDetailView.classList.remove('hidden');
-                return;
-            }
-        }
-        window.loadCustomerInvoices({}); 
-    };
-
-    window.showPaymentForm = async function(invoiceId, invoiceNumber, amount) {
-        // Reset the payment form to its initial state
-        const paymentFormElement = document.getElementById('payment-form');
-        if (paymentFormElement) {
-            paymentFormElement.reset();
-            const cardElementDiv = document.getElementById('card-element');
-            if (cardElement && cardElementDiv.innerHTML !== '') {
-                cardElement.clear();
-                cardElement.update({disabled: false}); // Ensure it's re-enabled
-            }
-            document.getElementById('card-errors').textContent = '';
-            
-            // Clear hidden fields related to saved cards
-            const originalPaymentMethodIdHidden = document.getElementById('original-payment-method-id-hidden');
-            if(originalPaymentMethodIdHidden) originalPaymentMethodIdHidden.value = '';
-            
-            // Show new card details section by default
-            const newCardDetailsSection = document.getElementById('new-card-details-section');
-            if(newCardDetailsSection) newCardDetailsSection.classList.remove('hidden');
-
-            const savedCardsSelect = document.getElementById('saved-cards-select');
-            if(savedCardsSelect) {
-                savedCardsSelect.value = ''; // Ensure "Add New Card" is selected
-            }
         }
 
-        document.getElementById('payment-invoice-id-display').textContent = `#${invoiceNumber}`;
-        document.getElementById('payment-form-invoice-id').value = invoiceId;
-        document.getElementById('payment-form-invoice-number').value = invoiceNumber;
-        document.getElementById('payment-form-amount').value = parseFloat(amount).toFixed(2);
-
-        document.getElementById('invoice-list-view').classList.add('hidden');
-        document.getElementById('invoice-detail-view').classList.add('hidden');
-        document.getElementById('payment-form-view').classList.remove('hidden');
-
-        // Fetch and pre-select default payment method here
-        try {
-            const defaultMethodResponse = await fetch('/api/customer/payment_methods.php?action=get_default_method');
-            const defaultMethodData = await defaultMethodResponse.json();
-
-            if (defaultMethodData.success && defaultMethodData.method) {
-                const defaultMethodId = defaultMethodData.method.id;
-                const savedCardsSelect = document.getElementById('saved-cards-select');
-                
-                if (savedCardsSelect) {
-                    // Check if the option exists in the dropdown before trying to set
-                    const optionExists = Array.from(savedCardsSelect.options).some(option => option.value == defaultMethodId);
-                    if (optionExists) {
-                        savedCardsSelect.value = defaultMethodId; 
-                        // Manually trigger change event if setting value doesn't naturally do it
-                        const event = new Event('change', { bubbles: true });
-                        savedCardsSelect.dispatchEvent(event);
-                    } else {
-                        // Default method exists in DB but not in dropdown (e.g., outdated list)
-                        console.warn("Default payment method found in DB but not in dropdown. Falling back to 'Add New Card'.");
-                        savedCardsSelect.value = ''; // Ensure "Add New Card" is selected
-                        const event = new Event('change', { bubbles: true });
-                        savedCardsSelect.dispatchEvent(event);
-                    }
-                }
-                // Store original Stripe PM ID if using a saved card for payment processing
-                const originalPaymentMethodIdHidden = document.getElementById('original-payment-method-id-hidden');
-                if(originalPaymentMethodIdHidden) { // This element might not exist in this page's HTML, but in PaymentMethods page.
-                    // This is where Stripe PM ID from DB should be stored for processing.
-                    originalPaymentMethodIdHidden.value = defaultMethodData.method.braintree_payment_token;
-                }
-
-            }
-        } catch (error) {
-            console.error("Error fetching default payment method:", error);
-            // Fallback: Ensure new card section is visible and selected
-            const savedCardsSelect = document.getElementById('saved-cards-select');
-            if(savedCardsSelect) savedCardsSelect.value = '';
-            const newCardDetailsSection = document.getElementById('new-card-details-section');
-            if(newCardDetailsSection) newCardDetailsSection.classList.remove('hidden');
-            if (cardElement) cardElement.update({disabled: false});
+        if (invoiceDetailView && !invoiceDetailView.classList.contains('hidden')) {
+            // If detail view is visible, show it again
+            invoiceDetailView.classList.remove('hidden');
+        } else {
+            // Otherwise, go back to the list view
+            window.loadCustomerInvoices({});
         }
     };
 
+    // --- IIFE for Invoice Page Specific JavaScript ---
+    (function() {
+        const stripePublicKey = 'pk_test_********************'; // Replace with your actual Stripe public key
+        const stripe = Stripe(stripePublicKey);
+        const elements = stripe.elements();
 
-    function initializeStripeElements() {
-        if (typeof Stripe === 'undefined') {
-            setTimeout(initializeStripeElements, 100);
-            return;
-        }
-        
-        const stripeKey = 'pk_test_********************'; // Replace with your actual publishable key
-        if (!stripeKey.startsWith('pk_')) {
-            console.error("Stripe key is not configured. Please ensure STRIPE_PUBLISHable_KEY is set in your .env file and starts with 'pk_'.");
-            return;
-        }
+        // Custom styling for Stripe Elements
+        const style = {
+            base: {
+                color: '#32325d',
+                fontFamily: 'Inter, sans-serif',
+                fontSmoothing: 'antialiased',
+                fontSize: '16px',
+                '::placeholder': {
+                    color: '#aab7c4'
+                },
+            },
+            invalid: {
+                color: '#fa755a',
+                iconColor: '#fa755a'
+            }
+        };
 
-        stripe = Stripe(stripeKey);
-        elements = stripe.elements(); // Assign to outer scope
-        const style = { base: { fontSize: '16px', fontFamily: 'Inter, sans-serif' } };
-        
-        const cardElementDiv = document.getElementById('card-element');
-        // Only create and mount cardElement if it hasn't been mounted yet
-        if (cardElementDiv && cardElementDiv.innerHTML === '') {
-            cardElement = elements.create('card', { style });
-            cardElement.mount(cardElementDiv);
-            cardElement.on('change', event => {
-                document.getElementById('card-errors').textContent = event.error ? event.error.message : '';
-            });
-        }
-        
-        // No need to call attachPageEventListeners from here, dashboard.php handles it via DOMContentLoaded for the whole app.
-    }
-
-    // Attach event listeners for the payment form itself (within the loaded content)
-    document.addEventListener('DOMContentLoaded', function() {
-        // This ensures Stripe elements are initialized ONLY when this specific HTML content is loaded
-        // and its DOM elements are available.
-        initializeStripeElements();
+        // Create an instance of the card Element
+        const card = elements.create('card', { style: style });
+        // Add an instance of the card Element into the `card-element` div
+        card.mount('#card-element');
 
         const paymentForm = document.getElementById('payment-form');
-        if (paymentForm) {
-            paymentForm.addEventListener('submit', handlePaymentFormSubmit);
-        }
-
-        const savedCardsSelect = document.getElementById('saved-cards-select');
-        const newCardDetailsSection = document.getElementById('new-card-details-section');
         const cardholderNameInput = document.getElementById('cardholder-name');
         const billingAddressInput = document.getElementById('billing-address');
+        const cardErrorsDiv = document.getElementById('card-errors');
+        const submitPaymentBtn = document.getElementById('submit-payment-btn');
+        const savedCardsSelect = document.getElementById('saved-cards-select');
+        const newCardDetailsSection = document.getElementById('new-card-details-section');
+        const paymentMethodIdHidden = document.getElementById('payment-method-id-hidden');
+        const originalPaymentMethodIdHidden = document.getElementById('original-payment-method-id-hidden');
+        const saveNewCardCheckbox = document.getElementById('save-new-card');
 
-        if (savedCardsSelect) {
-            savedCardsSelect.addEventListener('change', function() {
-                if (this.value === '') { // "Add New Card" selected
-                    newCardDetailsSection.classList.remove('hidden');
-                    // Clear and enable card element
-                    if (cardElement) cardElement.update({disabled: false}); 
-                    if (cardElement) cardElement.clear();
-                    if (cardElement) cardElement.focus();
-                    cardholderNameInput.value = ''; // Clear cardholder name
-                    billingAddressInput.value = ''; // Clear billing address
-                } else { // A saved card selected
-                    newCardDetailsSection.classList.add('hidden');
-                    // Disable card element and clear errors for saved cards
-                    if (cardElement) cardElement.update({disabled: true});
-                    if (cardElement) cardElement.clear();
-                    document.getElementById('card-errors').textContent = '';
 
-                    // Populate placeholder info for cardholder name from selected option
-                    const selectedOption = this.options[this.selectedIndex];
-                    cardholderNameInput.value = selectedOption.dataset.cardBrand + ' User'; // Placeholder name
-                    billingAddressInput.value = 'On file'; // Placeholder address
-                    
-                    // Set the originalPaymentMethodIdHidden for API submission
-                    const originalPaymentMethodIdHidden = document.getElementById('original-payment-method-id-hidden');
-                    if (originalPaymentMethodIdHidden) {
-                        originalPaymentMethodIdHidden.value = selectedOption.dataset.stripePmId;
+        // Handle real-time validation errors from the card Element.
+        card.addEventListener('change', function(event) {
+            if (event.error) {
+                cardErrorsDiv.textContent = event.error.message;
+            } else {
+                cardErrorsDiv.textContent = '';
+            }
+        });
+
+        // Helper function to get safe filter values
+        const getSafeFilterValues = () => {
+            const statusEl = document.getElementById('status-filter');
+            const searchEl = document.getElementById('search-input');
+            const startDateEl = document.getElementById('start-date-filter');
+            const endDateEl = document.getElementById('end-date-filter');
+            const perPageEl = document.getElementById('items-per-page-select');
+
+            const defaultPerPage = <?php echo json_encode($items_per_page); ?>;
+
+            return {
+                status: statusEl ? statusEl.value : 'all',
+                search: searchEl ? searchEl.value : '',
+                start_date: startDateEl ? startDateEl.value : '',
+                end_date: endDateEl ? endDateEl.value : '',
+                per_page: perPageEl ? perPageEl.value : defaultPerPage
+            };
+        };
+
+        // Main function to load customer invoices with filters and pagination
+        window.loadCustomerInvoices = function(params = {}) {
+            const filters = getSafeFilterValues();
+            const newParams = {
+                page: params.page || filters.page || 1, // Prioritize passed page, then current filter page, then 1
+                per_page: params.per_page || filters.per_page,
+                status: params.status || filters.status,
+                search: params.search || filters.search,
+                start_date: params.start_date || filters.start_date,
+                end_date: params.end_date || filters.end_date,
+                invoice_id: params.invoice_id || '' // For detail view
+            };
+            window.loadCustomerSection('invoices', newParams);
+        };
+
+        // Apply filters function, typically called by UI changes
+        window.applyFilters = function(params = {}) {
+            const currentPage = params.page || 1; // Always reset to page 1 for new filters
+            const filters = getSafeFilterValues(); // Get current filter values
+            window.loadCustomerInvoices({
+                page: currentPage,
+                status: filters.status,
+                search: filters.search,
+                start_date: filters.start_date,
+                end_date: filters.end_date,
+                per_page: filters.per_page
+            });
+        };
+
+        // Function to reset the payment form state
+        function resetPaymentForm() {
+            paymentForm.reset();
+            card.clear(); // Clear Stripe Element
+            cardErrorsDiv.textContent = '';
+            paymentMethodIdHidden.value = '';
+            originalPaymentMethodIdHidden.value = '';
+            saveNewCardCheckbox.checked = false;
+            savedCardsSelect.value = ''; // Select "Add New Card" option
+            newCardDetailsSection.classList.remove('hidden'); // Show new card details by default
+        }
+
+        window.showPaymentForm = async function(invoiceId, amount) {
+            resetPaymentForm(); // Reset form every time it's shown
+
+            document.getElementById('payment-invoice-id').textContent = 'ID ' + invoiceId;
+            document.getElementById('payment-form-invoice-id-hidden').value = invoiceId;
+            document.getElementById('payment-amount').value = parseFloat(amount).toFixed(2);
+
+            document.getElementById('invoice-detail-view').classList.add('hidden');
+            document.getElementById('invoice-list').classList.add('hidden');
+            document.getElementById('payment-form-view').classList.remove('hidden');
+        };
+
+        // Handle saved cards selection
+        savedCardsSelect.addEventListener('change', function() {
+            if (this.value === '') { // "Add New Card" selected
+                newCardDetailsSection.classList.remove('hidden');
+                cardholderNameInput.value = ''; // Clear cardholder name
+                billingAddressInput.value = ''; // Clear billing address
+                card.clear(); // Clear the card element
+                card.focus(); // Focus on the card element for new input
+                paymentMethodIdHidden.value = '';
+                originalPaymentMethodIdHidden.value = '';
+            } else { // A saved card selected
+                newCardDetailsSection.classList.add('hidden');
+                // Populate fields from selected option's data attributes
+                const selectedOption = this.options[this.selectedIndex];
+                cardholderNameInput.value = selectedOption.dataset.cardBrand + ' User'; // Placeholder name
+                billingAddressInput.value = 'On file'; // Placeholder address
+                // Disable direct card input for saved cards
+                card.clear(); // Clear card element when using saved
+                // Disable the card element and hide validation errors if any
+                card.update({disabled: true}); 
+                cardErrorsDiv.textContent = ''; // Clear errors
+                
+                paymentMethodIdHidden.value = ''; // No new PM ID if using existing
+                originalPaymentMethodIdHidden.value = this.value; // Send the saved method's DB ID
+            }
+        });
+
+        // Payment form submission
+        paymentForm.addEventListener('submit', async function(event) {
+            event.preventDefault();
+            
+            submitPaymentBtn.disabled = true;
+            window.showToast('Processing payment...', 'info');
+
+            const invoiceId = document.getElementById('payment-form-invoice-id-hidden').value;
+            const amount = document.getElementById('payment-amount').value;
+            const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+            const saveCard = saveNewCardCheckbox.checked;
+
+            let paymentMethodId = '';
+            let originalPaymentMethodId = '';
+
+            // Determine if new card or saved card is being used
+            if (savedCardsSelect.value === '') { // New card details
+                const { paymentMethod, error } = await stripe.createPaymentMethod({
+                    type: 'card',
+                    card: card,
+                    billing_details: {
+                        name: cardholderNameInput.value.trim(),
+                        address: {
+                            line1: billingAddressInput.value.split(',')[0].trim(),
+                            city: billingAddressInput.value.split(',')[1]?.trim(),
+                            state: billingAddressInput.value.split(',')[2]?.trim().split(' ')[0],
+                            postal_code: billingAddressInput.value.split(',')[2]?.trim().split(' ')[1]
+                        },
+                    },
+                });
+
+                if (error) {
+                    cardErrorsDiv.textContent = error.message;
+                    window.showToast('Payment failed: ' + error.message, 'error');
+                    submitPaymentBtn.disabled = false;
+                    return;
+                }
+                paymentMethodId = paymentMethod.id;
+            } else { // Using a saved card
+                originalPaymentMethodId = savedCardsSelect.value; // This is the ID from your DB
+            }
+
+            const formData = new FormData();
+            formData.append('action', 'process_payment');
+            formData.append('invoice_id', invoiceId);
+            formData.append('amount', amount);
+            formData.append('payment_method_id', paymentMethodId); // Will be empty if using saved card
+            formData.append('original_payment_method_id', originalPaymentMethodId); // Will be empty if using new card
+            formData.append('save_card', saveCard ? '1' : '0');
+            formData.append('cardholder_name', cardholderNameInput.value.trim()); // Send cardholder name for saving
+            formData.append('billing_address', billingAddressInput.value.trim()); // Send billing address for saving
+            formData.append('csrf_token', csrfToken);
+
+            try {
+                const response = await fetch('/api/payments.php', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    window.showToast(result.message || 'Payment successful!', 'success');
+                    // Reload customer's bookings or invoices to show updated status
+                    if (result.booking_id) {
+                        window.loadCustomerSection('bookings', { booking_id: result.booking_id });
+                    } else {
+                        window.loadCustomerInvoices({});
+                    }
+                } else if (result.requires_action) {
+                    // Handle 3D Secure or other required actions
+                    const { error: actionError } = await stripe.handleCardAction(
+                        result.payment_intent_client_secret
+                    );
+
+                    if (actionError) {
+                        cardErrorsDiv.textContent = actionError.message;
+                        window.showToast('Payment authentication failed: ' + actionError.message, 'error');
+                        submitPaymentBtn.disabled = false;
+                    } else {
+                        // Payment authentication succeeded, re-submit the payment to confirm
+                        // You might need a new API call here to confirm the PaymentIntent
+                        // or rely on a webhook if the PaymentIntent status changes automatically.
+                        // For simplicity, let's assume successful authentication directly completes the payment.
+                        // In a real app, you'd send paymentIntent.id back to backend for confirmation.
+                         window.showToast('Payment authentication successful. Finalizing payment...', 'info');
+                         // A more robust solution would call a backend endpoint to confirm the PaymentIntent.
+                         // For now, we'll assume the payment is done and reload.
+                         window.loadCustomerInvoices({}); // Reload page
+                    }
+                } else {
+                    window.showToast('Payment failed: ' + result.message, 'error');
+                    submitPaymentBtn.disabled = false;
+                }
+            } catch (error) {
+                console.error('Payment API Error:', error);
+                window.showToast('An unexpected error occurred during payment. Please try again.', 'error');
+                submitPaymentBtn.disabled = false;
+            }
+        });
+
+        document.body.addEventListener('click', function(event) {
+            const payButton = event.target.closest('.pay-invoice-btn, .pay-now-detail-btn');
+            if (payButton) {
+                window.showPaymentForm(payButton.dataset.invoiceId, payButton.dataset.amount);
+            }
+            
+            const viewButton = event.target.closest('.view-invoice-details');
+            if(viewButton){
+                 window.showInvoiceDetails(viewButton.dataset.invoiceId);
+            }
+
+            // Toggle filter section visibility on mobile
+            if (event.target.id === 'toggle-filters-btn') {
+                const filterOptionsSection = document.getElementById('filter-options-section');
+                if (filterOptionsSection) {
+                    filterOptionsSection.classList.toggle('hidden');
+                    filterOptionsSection.classList.toggle('flex'); // Also toggle flex for layout
+                    // On toggle, if showing, remove block from filter inputs if present and ensure full width
+                    if (filterOptionsSection.classList.contains('flex')) {
+                        const dateInputs = filterOptionsSection.querySelectorAll('input[type="date"]');
+                        dateInputs.forEach(input => {
+                            input.classList.add('w-full', 'flex-grow'); // Ensure they take full width
+                        });
                     }
                 }
-            });
-        }
-
-        // --- Bulk Delete Functionality (re-added as it might have been lost in previous merges) ---
-        const selectAllInvoicesCheckbox = document.getElementById('select-all-invoices');
-        const bulkDeleteInvoicesBtn = document.getElementById('bulk-delete-invoices-btn');
-
-        function toggleBulkDeleteButtonVisibility() {
-            const anyChecked = document.querySelectorAll('.invoice-checkbox:checked').length > 0;
-            if (bulkDeleteInvoicesBtn) {
-                bulkDeleteInvoicesBtn.classList.toggle('hidden', !anyChecked);
             }
-        }
 
-        if (selectAllInvoicesCheckbox) {
-            selectAllInvoicesCheckbox.addEventListener('change', function() {
+            // --- Bulk Delete Functionality ---
+            const selectAllInvoicesCheckbox = document.getElementById('select-all-invoices');
+            const bulkDeleteInvoicesBtn = document.getElementById('bulk-delete-invoices-btn');
+
+            function toggleBulkDeleteButtonVisibility() {
+                const anyChecked = document.querySelectorAll('.invoice-checkbox:checked').length > 0;
+                if (bulkDeleteInvoicesBtn) {
+                    bulkDeleteInvoicesBtn.classList.toggle('hidden', !anyChecked);
+                }
+            }
+
+            if (event.target.id === 'select-all-invoices') {
                 document.querySelectorAll('.invoice-checkbox').forEach(checkbox => {
-                    checkbox.checked = this.checked;
+                    checkbox.checked = event.target.checked;
                 });
                 toggleBulkDeleteButtonVisibility();
-            });
-        }
-
-        document.body.addEventListener('change', function(event) { // Use body for delegation
-            if (event.target.classList.contains('invoice-checkbox')) {
+            } else if (event.target.classList.contains('invoice-checkbox')) {
                 if (selectAllInvoicesCheckbox && !event.target.checked) {
                     selectAllInvoicesCheckbox.checked = false;
                 }
                 toggleBulkDeleteButtonVisibility();
             }
-        });
 
-        if (bulkDeleteInvoicesBtn) {
-            bulkDeleteInvoicesBtn.addEventListener('click', function() {
+            if (event.target.id === 'bulk-delete-invoices-btn') {
                 const selectedIds = Array.from(document.querySelectorAll('.invoice-checkbox:checked')).map(cb => cb.value);
                 if (selectedIds.length === 0) {
                     window.showToast('Please select at least one invoice to delete.', 'warning');
@@ -788,10 +891,19 @@ function getStatusBadgeClass($status) {
                     'Delete Selected',
                     'bg-red-600'
                 );
-            });
-        }
-        // Initial state of bulk delete button on page load
-        toggleBulkDeleteButtonVisibility();
+            }
+        });
 
-    }); // End DOMContentLoaded for this script
-})();
+        // Ensure initial state of bulk delete button is correct on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            const selectAllInvoicesCheckbox = document.getElementById('select-all-invoices');
+            if (selectAllInvoicesCheckbox) {
+                selectAllInvoicesCheckbox.checked = false; // Reset "select all" state
+            }
+            document.querySelectorAll('.invoice-checkbox').forEach(checkbox => {
+                checkbox.checked = false; // Ensure individual checkboxes are also reset
+            });
+            toggleBulkDeleteButtonVisibility(); // Update button visibility
+        });
+
+    })(); // End IIFE

@@ -87,9 +87,33 @@ try {
     $booking_id_from_invoice = $invoice_data['booking_id'];
     $stmt_invoice->close();
 
-    // Ensure Stripe customer exists (this function handles creation/validation)
-    // This function is defined in api/customer/payment_methods.php, assuming it's available or in functions.php
-    $stripe_customer_id = ensureStripeCustomerExists($conn, $user_id); 
+    // Determine the customer in Stripe:
+    // Check if the user already has a Stripe customer ID stored
+    $stripe_customer_id = null;
+    $stmt_user_stripe_id = $conn->prepare("SELECT stripe_customer_id FROM users WHERE id = ?");
+    $stmt_user_stripe_id->bind_param("i", $user_id);
+    $stmt_user_stripe_id->execute();
+    $user_stripe_data = $stmt_user_stripe_id->get_result()->fetch_assoc();
+    if ($user_stripe_data && !empty($user_stripe_data['stripe_customer_id'])) {
+        $stripe_customer_id = $user_stripe_data['stripe_customer_id'];
+    }
+    $stmt_user_stripe_id->close();
+
+    if (!$stripe_customer_id) {
+        // Create a new Stripe Customer if one doesn't exist
+        $customer = \Stripe\Customer::create([
+            'email' => $_SESSION['user_email'],
+            'name'  => $_SESSION['user_first_name'] . ' ' . $_SESSION['user_last_name'],
+            'metadata' => ['database_user_id' => $user_id]
+        ]);
+        $stripe_customer_id = $customer->id;
+
+        // Save the new Stripe customer ID to your database
+        $stmt_update_user_stripe_id = $conn->prepare("UPDATE users SET stripe_customer_id = ? WHERE id = ?");
+        $stmt_update_user_stripe_id->bind_param("si", $stripe_customer_id, $user_id);
+        $stmt_update_user_stripe_id->execute();
+        $stmt_update_user_stripe_id->close();
+    }
     
     $final_payment_method_id = $paymentMethodId; // Use the new payment method by default
 
@@ -108,25 +132,9 @@ try {
     }
 
 
-    // --- FIX: Add check for positive amount before Stripe PaymentIntent creation ---
-    $amount_in_cents = (int)($amountToPay * 100);
-    if ($amount_in_cents <= 0) {
-        throw new Exception("Payment amount must be greater than zero.");
-    }
-    // --- END FIX ---
-
-    // --- Debugging Log: Log the payload just before sending to Stripe ---
-    error_log("Stripe PaymentIntent creation payload for Invoice: {$invoiceNumber}, User: {$user_id}:");
-    error_log("Amount (cents): " . $amount_in_cents);
-    error_log("Currency: usd");
-    error_log("Customer ID: " . $stripe_customer_id);
-    error_log("Payment Method ID: " . $final_payment_method_id);
-    error_log("Raw POST data: " . print_r($_POST, true)); 
-    // --- END Debugging Log ---
-
     // 2. Create a PaymentIntent
     $paymentIntent = \Stripe\PaymentIntent::create([
-        'amount' => $amount_in_cents, // Amount in cents
+        'amount' => (int)($amountToPay * 100), // Amount in cents
         'currency' => 'usd', // Adjust currency as needed
         'customer' => $stripe_customer_id,
         'payment_method' => $final_payment_method_id,
@@ -137,7 +145,7 @@ try {
             'invoice_number' => $invoiceNumber,
             'user_id' => $user_id
         ],
-        // REMOVED: 'error_on_requires_action' => true, // This parameter caused the error
+        'error_on_requires_action' => true, // Fail if 3D Secure is required and not handled client-side
     ]);
 
     // 3. Handle PaymentIntent status

@@ -29,8 +29,6 @@ $action = $_REQUEST['action'] ?? ''; // Use $_REQUEST to handle both GET and POS
 
 // --- Initialize Stripe API ---
 try {
-    // Set your secret key. Remember to switch to your live secret key in production.
-    // See your keys here: https://dashboard.stripe.com/apikeys
     \Stripe\Stripe::setApiKey($_ENV['STRIPE_SECRET_KEY'] ?? getenv('STRIPE_SECRET_KEY'));
 } catch (Exception $e) {
     error_log("Stripe API initialization failed in payment_methods.php: " . $e->getMessage());
@@ -72,84 +70,6 @@ if ($request_method === 'POST') {
 
 $conn->close();
 
-/**
- * Ensures a Stripe Customer exists for the user. If not, it creates one and updates the DB.
- * If the existing Stripe Customer ID is invalid, it attempts to recreate a new one.
- * @param mysqli $conn The database connection.
- * @param int $user_id The ID of the user.
- * @return string The valid Stripe Customer ID.
- * @throws Exception If customer cannot be created/retrieved after multiple attempts.
- */
-function ensureStripeCustomerExists($conn, $user_id) {
-    $max_attempts = 2; // Try to retrieve/create customer a couple of times
-    for ($attempt = 1; $attempt <= $max_attempts; $attempt++) {
-        // 1. Get stripe_customer_id from local DB
-        $stripe_customer_id = null;
-        $user_email = null;
-        $user_name = null;
-
-        $stmt_user_info = $conn->prepare("SELECT stripe_customer_id, email, first_name, last_name FROM users WHERE id = ?");
-        $stmt_user_info->bind_param("i", $user_id);
-        $stmt_user_info->execute();
-        $user_data = $stmt_user_info->get_result()->fetch_assoc();
-        $stmt_user_info->close();
-
-        if ($user_data) {
-            $stripe_customer_id = $user_data['stripe_customer_id'];
-            $user_email = $user_data['email'];
-            $user_name = trim($user_data['first_name'] . ' ' . $user_data['last_name']);
-        } else {
-            throw new Exception("User not found in local database.");
-        }
-
-        // 2. If local ID exists, try to retrieve it from Stripe
-        if ($stripe_customer_id) {
-            try {
-                \Stripe\Customer::retrieve($stripe_customer_id);
-                return $stripe_customer_id; // Existing customer is valid
-            } catch (\Stripe\Exception\InvalidRequestException $e) {
-                // "No such customer" error - local ID is invalid, try to recreate
-                error_log("Stripe customer ID '{$stripe_customer_id}' for user {$user_id} is invalid. Attempting to recreate. Error: " . $e->getMessage());
-                $stripe_customer_id = null; // Mark as invalid, proceed to creation
-            } catch (Exception $e) {
-                // Other Stripe API errors when retrieving customer
-                error_log("Stripe API error retrieving customer '{$stripe_customer_id}' for user {$user_id}: " . $e->getMessage());
-                throw new Exception("Failed to verify Stripe customer: " . $e->getMessage());
-            }
-        }
-
-        // 3. If local ID is missing or invalid, create a new Stripe Customer
-        if (!$stripe_customer_id) {
-            try {
-                $customer = \Stripe\Customer::create([
-                    'email' => $user_email,
-                    'name' => $user_name,
-                    'metadata' => ['database_user_id' => $user_id]
-                ]);
-                $new_stripe_customer_id = $customer->id;
-
-                // Update local DB with new Stripe Customer ID
-                $stmt_update_user_stripe_id = $conn->prepare("UPDATE users SET stripe_customer_id = ? WHERE id = ?");
-                $stmt_update_user_stripe_id->bind_param("si", $new_stripe_customer_id, $user_id);
-                $stmt_update_user_stripe_id->execute();
-                $stmt_update_user_stripe_id->close();
-                
-                return $new_stripe_customer_id; // Successfully created and updated
-            } catch (Exception $e) {
-                error_log("Stripe API error creating new customer for user {$user_id}: " . $e->getMessage());
-                if ($attempt < $max_attempts) {
-                    // Log and retry if not last attempt
-                    usleep(100000); // Small delay before retry
-                    continue;
-                }
-                throw new Exception("Failed to create Stripe customer: " . $e->getMessage());
-            }
-        }
-    }
-    throw new Exception("Failed to ensure a valid Stripe customer after multiple attempts.");
-}
-
-
 function handleAddPaymentMethod($conn, $user_id) {
     $paymentMethodId = trim($_POST['payment_method_id'] ?? ''); // Stripe PaymentMethod ID
     $cardholderName = trim($_POST['cardholder_name'] ?? '');
@@ -163,9 +83,7 @@ function handleAddPaymentMethod($conn, $user_id) {
 
     $conn->begin_transaction();
     try {
-        $stripe_customer_id = ensureStripeCustomerExists($conn, $user_id);
-
-        // Retrieve PaymentMethod details from Stripe (necessary for card_type, last4, etc.)
+        // Retrieve PaymentMethod details from Stripe
         $paymentMethod = \Stripe\PaymentMethod::retrieve($paymentMethodId);
 
         $cardType = $paymentMethod->card->brand ?? 'unknown';
@@ -173,15 +91,44 @@ function handleAddPaymentMethod($conn, $user_id) {
         $expMonth = $paymentMethod->card->exp_month ?? '';
         $expYear = $paymentMethod->card->exp_year ?? '';
 
-        // Attach PaymentMethod to the (ensured) Stripe Customer
-        $paymentMethod->attach(['customer' => $stripe_customer_id]);
-        
+        // Attach PaymentMethod to Stripe Customer
+        $stripe_customer_id = null;
+        $stmt_user_stripe_id = $conn->prepare("SELECT stripe_customer_id FROM users WHERE id = ?");
+        $stmt_user_stripe_id->bind_param("i", $user_id);
+        $stmt_user_stripe_id->execute();
+        $user_stripe_data = $stmt_user_stripe_id->get_result()->fetch_assoc();
+        if ($user_stripe_data && !empty($user_stripe_data['stripe_customer_id'])) {
+            $stripe_customer_id = $user_stripe_data['stripe_customer_id'];
+        }
+        $stmt_user_stripe_id->close();
+
+        if (!$stripe_customer_id) {
+            // Create new Stripe customer if not exists
+            $customer = \Stripe\Customer::create([
+                'email' => $_SESSION['user_email'],
+                'name' => $_SESSION['user_first_name'] . ' ' . $_SESSION['user_last_name'],
+                'payment_method' => $paymentMethodId, // Set as default PaymentMethod
+                'invoice_settings' => ['default_payment_method' => $paymentMethodId],
+                'metadata' => ['database_user_id' => $user_id]
+            ]);
+            $stripe_customer_id = $customer->id;
+
+            $stmt_update_user_stripe_id = $conn->prepare("UPDATE users SET stripe_customer_id = ? WHERE id = ?");
+            $stmt_update_user_stripe_id->bind_param("si", $stripe_customer_id, $user_id);
+            $stmt_update_user_stripe_id->execute();
+            $stmt_update_user_stripe_id->close();
+        } else {
+            // Attach PaymentMethod to existing Customer
+            $paymentMethod->attach(['customer' => $stripe_customer_id]);
+        }
+
         // If setting as default, update Stripe customer's default payment method
         if ($setDefault) {
             \Stripe\Customer::update($stripe_customer_id, [
                 'invoice_settings' => ['default_payment_method' => $paymentMethodId],
             ]);
         }
+
 
         // Update is_default status for existing methods if new one is default
         if ($setDefault) {
@@ -192,6 +139,7 @@ function handleAddPaymentMethod($conn, $user_id) {
         }
 
         // Store PaymentMethod ID and details in your database
+        // `braintree_payment_token` column is now repurposed to store Stripe PaymentMethod IDs
         $stmt_insert = $conn->prepare("INSERT INTO user_payment_methods (user_id, braintree_payment_token, card_type, last_four, expiration_month, expiration_year, cardholder_name, is_default, billing_address) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
         $stmt_insert->bind_param("issssssis", $user_id, $paymentMethodId, $cardType, $lastFour, $expMonth, $expYear, $cardholderName, $setDefault, $billingAddress);
 
@@ -222,23 +170,20 @@ function handleSetDefaultPaymentMethod($conn, $user_id) {
 
     $conn->begin_transaction();
     try {
-        $stripe_customer_id = ensureStripeCustomerExists($conn, $user_id); // Ensure customer exists first
-
-        // Get PaymentMethod ID from your DB
-        $stmt_get_pm_info = $conn->prepare("SELECT braintree_payment_token FROM user_payment_methods WHERE id = ? AND user_id = ?");
+        // Get Stripe Customer ID and PaymentMethod ID from your DB
+        $stmt_get_pm_info = $conn->prepare("SELECT u.stripe_customer_id, upm.braintree_payment_token FROM users u JOIN user_payment_methods upm ON u.id = upm.user_id WHERE upm.id = ? AND u.id = ?");
         $stmt_get_pm_info->bind_param("ii", $methodId, $user_id);
         $stmt_get_pm_info->execute();
         $pm_info = $stmt_get_pm_info->get_result()->fetch_assoc();
         $stmt_get_pm_info->close();
 
-        if (!$pm_info || empty($pm_info['braintree_payment_token'])) {
-            throw new Exception("Payment method not found or unauthorized.");
+        if (!$pm_info || empty($pm_info['stripe_customer_id']) || empty($pm_info['braintree_payment_token'])) {
+            throw new Exception("Payment method or Stripe customer ID not found.");
         }
-        $stripePmId = $pm_info['braintree_payment_token'];
 
         // Set as default in Stripe
-        \Stripe\Customer::update($stripe_customer_id, [
-            'invoice_settings' => ['default_payment_method' => $stripePmId],
+        \Stripe\Customer::update($pm_info['stripe_customer_id'], [
+            'invoice_settings' => ['default_payment_method' => $pm_info['braintree_payment_token']],
         ]);
 
         // Unset current default in your DB
@@ -344,8 +289,6 @@ function handleUpdatePaymentMethod($conn, $user_id) {
 
     $conn->begin_transaction();
     try {
-        $stripe_customer_id = ensureStripeCustomerExists($conn, $user_id); // Ensure customer exists first
-
         // Get the Stripe Payment Method ID associated with this local ID
         $stmt_get_stripe_pm_id = $conn->prepare("SELECT braintree_payment_token, is_default FROM user_payment_methods WHERE id = ? AND user_id = ?");
         $stmt_get_stripe_pm_id->bind_param("ii", $methodId, $user_id);
@@ -378,9 +321,18 @@ function handleUpdatePaymentMethod($conn, $user_id) {
 
         // If setting as default, update Stripe customer's default payment method
         if ($setDefault) {
-            \Stripe\Customer::update($stripe_customer_id, [
-                'invoice_settings' => ['default_payment_method' => $stripePmId],
-            ]);
+            $stripe_customer_id = null;
+            $stmt_user_stripe_id = $conn->prepare("SELECT stripe_customer_id FROM users WHERE id = ?");
+            $stmt_user_stripe_id->bind_param("i", $user_id);
+            $stmt_user_stripe_id->execute();
+            $user_stripe_data = $stmt_user_stripe_id->get_result()->fetch_assoc();
+            $stmt_user_stripe_id->close();
+            if ($user_stripe_data && !empty($user_stripe_data['stripe_customer_id'])) {
+                $stripe_customer_id = $user_stripe_data['stripe_customer_id'];
+                \Stripe\Customer::update($stripe_customer_id, [
+                    'invoice_settings' => ['default_payment_method' => $stripePmId],
+                ]);
+            }
         }
 
         // Update is_default status for other methods if new one is default
