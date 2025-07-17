@@ -7,6 +7,7 @@ require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/functions.php';
 
 // Ensure user is logged in. If not, redirect to the login page.
+// This is the key change to prevent redirection to unauthorized.php
 if (!is_logged_in()) {
     redirect('/customer/login.php');
 }
@@ -87,7 +88,7 @@ $pending_quotes_count = $result_pending_quotes->num_rows;
 
 // Store pending quotes for display on dashboard
 while ($row = $result_pending_quotes->fetch_assoc()) {
-    // FIX: Add null coalescing for json_decode to prevent deprecation warnings
+    // Add null coalescing for json_decode to prevent deprecation warnings
     $quote_details = json_decode($row['quote_details'] ?? '{}', true);
     $item_desc = 'N/A';
     if ($row['service_type'] == 'equipment_rental' && isset($quote_details['equipment_types'])) {
@@ -308,7 +309,6 @@ $conn->close();
 <body class="flex flex-col md:flex-row min-h-screen">
 
     <script>
-    document.addEventListener('DOMContentLoaded', function() {
         // --- Global Helper Functions (defined upfront to ensure availability) ---
         function showModal(modalId) {
             document.getElementById(modalId).classList.remove('hidden');
@@ -430,29 +430,13 @@ $conn->close();
             // Push state to history for back/forward navigation
             history.pushState({ section: sectionId, params: params }, '', `#${sectionId}`);
 
-            // Re-run scripts in the loaded content - FIX APPLIED HERE
+            // Re-run scripts in the loaded content
             if (currentContentArea) {
                 currentContentArea.querySelectorAll('script').forEach(oldScript => {
-                    // --- ADDED THIS CHECK ---
-                    // Only re-execute standard JavaScript scripts.
-                    // A script with no 'type' attribute is considered 'text/javascript'.
-                    if (!oldScript.type || oldScript.type.toLowerCase() === 'text/javascript') {
-
-                        const newScript = document.createElement('script');
-                        
-                        // Copy attributes from the old script to the new one
-                        Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
-                        
-                        // Set the text content of the new script element
-                        newScript.textContent = oldScript.textContent;
-                        
-                        // Append the new script to the document body to re-execute it
-                        // Append and immediately remove to avoid cluttering the DOM
-                        document.body.appendChild(newScript).parentNode.removeChild(newScript); 
-
-                        // You can also remove the old script from the loaded content
-                        oldScript.remove();
-                    }
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
                 });
             }
 
@@ -474,7 +458,7 @@ $conn->close();
             }
             showToast(`Failed to load ${sectionId.replace('-', ' ')}`, 'error');
         }
-        };
+    };
 
         // --- AI Chat Logic for Service Request Button (Made Global) ---
         window.showAIChat = async function(serviceType) {
@@ -562,9 +546,9 @@ $conn->close();
                                 showToast(`Processing video: ${file.name}...`, 'info');
                                 try {
                                     const frames = await extractFramesFromVideo(file, 10); // Extracts 10 frames
-                                    frames.forEach((frameDataUrl, index) => {
+                                    frames.forEach((frame, index) => {
                                         // Convert data URL to Blob/File object to send via FormData
-                                        const blob = dataURLtoBlob(frameDataUrl);
+                                        const blob = dataURLtoBlob(frame);
                                         processedFiles.push(new File([blob], `frame_${file.name}_${index}.jpeg`, { type: 'image/jpeg' }));
                                     });
                                     showToast(`Extracted ${frames.length} frames from video.`, 'success');
@@ -592,14 +576,14 @@ $conn->close();
         };
 
         function addAIChatMessage(message, sender, ) {
-            const aiChatMessagesDiv = document.getElementById('ai-chat-messages');
-            const messageDiv = document.createElement('div');
-            messageDiv.classList.add('chat-bubble', sender === 'user' ? 'user-bubble' : 'ai-bubble');
-            // Use innerHTML and marked.parse() for rendering markdown
-            messageDiv.innerHTML = `<span class="font-semibold ${sender === 'user' ? 'text-green-200' : 'text-blue-800'}">${sender === 'user' ? 'You' : 'AI'}:</span> ${marked.parse(message)}`;
-            aiChatMessagesDiv.appendChild(messageDiv);
-            aiChatMessagesDiv.scrollTop = aiChatMessagesDiv.scrollHeight;
-        }
+    const aiChatMessagesDiv = document.getElementById('ai-chat-messages');
+    const messageDiv = document.createElement('div');
+    messageDiv.classList.add('chat-bubble', sender === 'user' ? 'user-bubble' : 'ai-bubble');
+    // Use innerHTML and marked.parse() for rendering markdown
+    messageDiv.innerHTML = `<span class="font-semibold ${sender === 'user' ? 'text-green-200' : 'text-blue-800'}">${sender === 'user' ? 'You' : 'AI'}:</span> ${marked.parse(message)}`;
+    aiChatMessagesDiv.appendChild(messageDiv);
+    aiChatMessagesDiv.scrollTop = aiChatMessagesDiv.scrollHeight;
+}
 
         // --- Video Frame Extraction Function ---
         function extractFramesFromVideo(videoFile, numFrames) {
@@ -658,50 +642,33 @@ $conn->close();
         }
 
 
-        async function sendAIChatMessageToApi(message, initialServiceType = null) {
+        async function sendAIChatMessageToApi(message, serviceType, files = []) {
             const aiChatInput = document.getElementById('ai-chat-input');
             const aiChatSendBtn = document.getElementById('ai-chat-send-btn');
             const aiChatMessagesDiv = document.getElementById('ai-chat-messages');
             const aiChatFileInput = document.getElementById('ai-chat-file-input');
-            const typingIndicator = aiChatMessagesDiv.querySelector('.typing-indicator'); // Assuming you have a way to select this now
 
             // Show loading dots
-            if (!typingIndicator) { // Create if it doesn't exist already
-                const loadingDiv = document.createElement('div');
-                loadingDiv.classList.add('typing-indicator'); // Use typing indicator for loading
-                loadingDiv.innerHTML = '<span></span><span></span><span></span>';
-                aiChatMessagesDiv.appendChild(loadingDiv);
-            } else {
-                typingIndicator.classList.remove('hidden');
-            }
+            const loadingDiv = document.createElement('div');
+            loadingDiv.classList.add('typing-indicator'); // Use typing indicator for loading
+            loadingDiv.innerHTML = '<span></span><span></span><span></span>';
+            aiChatMessagesDiv.appendChild(loadingDiv);
             aiChatMessagesDiv.scrollTop = aiChatMessagesDiv.scrollHeight;
             aiChatInput.disabled = true;
             aiChatSendBtn.disabled = true;
 
             const formData = new FormData();
             formData.append('message', message);
-            if (initialServiceType) {
-                formData.append('initial_service_type', initialServiceType);
-            }
-            
+            formData.append('initial_service_type', serviceType);
+
             // Use processed files from aiChatFileInput.processedFiles if available
-            const filesToSend = aiChatFileInput && aiChatFileInput.processedFiles ? aiChatFileInput.processedFiles : [];
+            const filesToSend = aiChatFileInput && aiChatFileInput.processedFiles ? aiChatFileInput.processedFiles : files;
 
+            // Append files to FormData
             if (filesToSend.length > 0) {
-                for (const file of filesToSend) {
-                    formData.append('media_files[]', file);
+                for (let i = 0; i < filesToSend.length; i++) {
+                    formData.append('media_files[]', filesToSend[i]);
                 }
-                // Clear the processed files array after appending them to FormData
-                aiChatFileInput.processedFiles = []; // Corrected variable name
-                const fileUploadPreview = document.getElementById('ai-chat-file-upload-section'); // Assuming this is the element for preview
-                const previewFileName = document.getElementById('ai-chat-selected-files');
-                if (fileUploadPreview) fileUploadPreview.classList.add('hidden');
-                if (previewFileName) previewFileName.textContent = '';
-            }
-
-            let currentConversationId = sessionStorage.getItem('conversation_id'); // Ensure currentConversationId is accessible
-            if (currentConversationId) {
-                formData.append('conversation_id', currentConversationId);
             }
 
             try {
@@ -709,192 +676,68 @@ $conn->close();
                     method: 'POST',
                     body: formData
                 });
-
                 const data = await response.json();
 
-                if (typingIndicator) typingIndicator.classList.add('hidden'); // Hide typing indicator
+                // Remove loading dots
+                aiChatMessagesDiv.removeChild(loadingDiv); 
 
-                if (data.success) {
-                    addAIChatMessage(data.ai_response, 'ai'); // Changed to addAIChatMessage
-                    if (data.conversation_id) {
-                        sessionStorage.setItem('conversation_id', data.conversation_id);
-                        currentConversationId = data.conversation_id;
-                    } else if (data.conversation_id === null) {
-                        sessionStorage.removeItem('conversation_id');
-                        currentConversationId = null;
-                    }
+                addAIChatMessage(data.ai_response, 'ai');
 
-                    if (data.suggested_replies && data.suggested_replies.length > 0) {
-                        // You'll need to define displayQuickReplyButtons or ensure it's loaded
-                        // For now, I'll assume it exists or you'll add it later.
-                        // displayQuickReplyButtons(data.suggested_replies);
-                        console.log('Suggested Replies:', data.suggested_replies); // Log for now
-                    }
-
-                    if (data.redirect_url) {
-                        setTimeout(() => {
-                            window.location.href = data.redirect_url;
-                        }, 1000);
-                    }
+                if (data.is_info_collected) {
+                    hideModal('ai-chat-modal'); // Hide the chat modal
+                    showToast("Redirecting to your quote preview...", 'success');
+                    
+                    // Redirect to the junk removal page with the new quote ID
+                    const urlParams = new URLSearchParams(new URL(data.redirect_url, window.location.origin).search);
+                    const quoteId = urlParams.get('quote_id');
+                    
+                    setTimeout(() => {
+                        window.loadCustomerSection('junk-removal', { quote_id: quoteId });
+                    }, 1500); // Delay for toast visibility
+                    
                 } else {
-                    addAIChatMessage('Error: ' + (data.message || 'Something went wrong.'), 'ai'); // Changed to addAIChatMessage
-                    // displayQuickReplyButtons([
-                    //     {text: "Try again", value: "Please try that again."},
-                    //     {text: "Start over", value: "I'd like to start a new project."}
-                    // ]);
-                    console.log('Error Suggested Replies:', [
-                        {text: "Try again", value: "Please try that again."},
-                        {text: "Start over", value: "I'd like to start a new project."}
-                    ]);
+                    aiChatInput.disabled = false;
+                    aiChatSendBtn.disabled = false;
+                    aiChatInput.focus();
                 }
+
             } catch (error) {
-                console.error('API Error:', error);
-                if (typingIndicator) typingIndicator.classList.add('hidden');
-                addAIChatMessage('Sorry, there was an error connecting right now. Please try again in a moment.', 'ai'); // Changed to addAIChatMessage
-                 // displayQuickReplyButtons([
-                 //    {text: "Try again", value: "Please try that again."},
-                 //    {text: "Start over", value: "I'd like to start a new project."}
-                 //]);
-                 console.log('API Error Suggested Replies:', [
-                    {text: "Try again", value: "Please try that again."},
-                    {text: "Start over", value: "I'd like to start a new project."}
-                ]);
-            } finally {
+                console.error('Error in AI chat:', error);
+                aiChatMessagesDiv.removeChild(loadingDiv);
+                addAIChatMessage('Sorry, there was an error processing your request. Please try again.', 'ai');
                 aiChatInput.disabled = false;
                 aiChatSendBtn.disabled = false;
             }
         }
-        
-        // Ensure elements are available before adding event listeners to them
-        const sendMessageButton = document.getElementById('ai-chat-send-btn'); // Assuming this is your send button in the modal
-        const chatInput = document.getElementById('ai-chat-input'); // Assuming this is your chat input in the modal
-        const mediaFileInput = document.getElementById('ai-chat-file-input'); // Assuming this is your file input
-        const fileUploadPreview = document.getElementById('ai-chat-file-upload-section'); // Assuming this displays preview
-        const previewFileName = document.getElementById('ai-chat-selected-files'); // Assuming this shows file names
-        const chatWidget = document.getElementById('aiChatWidget'); // Assuming your chat widget has this ID
 
-        // Add null checks before attaching event listeners
-        if (sendMessageButton && chatInput) {
-            sendMessageButton.addEventListener('click', function() {
-                // When calling sendAIChatMessageToApi, pass the serviceType if you can determine it.
-                // For a general chat widget, you might not have an initialServiceType.
-                // You might need to infer it from context or let the AI determine it.
-                // For now, I'll remove the `sendUserMessageToAI` call as it's not defined
-                // and you have `sendAIChatMessageToApi`.
-                const message = chatInput.value.trim();
-                if (message) {
-                    addAIChatMessage(message, 'user');
-                    chatInput.value = '';
-                    sendAIChatMessageToApi(message); // Call the AI API with the message
-                }
-            });
-
-            chatInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    sendMessageButton.click();
-                }
-            });
+        // --- Other Global Request functions for Modals (Relocation, Swap, Pickup) ---
+        window.confirmRelocation = function() {
+            const newAddress = document.getElementById('relocation-address').value;
+            if (newAddress) {
+                hideModal('relocation-request-modal');
+                showToast(`Relocation to "${newAddress}" requested successfully! Charges: $40.00 (Dummy)`, 'success');
+            } else {
+                showToast('Please enter a new destination address.', 'error');
+            }
         }
-        
-        if (mediaFileInput && previewFileName && fileUploadPreview) {
-            mediaFileInput.addEventListener('change', async function(e) {
-                if (e.target.files.length > 0) {
-                    const files = Array.from(e.target.files);
-                    let fileNames = files.map(f => f.name).join(', ');
-                    previewFileName.textContent = `Selected: ${fileNames}`;
-                    fileUploadPreview.classList.remove('hidden');
 
-                    const processedFiles = [];
-                    for (const file of files) {
-                        if (file.type.startsWith('video/')) {
-                            window.showToast(`Processing video: ${file.name}...`, 'info');
-                            try {
-                                // Extract 10 frames from the video
-                                const frames = await window.extractFramesFromVideo(file, 10);
-                                frames.forEach((frame, index) => {
-                                    const blob = window.dataURLtoBlob(frame);
-                                    processedFiles.push(new File([blob], `frame_${file.name}_${index}.jpeg`, { type: 'image/jpeg' }));
-                                });
-                                window.showToast(`Extracted ${frames.length} frames from ${file.name}.`, 'success');
-                            } catch (error) {
-                                console.error('Error extracting frames:', error);
-                                window.showToast(`Failed to extract frames from ${file.name}. Sending original video.`, 'error');
-                                processedFiles.push(file); // Fallback to sending original video if frame extraction fails
-                            }
-                        } else {
-                            processedFiles.push(file); // For images, just push the original file
-                        }
-                    }
-                    mediaFileInput.processedFiles = processedFiles; // Store processed files
-                } else {
-                    mediaFileInput.processedFiles = [];
-                    previewFileName.textContent = '';
-                    fileUploadPreview.classList.add('hidden');
-                }
-            });
+        window.confirmSwap = function() {
+            hideModal('swap-request-modal');
+            showToast('Equipment swap requested successfully! Charges: $30.00 (Dummy)', 'success');
+        }
 
-            const removeFileButton = document.getElementById('remove-file-button'); // Assuming this exists within the chat file upload section
-            if (removeFileButton) {
-                removeFileButton.addEventListener('click', function() {
-                    mediaFileInput.value = ''; // Clear file input
-                    mediaFileInput.processedFiles = []; // Clear processed files
-                    previewFileName.textContent = '';
-                    fileUploadPreview.classList.add('hidden');
-                });
+        window.confirmPickup = function() {
+            const pickupDate = document.getElementById('pickup-date').value;
+            const pickupTime = document.getElementById('pickup-time').value;
+            if (pickupDate && pickupTime) {
+                hideModal('pickup-request-modal');
+                showToast(`Pickup scheduled for ${pickupDate} at ${pickupTime}. (Dummy)`, 'success');
+            } else {
+                showToast('Please select a preferred pickup date and time.', 'error');
             }
         }
 
 
-        if (window.innerWidth >= 768 && chatWidget) {
-            const chatHeader = chatWidget.querySelector('.p-4:first-child');
-            let isDragging = false;
-            let currentX;
-            let currentY;
-            let initialX;
-            let initialY;
-            let xOffset = 0;
-            let yOffset = 0;
-
-            if (chatHeader) { // Ensure chatHeader exists before adding listeners
-                chatHeader.addEventListener("mousedown", dragStart);
-                chatWidget.addEventListener("mouseup", dragEnd);
-                chatWidget.addEventListener("mousemove", drag);
-            }
-
-            function dragStart(e) {
-                initialX = e.clientX - xOffset;
-                initialY = e.clientY - yOffset;
-
-                if (e.target.closest('#aiChatWidget > div:first-child') === chatHeader) {
-                    isDragging = true;
-                }
-            }
-
-            function dragEnd(e) {
-                initialX = currentX;
-                initialY = currentY;
-                isDragging = false;
-            }
-
-            function drag(e) {
-                if (isDragging) {
-                    e.preventDefault();
-                    currentX = e.clientX - initialX;
-                    currentY = e.clientY - initialY;
-
-                    xOffset = currentX;
-                    yOffset = currentY;
-
-                    setTranslate(currentX, currentY, chatWidget);
-                }
-            }
-
-            function setTranslate(xPos, yPos, el) {
-                el.style.transform = "translate3d(" + xPos + "px, " + yPos + "px, 0)";
-            }
-        }
-    });
     </script>
 
 

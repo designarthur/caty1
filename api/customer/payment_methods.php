@@ -6,11 +6,12 @@ ini_set('display_errors', 0);
 ini_set('display_startup_errors', 0);
 error_reporting(E_ALL & ~E_NOTICE & ~E_DEPRECATED & ~E_STRICT);
 
+
+// Start session and include necessary files
 session_start();
 require_once __DIR__ . '/../../includes/db.php';
-require_once __DIR__ . '/../../includes/session.php';
-require_once __DIR__ . '/../../includes/functions.php';
-require_once __DIR__ . '/../../vendor/autoload.php'; // Composer autoload for Stripe
+require_once __DIR__ . '/../../includes/session.php'; // For is_logged_in() and $_SESSION['user_id']
+// Removed Braintree requirement: require_once __DIR__ . '/../../vendor/autoload.php'; 
 
 header('Content-Type: application/json');
 
@@ -24,41 +25,33 @@ $user_id = $_SESSION['user_id'];
 $request_method = $_SERVER['REQUEST_METHOD'];
 $action = $_REQUEST['action'] ?? ''; // Use $_REQUEST to handle both GET and POST
 
-// --- Initialize Stripe ---
+// Removed Braintree Gateway initialization
+/*
 try {
-    \Stripe\Stripe::setApiKey($_ENV['STRIPE_SECRET_KEY'] ?? '');
-
-    if (empty(\Stripe\Stripe::getApiKey())) {
-        throw new Exception("Stripe secret key is not configured in the .env file.");
-    }
+    $gateway = new Braintree\Gateway([
+        'environment' => $_ENV['BRAINTREE_ENVIRONMENT'] ?? 'sandbox',
+        'merchantId'  => $_ENV['BRAINTREE_MERCHANT_ID'],
+        'publicKey'   => $_ENV['BRAINTREE_PUBLIC_KEY'],
+        'privateKey'  => $_ENV['BRAINTREE_PRIVATE_KEY']
+    ]);
 } catch (Exception $e) {
-    error_log("Stripe initialization failed: " . $e->getMessage());
+    error_log("Braintree Gateway initialization failed: " . $e->getMessage());
     echo json_encode(['success' => false, 'message' => 'Payment system configuration error.']);
     exit;
 }
-
-// CSRF token validation
-try {
-    if ($request_method === 'POST') {
-        validate_csrf_token();
-    }
-} catch (Exception $e) {
-    http_response_code(403);
-    echo json_encode(['success' => false, 'message' => 'Invalid security token. Please refresh the page and try again.']);
-    exit;
-}
+*/
 
 
 if ($request_method === 'POST') {
     switch ($action) {
         case 'add_method':
-            handleAddPaymentMethod($conn, $user_id);
+            handleAddPaymentMethod($conn, $user_id); // Removed $gateway parameter
             break;
         case 'set_default':
             handleSetDefaultPaymentMethod($conn, $user_id);
             break;
         case 'delete_method':
-            handleDeletePaymentMethod($conn, $user_id);
+            handleDeletePaymentMethod($conn, $user_id); // Removed $gateway parameter
             break;
         case 'update_method':
             handleUpdatePaymentMethod($conn, $user_id);
@@ -72,6 +65,9 @@ if ($request_method === 'POST') {
         case 'get_default_method':
             handleGetDefaultMethod($conn, $user_id);
             break;
+        case 'get_client_token': // This action is no longer needed without Braintree client-side SDK
+            echo json_encode(['success' => false, 'message' => 'Client token functionality is disabled.']);
+            break;
         default:
             echo json_encode(['success' => false, 'message' => 'Invalid GET action.']);
             break;
@@ -82,97 +78,63 @@ if ($request_method === 'POST') {
 
 $conn->close();
 
-/**
- * Gets or creates a Stripe Customer ID for the given user.
- *
- * @param mysqli $conn The database connection.
- * @param int $user_id The ID of the local user.
- * @return string The Stripe Customer ID.
- * @throws Exception If Stripe customer cannot be retrieved or created.
- */
-function getOrCreateStripeCustomer($conn, $user_id) {
-    // Try to retrieve existing Stripe Customer ID from local DB
-    $stmt = $conn->prepare("SELECT stripe_customer_id, email, first_name, last_name FROM users WHERE id = ?");
-    $stmt->bind_param("i", $user_id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $user_data = $result->fetch_assoc();
-    $stmt->close();
-
-    if ($user_data && !empty($user_data['stripe_customer_id'])) {
-        return $user_data['stripe_customer_id'];
-    }
-
-    // If not found, create a new Stripe Customer
-    try {
-        $customer = \Stripe\Customer::create([
-            'email' => $user_data['email'],
-            'name'  => $user_data['first_name'] . ' ' . $user_data['last_name'],
-            'description' => "Customer for user ID {$user_id}",
-        ]);
-        $stripe_customer_id = $customer->id;
-
-        // Save new Stripe Customer ID to local DB
-        $stmt_update = $conn->prepare("UPDATE users SET stripe_customer_id = ? WHERE id = ?");
-        $stmt_update->bind_param("si", $stripe_customer_id, $user_id);
-        $stmt_update->execute();
-        $stmt_update->close();
-
-        return $stripe_customer_id;
-    } catch (\Stripe\Exception\ApiErrorException $e) {
-        error_log("Error creating Stripe Customer: " . $e->getMessage());
-        throw new Exception("Failed to create Stripe customer account. " . $e->getMessage());
-    }
-}
-
-function handleAddPaymentMethod($conn, $user_id) {
-    $paymentMethodId = trim($_POST['payment_method_id'] ?? '');
+function handleAddPaymentMethod($conn, $user_id) { // Removed $gateway parameter
     $cardholderName = trim($_POST['cardholder_name'] ?? '');
+    $cardNumber = trim(str_replace(' ', '', $_POST['card_number'] ?? ''));
+    $expiryDate = trim($_POST['expiry_date'] ?? '');
+    $cvv = trim($_POST['cvv'] ?? '');
     $billingAddress = trim($_POST['billing_address'] ?? '');
-    $setDefault = isset($_POST['set_default']) && $_POST['set_default'] === 'true';
+    $setDefault = isset($_POST['set_default']) && $_POST['set_default'] === 'on';
 
-    // Card details sent for local storage only, not used to create PM on Stripe.
-    $cardType = trim($_POST['card_type'] ?? 'Unknown');
-    $lastFour = trim($_POST['last_four'] ?? '');
-    $expirationMonth = trim($_POST['expiration_month'] ?? '');
-    $expirationYear = trim($_POST['expiration_year'] ?? '');
-
-    if (empty($paymentMethodId) || empty($cardholderName) || empty($billingAddress)) {
+    if (empty($cardholderName) || empty($cardNumber) || empty($expiryDate) || empty($cvv) || empty($billingAddress)) {
         echo json_encode(['success' => false, 'message' => 'All fields are required.']);
         return;
     }
+    if (!preg_match('/^\d{13,16}$/', $cardNumber)) {
+        echo json_encode(['success' => false, 'message' => 'Invalid card number format.']);
+        return;
+    }
+    if (!preg_match('/^(0[1-9]|1[0-2])\/([0-9]{2})$/', $expiryDate, $matches)) {
+        echo json_encode(['success' => false, 'message' => 'Invalid expiration date format (MM/YY).']);
+        return;
+    }
+    $expMonth = $matches[1];
+    $expYear = '20' . $matches[2];
+    if (strtotime("$expYear-$expMonth-01") < strtotime(date('Y-m-01'))) {
+        echo json_encode(['success' => false, 'message' => 'Expiration date is in the past.']);
+        return;
+    }
+    if (!preg_match('/^\d{3,4}$/', $cvv)) {
+        echo json_encode(['success' => false, 'message' => 'Invalid CVV format (3 or 4 digits).']);
+        return;
+    }
+
+    // --- Manual Card Type Detection (Simplified) ---
+    $firstDigit = substr($cardNumber, 0, 1);
+    $cardType = 'Unknown';
+    if ($firstDigit == '4') $cardType = 'Visa';
+    elseif ($firstDigit == '5') $cardType = 'MasterCard';
+    elseif ($firstDigit == '3') $cardType = 'Amex';
+    elseif ($firstDigit == '6') $cardType = 'Discover'; // Added Discover
+    // You can add more card types as needed
+
+    $lastFour = substr($cardNumber, -4);
 
     $conn->begin_transaction();
     try {
-        $stripe_customer_id = getOrCreateStripeCustomer($conn, $user_id);
-
-        // Attach Payment Method to Stripe Customer
-        try {
-            $stripePaymentMethod = \Stripe\PaymentMethod::retrieve($paymentMethodId);
-            $stripePaymentMethod->attach(['customer' => $stripe_customer_id]);
-        } catch (\Stripe\Exception\InvalidRequestException $e) {
-            if (strpos($e->getMessage(), 'already been attached') !== false) {
-                // Payment method already attached, can continue
-                error_log("Payment method {$paymentMethodId} already attached to a customer. Continuing.");
-            } else {
-                throw $e; // Re-throw other attachment errors
-            }
-        }
-
         if ($setDefault) {
-            // Unset current default payment method in local DB
             $stmt_unset_default = $conn->prepare("UPDATE user_payment_methods SET is_default = FALSE WHERE user_id = ?");
             $stmt_unset_default->bind_param("i", $user_id);
             $stmt_unset_default->execute();
             $stmt_unset_default->close();
-
-            // Optionally, set as default for future invoices in Stripe (requires customer.invoice_settings update)
-            // \Stripe\Customer::update($stripe_customer_id, ['invoice_settings' => ['default_payment_method' => $paymentMethodId]]);
         }
 
-        // Store payment method details locally
-        $stmt_insert = $conn->prepare("INSERT INTO user_payment_methods (user_id, stripe_payment_method_id, card_type, last_four, expiration_month, expiration_year, cardholder_name, is_default, billing_address) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt_insert->bind_param("issssssis", $user_id, $paymentMethodId, $cardType, $lastFour, $expirationMonth, $expirationYear, $cardholderName, $setDefault, $billingAddress);
+        // Removed Braintree payment method creation
+        // Instead of Braintree token, generate a simple unique token for internal use
+        $internalToken = 'local_' . uniqid() . substr($cardNumber, -4);
+
+        $stmt_insert = $conn->prepare("INSERT INTO user_payment_methods (user_id, braintree_payment_token, card_type, last_four, expiration_month, expiration_year, cardholder_name, is_default, billing_address) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt_insert->bind_param("issssssis", $user_id, $internalToken, $cardType, $lastFour, $expMonth, $expYear, $cardholderName, $setDefault, $billingAddress);
 
         if ($stmt_insert->execute()) {
             $conn->commit();
@@ -189,7 +151,7 @@ function handleAddPaymentMethod($conn, $user_id) {
 }
 
 function handleSetDefaultPaymentMethod($conn, $user_id) {
-    $methodId = $_POST['id'] ?? null; // Local DB ID
+    $methodId = $_POST['id'] ?? null;
     if (empty($methodId)) {
         echo json_encode(['success' => false, 'message' => 'Payment method ID required.']);
         return;
@@ -197,37 +159,14 @@ function handleSetDefaultPaymentMethod($conn, $user_id) {
 
     $conn->begin_transaction();
     try {
-        // Unset current default in local DB
         $stmt_unset = $conn->prepare("UPDATE user_payment_methods SET is_default = FALSE WHERE user_id = ?");
         $stmt_unset->bind_param("i", $user_id);
         $stmt_unset->execute();
         $stmt_unset->close();
 
-        // Set new default in local DB
         $stmt_set = $conn->prepare("UPDATE user_payment_methods SET is_default = TRUE WHERE id = ? AND user_id = ?");
         $stmt_set->bind_param("ii", $methodId, $user_id);
         if ($stmt_set->execute() && $stmt_set->affected_rows > 0) {
-            // Optional: Update Stripe customer's default payment method for subscriptions/invoicing
-            // Fetch Stripe Customer ID and Payment Method ID from local DB first
-            $stmt_pm = $conn->prepare("SELECT stripe_payment_method_id FROM user_payment_methods WHERE id = ? AND user_id = ?");
-            $stmt_pm->bind_param("ii", $methodId, $user_id);
-            $stmt_pm->execute();
-            $pm_data = $stmt_pm->get_result()->fetch_assoc();
-            $stmt_pm->close();
-
-            if ($pm_data && !empty($pm_data['stripe_payment_method_id'])) {
-                $stripe_customer_id = getOrCreateStripeCustomer($conn, $user_id);
-                try {
-                    \Stripe\Customer::update(
-                        $stripe_customer_id,
-                        ['invoice_settings' => ['default_payment_method' => $pm_data['stripe_payment_method_id']]]
-                    );
-                } catch (\Stripe\Exception\ApiErrorException $e) {
-                    error_log("Stripe error setting default payment method for customer {$stripe_customer_id}: " . $e->getMessage());
-                    // Not a critical error for local DB, but worth logging
-                }
-            }
-
             $conn->commit();
             echo json_encode(['success' => true, 'message' => 'Default payment method updated.']);
         } else {
@@ -237,12 +176,12 @@ function handleSetDefaultPaymentMethod($conn, $user_id) {
     } catch (Exception $e) {
         $conn->rollback();
         error_log("Set default failed: " . $e->getMessage());
-        echo json_encode(['success' => false, 'message' => 'Failed to set default payment method: ' . $e->getMessage()]);
+        echo json_encode(['success' => false, 'message' => 'Failed to set default payment method.']);
     }
 }
 
-function handleDeletePaymentMethod($conn, $user_id) {
-    $methodId = $_POST['id'] ?? null; // Local DB ID
+function handleDeletePaymentMethod($conn, $user_id) { // Removed $gateway parameter
+    $methodId = $_POST['id'] ?? null;
     if (empty($methodId)) {
         echo json_encode(['success' => false, 'message' => 'Payment method ID required.']);
         return;
@@ -250,7 +189,7 @@ function handleDeletePaymentMethod($conn, $user_id) {
 
     $conn->begin_transaction();
     try {
-        $stmt_check = $conn->prepare("SELECT stripe_payment_method_id, is_default FROM user_payment_methods WHERE id = ? AND user_id = ?");
+        $stmt_check = $conn->prepare("SELECT braintree_payment_token, is_default FROM user_payment_methods WHERE id = ? AND user_id = ?");
         $stmt_check->bind_param("ii", $methodId, $user_id);
         $stmt_check->execute();
         $method = $stmt_check->get_result()->fetch_assoc();
@@ -271,18 +210,15 @@ function handleDeletePaymentMethod($conn, $user_id) {
             }
         }
 
-        // Detach Payment Method from Stripe Customer
-        if (!empty($method['stripe_payment_method_id'])) {
-            try {
-                $stripePaymentMethod = \Stripe\PaymentMethod::retrieve($method['stripe_payment_method_id']);
-                if ($stripePaymentMethod->customer) { // Only detach if it's attached to a customer
-                    $stripePaymentMethod->detach();
-                }
-            } catch (\Stripe\Exception\ApiErrorException $e) {
-                // Log error but don't prevent local deletion if Stripe already removed it or it's unattached
-                error_log("Stripe PaymentMethod detach failed: " . $e->getMessage());
-            }
+        // Removed Braintree payment method deletion:
+        /*
+        $braintreeToken = $method['braintree_payment_token'];
+        $result = $gateway->paymentMethod()->delete($braintreeToken);
+
+        if (!$result->success) {
+            throw new Exception("Failed to delete payment method from Braintree: " . $result->message);
         }
+        */
 
         $stmt_delete = $conn->prepare("DELETE FROM user_payment_methods WHERE id = ? AND user_id = ?");
         $stmt_delete->bind_param("ii", $methodId, $user_id);
@@ -301,18 +237,17 @@ function handleDeletePaymentMethod($conn, $user_id) {
 }
 
 function handleUpdatePaymentMethod($conn, $user_id) {
-    $methodId = $_POST['id'] ?? null; // Local DB ID
+    $methodId = $_POST['id'] ?? null;
     $cardholderName = trim($_POST['cardholder_name'] ?? '');
     $expirationMonth = trim($_POST['expiration_month'] ?? '');
     $expirationYear = trim($_POST['expiration_year'] ?? '');
     $billingAddress = trim($_POST['billing_address'] ?? '');
-    $setDefault = isset($_POST['set_default']) && $_POST['set_default'] === 'true';
+    $setDefault = isset($_POST['set_default']) && $_POST['set_default'] === 'on';
 
     if (empty($methodId) || empty($cardholderName) || empty($expirationMonth) || empty($expirationYear) || empty($billingAddress)) {
         echo json_encode(['success' => false, 'message' => 'All fields are required.']);
         return;
     }
-    // Simple validation for MM/YYYY
     if (!preg_match('/^(0[1-9]|1[0-2])$/', $expirationMonth) || !preg_match('/^\d{4}$/', $expirationYear)) {
         echo json_encode(['success' => false, 'message' => 'Invalid expiration date format (MM/YYYY).']);
         return;
@@ -321,33 +256,12 @@ function handleUpdatePaymentMethod($conn, $user_id) {
     $conn->begin_transaction();
     try {
         if ($setDefault) {
-            // Unset current default in local DB
             $stmt_unset = $conn->prepare("UPDATE user_payment_methods SET is_default = FALSE WHERE user_id = ?");
             $stmt_unset->bind_param("i", $user_id);
             $stmt_unset->execute();
             $stmt_unset->close();
-
-            // Set as default in Stripe (invoice_settings.default_payment_method)
-            $stmt_pm_id = $conn->prepare("SELECT stripe_payment_method_id FROM user_payment_methods WHERE id = ? AND user_id = ?");
-            $stmt_pm_id->bind_param("ii", $methodId, $user_id);
-            $stmt_pm_id->execute();
-            $pm_data = $stmt_pm_id->get_result()->fetch_assoc();
-            $stmt_pm_id->close();
-
-            if ($pm_data && !empty($pm_data['stripe_payment_method_id'])) {
-                $stripe_customer_id = getOrCreateStripeCustomer($conn, $user_id);
-                try {
-                    \Stripe\Customer::update(
-                        $stripe_customer_id,
-                        ['invoice_settings' => ['default_payment_method' => $pm_data['stripe_payment_method_id']]]
-                    );
-                } catch (\Stripe\Exception\ApiErrorException $e) {
-                    error_log("Stripe error setting default payment method on update: " . $e->getMessage());
-                }
-            }
         }
 
-        // Update local DB record for billing details and default status
         $stmt_update = $conn->prepare("UPDATE user_payment_methods SET cardholder_name = ?, expiration_month = ?, expiration_year = ?, billing_address = ?, is_default = ? WHERE id = ? AND user_id = ?");
         $stmt_update->bind_param("ssssiii", $cardholderName, $expirationMonth, $expirationYear, $billingAddress, $setDefault, $methodId, $user_id);
 
@@ -384,3 +298,16 @@ function handleGetDefaultMethod($conn, $user_id) {
         echo json_encode(['success' => false, 'message' => 'No default payment method found.']);
     }
 }
+
+// Removed handleGetClientToken function
+/*
+function handleGetClientToken($gateway) {
+    try {
+        $clientToken = $gateway->clientToken()->generate();
+        echo json_encode(['success' => true, 'client_token' => $clientToken->token]);
+    } catch (Exception $e) {
+        error_log("Failed to generate Braintree client token: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Failed to retrieve payment client token.']);
+    }
+}
+*/
