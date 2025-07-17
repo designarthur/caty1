@@ -7,44 +7,43 @@ if (session_status() == PHP_SESSION_NONE) {
 }
 require_once __DIR__ . '/../../includes/db.php';
 require_once __DIR__ . '/../../includes/session.php';
+require_once __DIR__ . '/../../includes/functions.php'; // Required for CSRF token
 
 if (!is_logged_in()) {
     echo '<div class="text-red-500 text-center p-8">You must be logged in to view this content.</div>';
     exit;
 }
 
+generate_csrf_token();
+$csrf_token = $_SESSION['csrf_token'];
+
 $user_id = $_SESSION['user_id'];
 
 // Fetch saved payment methods from the database
 $saved_payment_methods = [];
 // Select all necessary fields to pass to frontend for editing
-$stmt = $conn->prepare("SELECT id, braintree_payment_token, card_type, last_four, expiration_month, expiration_year, cardholder_name, is_default, billing_address FROM user_payment_methods WHERE user_id = ? ORDER BY is_default DESC, created_at DESC");
+$stmt = $conn->prepare("SELECT id, stripe_payment_method_id, card_type, last_four, expiration_month, expiration_year, cardholder_name, is_default, billing_address FROM user_payment_methods WHERE user_id = ? ORDER BY is_default DESC, created_at DESC");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $result = $stmt->get_result();
 while($row = $result->fetch_assoc()) {
-    // Ensure expiration_month and expiration_year are not null before substr/htmlspecialchars
     $expMonth = htmlspecialchars($row['expiration_month'] ?? '');
-    // Using ?? '' before substr for safety, then htmlspecialchars for output
     $expYearFull = htmlspecialchars($row['expiration_year'] ?? '');
     $expYearLastTwo = substr($expYearFull, -2);
     $row['expiry_display'] = $expMonth . '/' . $expYearLastTwo;
 
-    // Ensure last_four is not null for card_last_four display
     $row['card_last_four'] = htmlspecialchars($row['last_four'] ?? '');
-    // Add raw expiry parts for populating edit form
     $row['raw_expiration_month'] = htmlspecialchars($row['expiration_month'] ?? '');
     $row['raw_expiration_year'] = htmlspecialchars($row['expiration_year'] ?? '');
     $row['raw_billing_address'] = htmlspecialchars($row['billing_address'] ?? '');
 
-    $row['status'] = $row['is_default'] ? 'Default' : 'Active'; // Convert boolean to string status
-    $row['token'] = $row['braintree_payment_token']; // Use Braintree token as frontend identifier
+    $row['status'] = $row['is_default'] ? 'Default' : 'Active';
+    $row['token'] = $row['stripe_payment_method_id']; // Use Stripe Payment Method ID as frontend identifier
     $saved_payment_methods[] = $row;
 }
 $stmt->close();
 
-// Close DB connection if not needed further on this page
-// $conn->close(); // Keep connection open until script ends
+$conn->close();
 ?>
 
 <h1 class="text-3xl font-bold text-gray-800 mb-8">Payment Methods</h1>
@@ -68,6 +67,7 @@ $stmt->close();
                 <tbody class="bg-white divide-y divide-gray-200">
                     <?php foreach ($saved_payment_methods as $method): ?>
                         <tr data-id="<?php echo htmlspecialchars($method['id']); ?>"
+                            data-stripe-payment-method-id="<?php echo htmlspecialchars($method['stripe_payment_method_id']); ?>"
                             data-cardholder-name="<?php echo htmlspecialchars($method['cardholder_name']); ?>"
                             data-last-four="<?php echo htmlspecialchars($method['card_last_four']); ?>"
                             data-exp-month="<?php echo htmlspecialchars($method['raw_expiration_month']); ?>"
@@ -98,33 +98,31 @@ $stmt->close();
 <div class="bg-white p-6 rounded-lg shadow-md border border-blue-200 max-w-2xl mx-auto">
     <h2 class="text-xl font-semibold text-gray-700 mb-4 flex items-center"><i class="fas fa-plus-circle mr-2 text-green-600"></i>Add New Payment Method</h2>
     <form id="add-payment-method-form">
+        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+        <input type="hidden" name="action" value="add_method">
+        
         <div class="mb-5">
-            <label for="new-cardholder-name" class="block text-sm font-medium text-gray-700 mb-2">Cardholder Name</label>
-            <input type="text" id="new-cardholder-name" name="cardholder_name" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" required>
+            <label for="cardholder-name" class="block text-sm font-medium text-gray-700 mb-2">Cardholder Name</label>
+            <input type="text" id="cardholder-name" name="cardholder_name" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" required>
         </div>
-        <!-- Reverted to standard input fields for card number and CVV -->
+        
         <div class="mb-5">
-            <label for="new-card-number" class="block text-sm font-medium text-gray-700 mb-2">Card Number</label>
-            <input type="text" id="new-card-number" name="card_number" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="**** **** **** ****" required pattern="[0-9\s]{13,19}" maxlength="19">
+            <label for="card-element" class="block text-sm font-medium text-gray-700 mb-2">Credit or Debit Card</label>
+            <div id="card-element" class="p-3 border border-gray-300 rounded-lg focus:border-blue-500" style="background-color: #f8f9fa;">
+                </div>
+            <div id="card-errors" role="alert" class="text-red-500 text-sm mt-2"></div>
         </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
-            <div>
-                <label for="new-expiry-date" class="block text-sm font-medium text-gray-700 mb-2">Expiration Date (MM/YY)</label>
-                <input type="text" id="new-expiry-date" name="expiry_date" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="MM/YY" required pattern="(0[1-9]|1[0-2])\/[0-9]{2}">
-            </div>
-            <div>
-                <label for="new-cvv" class="block text-sm font-medium text-gray-700 mb-2">CVV</label>
-                <input type="text" id="new-cvv" name="cvv" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="***" required pattern="[0-9]{3,4}">
-            </div>
-        </div>
+
         <div class="mb-5">
-            <label for="new-billing-address" class="block text-sm font-medium text-gray-700 mb-2">Billing Address</label>
-            <input type="text" id="new-billing-address" name="billing_address" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="123 Example St, City, State, Zip" required>
+            <label for="billing-address" class="block text-sm font-medium text-gray-700 mb-2">Billing Address (for card verification)</label>
+            <input type="text" id="billing-address" name="billing_address" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="123 Example St, City, State, Zip" required>
         </div>
+
         <div class="mb-5 flex items-center">
             <input type="checkbox" id="set-default" name="set_default" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
             <label for="set-default" class="ml-2 block text-sm text-gray-900">Set as default payment method</label>
         </div>
+
         <div class="text-right">
             <button type="submit" class="py-3 px-6 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-lg font-semibold">
                 <i class="fas fa-plus mr-2"></i>Add Payment Method
@@ -135,9 +133,12 @@ $stmt->close();
 
 <div id="edit-payment-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
     <div class="bg-white p-6 rounded-lg shadow-xl w-11/12 max-w-md text-gray-800">
-        <h3 class="text-xl font-bold mb-4">Edit Payment Method</h3>
+        <h3 class="text-xl font-bold mb-4">Edit Payment Method Details</h3>
         <form id="edit-payment-method-form">
             <input type="hidden" id="edit-method-id" name="id">
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+            <input type="hidden" name="action" value="update_method">
+
             <div class="mb-5">
                 <label for="edit-cardholder-name" class="block text-sm font-medium text-gray-700 mb-2">Cardholder Name</label>
                 <input type="text" id="edit-cardholder-name" name="cardholder_name" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" required>
@@ -145,7 +146,6 @@ $stmt->close();
             <div class="mb-5">
                 <label for="edit-card-number-display" class="block text-sm font-medium text-gray-700 mb-2">Card Number (Last 4)</label>
                 <input type="text" id="edit-card-number-display" class="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed" readonly>
-                <p class="text-xs text-gray-500 mt-1">Card number cannot be changed. To change card details, please add a new method.</p>
             </div>
              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
                 <div>
@@ -159,10 +159,10 @@ $stmt->close();
             </div>
             <div class="mb-5">
                 <label for="edit-billing-address" class="block text-sm font-medium text-gray-700 mb-2">Billing Address</label>
-                <input type="text" id="edit-billing-address" name="billing_address" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" required>
+                <input type="text" id="edit-billing-address" name="billing_address" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="123 Example St, City, State, Zip" required>
             </div>
             <div class="mb-5 flex items-center">
-                <input type="checkbox" id="edit-set-default" name="set_default" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                <input type="checkbox" id="edit-set-default" name="set_default" class="h-4 w-4 text-blue-600 border-gray-300 rounded">
                 <label for="edit-set-default" class="ml-2 block text-sm text-gray-900">Set as default payment method</label>
             </div>
             <div class="flex justify-end space-x-4">
@@ -174,92 +174,115 @@ $stmt->close();
 </div>
 
 
-<!-- Removed Braintree SDK scripts -->
+<script src="https://js.stripe.com/v3/"></script>
 <script>
-    // IIFE to encapsulate the script and prevent global variable conflicts
     (function() {
-        // Removed braintreeInstance and initializeBraintree function
+        // Stripe Public Key (replace with your actual public key from environment variable)
+        const stripe = Stripe('pk_test_TYooMQauvdPbR5nWYBgDqgHw'); // This should come from your .env file via PHP
+        const elements = stripe.elements();
 
-        // Client-side validation for expiration date (MM/YY)
-        function isValidExpiryDate(month, year) {
-            if (!/^(0[1-9]|1[0-2])$/.test(month) || !/^\d{4}$/.test(year)) {
-                return false;
-            }
+        // Custom styling for Stripe Elements
+        const style = {
+            base: {
+                color: '#2d3748',
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '16px',
+                '::placeholder': {
+                    color: '#a0aec0',
+                },
+            },
+            invalid: {
+                color: '#ef4444',
+                iconColor: '#ef4444',
+            },
+        };
 
-            const currentYear = new Date().getFullYear();
-            const currentMonth = new Date().getMonth() + 1; // Month is 0-indexed
+        // Create an instance of the card Element.
+        const cardElement = elements.create('card', { style: style });
 
-            const expMonth = parseInt(month, 10);
-            const expYear = parseInt(year, 10);
-
-            if (expYear < currentYear) {
-                return false; // Expired year
-            }
-            if (expYear === currentYear && expMonth < currentMonth) {
-                return false; // Expired month in current year
-            }
-            return true;
+        // Add an instance of the card Element into the `card-element` div.
+        const cardElementContainer = document.getElementById('card-element');
+        if (cardElementContainer) {
+            cardElement.mount(cardElementContainer);
         }
+
+        // Handle real-time validation errors from the card Element.
+        cardElement.on('change', function(event) {
+            const displayError = document.getElementById('card-errors');
+            if (event.error) {
+                displayError.textContent = event.error.message;
+            } else {
+                displayError.textContent = '';
+            }
+        });
 
         // --- Add Payment Method Form Handling ---
         const addPaymentMethodForm = document.getElementById('add-payment-method-form');
         if (addPaymentMethodForm) {
             addPaymentMethodForm.addEventListener('submit', async function(event) {
-                event.preventDefault(); // Prevent default form submission
+                event.preventDefault();
 
-                const cardholderName = document.getElementById('new-cardholder-name').value.trim();
-                const cardNumber = document.getElementById('new-card-number').value.trim();
-                const expiryDate = document.getElementById('new-expiry-date').value.trim(); // MM/YY format
-                const cvv = document.getElementById('new-cvv').value.trim();
-                const billingAddress = document.getElementById('new-billing-address').value.trim();
+                const cardholderName = document.getElementById('cardholder-name').value.trim();
+                const billingAddress = document.getElementById('billing-address').value.trim();
                 const setDefault = document.getElementById('set-default').checked;
 
-                // Client-side validation
-                if (!cardholderName || !cardNumber || !expiryDate || !cvv || !billingAddress) {
-                    window.showToast('Please fill in all fields.', 'error');
-                    return;
-                }
-                if (!/^\d{13,16}$/.test(cardNumber.replace(/\s/g, ''))) { // Remove spaces for validation
-                    window.showToast('Please enter a valid card number (13-16 digits).', 'error');
-                    return;
-                }
-
-                const expiryParts = expiryDate.split('/');
-                if (expiryParts.length !== 2 || !isValidExpiryDate(expiryParts[0], '20' + expiryParts[1])) { // Assuming YY is 2-digit, convert to 4
-                    window.showToast('Please enter a valid expiration date (MM/YY) that is not expired.', 'error');
-                    return;
-                }
-                if (!/^\d{3,4}$/.test(cvv)) {
-                    window.showToast('Please enter a valid CVV (3 or 4 digits).', 'error');
+                if (!cardholderName || !billingAddress) {
+                    window.showToast('Please fill in all required fields.', 'error');
                     return;
                 }
 
                 window.showToast('Adding new payment method...', 'info');
 
-                const formData = new FormData(this); // Get all form data
-                formData.append('action', 'add_method');
-                // No payment_method_nonce needed as Braintree is removed from client-side
-                formData.append('cardholder_name', cardholderName);
-                formData.append('card_number', cardNumber); // Send raw card number
-                formData.append('expiry_date', expiryDate); // Send raw expiry date
-                formData.append('cvv', cvv); // Send raw CVV
-                formData.append('billing_address', billingAddress);
-                formData.append('set_default', setDefault ? 'on' : 'off');
-
                 try {
-                    const response = await fetch('/api/customer/payment_methods.php', {
-                        method: 'POST',
-                        body: formData
+                    const { paymentMethod, error } = await stripe.createPaymentMethod({
+                        type: 'card',
+                        card: cardElement,
+                        billing_details: {
+                            name: cardholderName,
+                            address: {
+                                line1: billingAddress.split(',')[0].trim(),
+                                city: billingAddress.split(',')[1] ? billingAddress.split(',')[1].trim() : '',
+                                state: billingAddress.split(',')[2] ? billingAddress.split(',')[2].trim().split(' ')[0] : '',
+                                postal_code: billingAddress.split(',')[2] ? billingAddress.split(',')[2].trim().split(' ')[1] : '',
+                                country: 'US', // Assuming US for now, could be dynamic
+                            },
+                        },
                     });
 
-                    const result = await response.json();
-
-                    if (result.success) {
-                        window.showToast(result.message || 'Payment method added successfully!', 'success');
-                        addPaymentMethodForm.reset(); // Clear form
-                        window.loadCustomerSection('payment-methods'); // Reload the section to show the new method in the list
+                    if (error) {
+                        const displayError = document.getElementById('card-errors');
+                        displayError.textContent = error.message;
+                        window.showToast(error.message, 'error');
                     } else {
-                        window.showToast(result.message || 'Failed to add payment method.', 'error');
+                        // Send the paymentMethod.id to your server
+                        const formData = new FormData();
+                        formData.append('action', 'add_method');
+                        formData.append('csrf_token', '<?php echo htmlspecialchars($csrf_token); ?>');
+                        formData.append('payment_method_id', paymentMethod.id);
+                        formData.append('cardholder_name', cardholderName);
+                        formData.append('billing_address', billingAddress);
+                        formData.append('set_default', setDefault ? 'true' : 'false');
+                        // Also send card details for local storage (last4, brand, expiry)
+                        formData.append('card_type', paymentMethod.card.brand);
+                        formData.append('last_four', paymentMethod.card.last4);
+                        formData.append('expiration_month', paymentMethod.card.exp_month);
+                        formData.append('expiration_year', paymentMethod.card.exp_year);
+
+                        const response = await fetch('/api/customer/payment_methods.php', {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        const result = await response.json();
+
+                        if (result.success) {
+                            window.showToast(result.message || 'Payment method added successfully!', 'success');
+                            addPaymentMethodForm.reset();
+                            cardElement.clear(); // Clear the card element
+                            window.loadCustomerSection('payment-methods'); // Reload the section
+                        } else {
+                            window.showToast(result.message || 'Failed to add payment method.', 'error');
+                        }
                     }
                 } catch (error) {
                     console.error('Add payment method API Error:', error);
@@ -268,7 +291,7 @@ $stmt->close();
             });
         }
 
-        // --- Edit Payment Method Form Handling (NEW) ---
+        // --- Edit Payment Method Form Handling ---
         const editPaymentMethodForm = document.getElementById('edit-payment-method-form');
         if (editPaymentMethodForm) {
             editPaymentMethodForm.addEventListener('submit', async function(event) {
@@ -277,11 +300,10 @@ $stmt->close();
                 const methodId = document.getElementById('edit-method-id').value;
                 const cardholderName = document.getElementById('edit-cardholder-name').value.trim();
                 const expirationMonth = document.getElementById('edit-expiry-month').value.trim();
-                const expirationYear = document.getElementById('edit-expiry-year').value.trim(); // YYYY format
+                const expirationYear = document.getElementById('edit-expiry-year').value.trim();
                 const billingAddress = document.getElementById('edit-billing-address').value.trim();
                 const setDefault = document.getElementById('edit-set-default').checked;
 
-                // Client-side validation for edit form
                 if (!cardholderName || !expirationMonth || !expirationYear || !billingAddress) {
                     window.showToast('Please fill in all fields.', 'error');
                     return;
@@ -294,13 +316,14 @@ $stmt->close();
                 window.showToast('Saving changes...', 'info');
 
                 const formData = new FormData();
-                formData.append('action', 'update_method'); // New action for the API
+                formData.append('action', 'update_method');
+                formData.append('csrf_token', '<?php echo htmlspecialchars($csrf_token); ?>');
                 formData.append('id', methodId);
                 formData.append('cardholder_name', cardholderName);
                 formData.append('expiration_month', expirationMonth);
                 formData.append('expiration_year', expirationYear);
                 formData.append('billing_address', billingAddress);
-                formData.append('set_default', setDefault ? 'on' : 'off'); // Send 'on' or 'off' as expected by PHP
+                formData.append('set_default', setDefault ? 'true' : 'false');
 
                 try {
                     const response = await fetch('/api/customer/payment_methods.php', {
@@ -312,8 +335,8 @@ $stmt->close();
 
                     if (result.success) {
                         window.showToast(result.message || 'Payment method updated successfully!', 'success');
-                        window.hideModal('edit-payment-modal'); // Hide the modal on success
-                        window.loadCustomerSection('payment-methods'); // Reload to reflect changes
+                        window.hideModal('edit-payment-modal');
+                        window.loadCustomerSection('payment-methods');
                     } else {
                         window.showToast(result.message || 'Failed to update payment method.', 'error');
                     }
@@ -322,6 +345,22 @@ $stmt->close();
                     window.showToast('An error occurred while updating payment method. Please try again.', 'error');
                 }
             });
+        }
+
+        // Helper for expiry date validation
+        function isValidExpiryDate(month, year) {
+            if (!/^(0[1-9]|1[0-2])$/.test(month) || !/^\d{4}$/.test(year)) {
+                return false;
+            }
+            const currentYear = new Date().getFullYear();
+            const currentMonth = new Date().getMonth() + 1;
+            const expMonth = parseInt(month, 10);
+            const expYear = parseInt(year, 10);
+
+            if (expYear < currentYear || (expYear === currentYear && expMonth < currentMonth)) {
+                return false;
+            }
+            return true;
         }
 
         // --- Event listeners for table buttons (Edit, Set Default, Delete) ---
@@ -333,7 +372,7 @@ $stmt->close();
                 document.getElementById('edit-cardholder-name').value = row.dataset.cardholderName;
                 document.getElementById('edit-card-number-display').value = '**** **** **** ' + row.dataset.lastFour;
                 document.getElementById('edit-expiry-month').value = row.dataset.expMonth;
-                document.getElementById('edit-expiry-year').value = row.dataset.expYear; // Full 4-digit year
+                document.getElementById('edit-expiry-year').value = row.dataset.expYear;
                 document.getElementById('edit-billing-address').value = row.dataset.billingAddress;
                 document.getElementById('edit-set-default').checked = (row.dataset.isDefault === 'true');
                 window.showModal('edit-payment-modal');
@@ -350,6 +389,7 @@ $stmt->close();
                             window.showToast('Setting default payment method...', 'info');
                             const formData = new FormData();
                             formData.append('action', 'set_default');
+                            formData.append('csrf_token', '<?php echo htmlspecialchars($csrf_token); ?>');
                             formData.append('id', methodId);
 
                             try {
@@ -360,7 +400,7 @@ $stmt->close();
                                 const result = await response.json();
                                 if (result.success) {
                                     window.showToast(result.message || 'Default payment method updated!', 'success');
-                                    window.loadCustomerSection('payment-methods'); // Reload to reflect changes
+                                    window.loadCustomerSection('payment-methods');
                                 } else {
                                     window.showToast(result.message || 'Failed to set default payment method.', 'error');
                                 }
@@ -370,8 +410,8 @@ $stmt->close();
                             }
                         }
                     },
-                    'Set Default', // Confirm button text
-                    'bg-green-600' // Confirm button color
+                    'Set Default',
+                    'bg-green-600'
                 );
             }
 
@@ -386,6 +426,7 @@ $stmt->close();
                             window.showToast('Deleting payment method...', 'info');
                             const formData = new FormData();
                             formData.append('action', 'delete_method');
+                            formData.append('csrf_token', '<?php echo htmlspecialchars($csrf_token); ?>');
                             formData.append('id', methodId);
 
                             try {
@@ -396,19 +437,20 @@ $stmt->close();
                                 const result = await response.json();
                                 if (result.success) {
                                     window.showToast(result.message || 'Payment method deleted!', 'success');
-                                    window.loadCustomerSection('payment-methods'); // Reload to reflect changes
+                                    window.loadCustomerSection('payment-methods');
                                 } else {
                                     window.showToast(result.message || 'Failed to delete payment method.', 'error');
-                                    }
-                                } catch (error) {
-                                    console.error('Delete payment method API Error:', error);
-                                    window.showToast('An error occurred. Please try again.', 'error');
                                 }
+                            } catch (error) {
+                                console.error('Delete payment method API Error:', error);
+                                window.showToast('An error occurred. Please try again.', 'error');
                             }
-                        },
-                        'Delete', // Confirm button text
-                        'bg-red-600' // Confirm button color
-                    );
-                }
-            });
-        })(); // End of IIFE
+                        }
+                    },
+                    'Delete',
+                    'bg-red-600'
+                );
+            }
+        });
+    })();
+</script>
