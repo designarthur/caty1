@@ -44,7 +44,7 @@ $requested_invoice_id = $_GET['invoice_id'] ?? null;
 $requested_quote_id = $_GET['quote_id'] ?? null; // For direct link from pending quotes
 
 // If a specific invoice number is requested, fetch its details
-if ($requested_invoice_id || $requested_quote_id) { 
+if ($requested_invoice_id || $requested_quote_id) {
     $sql = "SELECT
                 i.id, i.invoice_number, i.amount, i.status, i.created_at, i.due_date, i.transaction_id, i.payment_method, i.discount, i.tax, i.booking_id,
                 u.first_name, u.last_name, u.email, u.address, u.city, u.state, u.zip_code
@@ -61,12 +61,12 @@ if ($requested_invoice_id || $requested_quote_id) {
         $stmt_detail = $conn->prepare($sql);
         $stmt_detail->bind_param("ii", $user_id, $requested_quote_id);
     }
-    
+
     $stmt_detail->execute();
     $result_detail = $stmt_detail->get_result();
     if ($result_detail->num_rows > 0) {
         $invoice_detail = $result_detail->fetch_assoc();
-        
+
         // Fetch line items
         $invoice_detail['items'] = [];
         $stmt_items = $conn->prepare("SELECT * FROM invoice_items WHERE invoice_id = ? ORDER BY id ASC");
@@ -171,9 +171,35 @@ if ($requested_invoice_id || $requested_quote_id) {
     $stmt_list->close();
 }
 
+// Fetch saved payment methods before closing the connection
+$saved_cards_options = '';
+$user_stripe_customer_id = null;
+$stmt_user_stripe_id = $conn->prepare("SELECT stripe_customer_id FROM users WHERE id = ?");
+$stmt_user_stripe_id->bind_param("i", $user_id);
+$stmt_user_stripe_id->execute();
+$user_stripe_data = $stmt_user_stripe_id->get_result()->fetch_assoc();
+if ($user_stripe_data && !empty($user_stripe_data['stripe_customer_id'])) {
+    $user_stripe_customer_id = $user_stripe_data['stripe_customer_id'];
+}
+$stmt_user_stripe_id->close();
+
+if ($user_stripe_customer_id) {
+    $stmt_saved_methods = $conn->prepare("SELECT id, braintree_payment_token, card_type, last_four, expiration_month, expiration_year, cardholder_name, is_default, billing_address FROM user_payment_methods WHERE user_id = ? ORDER BY is_default DESC, created_at DESC");
+    $stmt_saved_methods->bind_param("i", $user_id);
+    $stmt_saved_methods->execute();
+    $result_saved_methods = $stmt_saved_methods->get_result();
+    while ($method = $result_saved_methods->fetch_assoc()) {
+        $expiry_month = $method['expiration_month'] ?? '';
+        $expiry_year = $method['expiration_year'] ?? '';
+        $expiry_display = htmlspecialchars($expiry_month) . '/' . substr(htmlspecialchars($expiry_year), -2);
+        $is_default_attr = $method['is_default'] ? 'data-is-default="true"' : 'data-is-default="false"';
+        $saved_cards_options .= '<option value="' . htmlspecialchars($method['id']) . '" data-card-brand="' . htmlspecialchars($method['card_type'] ?? '') . '" data-last-four="' . htmlspecialchars($method['last_four'] ?? '') . '" data-exp-month="' . htmlspecialchars($expiry_month) . '" data-exp-year="' . htmlspecialchars($expiry_year) . '" ' . $is_default_attr . ' data-stripe-pm-id="' . htmlspecialchars($method['braintree_payment_token'] ?? '') . '">' . htmlspecialchars($method['card_type'] ?? '') . ' ending in ' . htmlspecialchars($method['last_four'] ?? '') . ' (Expires ' . $expiry_display . ')' . ($method['is_default'] ? ' (Default)' : '') . '</option>';
+    }
+    $stmt_saved_methods->close();
+}
 
 $conn->close();
-generate_csrf_token(); 
+generate_csrf_token();
 
 // --- Helper Functions ---
 function getStatusBadgeClass($status) {
@@ -210,7 +236,7 @@ function getStatusBadgeClass($status) {
                 <button id="toggle-filters-btn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-md md:hidden">
                     <i class="fas fa-filter"></i>
                 </button>
-                 <button id="apply-filters-btn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-md hidden md:block">
+                 <button id="apply-filters-btn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-md hidden md:block" onclick="applyFilters()">
                     <i class="fas fa-search"></i>
                 </button>
             </div>
@@ -301,7 +327,7 @@ function getStatusBadgeClass($status) {
                         </div>
                         <div class="border-t border-b border-gray-200 py-2 mb-2">
                             <p class="text-lg font-bold text-gray-700"><span class="font-medium">Amount:</span> $<?php echo number_format($invoice['amount'], 2); ?></p>
-                            <p class="text-sm text-gray-700"><span class="font-medium">Status:</span> 
+                            <p class="text-sm text-gray-700"><span class="font-medium">Status:</span>
                                 <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <?php echo getStatusBadgeClass($invoice['status']); ?>">
                                     <?php echo htmlspecialchars(strtoupper(str_replace('_', ' ', (string)($invoice['status'] ?? '')))); ?>
                                 </span>
@@ -453,42 +479,19 @@ function getStatusBadgeClass($status) {
 </div>
 
 <div id="payment-form-view" class="bg-white p-6 rounded-lg shadow-md border border-blue-200 mt-8 hidden">
-    <button class="mb-4 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 back-to-details-btn"><i class="fas fa-arrow-left mr-2"></i>Back to Invoice</button>
+    <button class="mb-4 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 back-to-details-btn" onclick="window.hideInvoiceDetails()"><i class="fas fa-arrow-left mr-2"></i>Back to Invoice</button>
     <h2 class="text-2xl font-bold text-gray-800 mb-6">Pay Invoice <span id="payment-invoice-id-display"></span></h2>
     <form id="payment-form">
         <input type="hidden" name="invoice_id" id="payment-form-invoice-id">
         <input type="hidden" name="invoice_number" id="payment-form-invoice-number">
         <input type="hidden" name="amount" id="payment-form-amount">
         <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+        <input type="hidden" id="original-payment-method-id-hidden" name="original_payment_method_id">
         <div class="mb-5">
             <label for="saved-cards-select" class="block text-sm font-medium text-gray-700 mb-2">Use Saved Card</label>
             <select id="saved-cards-select" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
                 <option value="">-- Add New Card --</option>
-                <?php
-                // Fetch saved payment methods from the database (assuming stripe_customer_id and braintree_payment_token holds stripe PM ID)
-                $user_stripe_customer_id = null;
-                $stmt_user_stripe_id = $conn->prepare("SELECT stripe_customer_id FROM users WHERE id = ?");
-                $stmt_user_stripe_id->bind_param("i", $user_id);
-                $stmt_user_stripe_id->execute();
-                $user_stripe_data = $stmt_user_stripe_id->get_result()->fetch_assoc();
-                if ($user_stripe_data && !empty($user_stripe_data['stripe_customer_id'])) {
-                    $user_stripe_customer_id = $user_stripe_data['stripe_customer_id'];
-                }
-                $stmt_user_stripe_id->close();
-
-                if ($user_stripe_customer_id) {
-                    $stmt_saved_methods = $conn->prepare("SELECT id, braintree_payment_token, card_type, last_four, expiration_month, expiration_year, cardholder_name, is_default, billing_address FROM user_payment_methods WHERE user_id = ? ORDER BY is_default DESC, created_at DESC");
-                    $stmt_saved_methods->bind_param("i", $user_id);
-                    $stmt_saved_methods->execute();
-                    $result_saved_methods = $stmt_saved_methods->get_result();
-                    while ($method = $result_saved_methods->fetch_assoc()) {
-                        $expiry_display = htmlspecialchars($method['expiration_month'] ?? '') . '/' . substr(htmlspecialchars($method['expiration_year'] ?? ''), -2);
-                        $is_default_attr = $method['is_default'] ? 'data-is-default="true"' : 'data-is-default="false"';
-                        echo '<option value="' . htmlspecialchars($method['id']) . '" data-card-brand="' . htmlspecialchars($method['card_type']) . '" data-last-four="' . htmlspecialchars($method['last_four']) . '" data-exp-month="' . htmlspecialchars($method['expiration_month']) . '" data-exp-year="' . htmlspecialchars($method['expiration_year']) . '" ' . $is_default_attr . ' data-stripe-pm-id="' . htmlspecialchars($method['braintree_payment_token']) . '">' . htmlspecialchars($method['card_type']) . ' ending in ' . htmlspecialchars($method['last_four']) . ' (Expires ' . $expiry_display . ')' . ($method['is_default'] ? ' (Default)' : '') . '</option>';
-                    }
-                    $stmt_saved_methods->close();
-                }
-                ?>
+                <?php echo $saved_cards_options; ?>
             </select>
         </div>
 
@@ -515,15 +518,13 @@ function getStatusBadgeClass($status) {
 
         <div class="mb-5">
             <label for="payment-amount" class="block text-sm font-medium text-gray-700 mb-2">Amount to Pay</label>
-            <input type="number" id="payment-amount" name="amount" class="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 focus:ring-blue-500 focus:border-blue-500" step="0.01" value="0.00" readonly>
+            <input type="number" id="payment-amount" class="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 focus:ring-blue-500 focus:border-blue-500" step="0.01" value="0.00" readonly>
         </div>
         <button type="submit" id="submit-payment-btn" class="w-full py-3 px-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 shadow-lg font-semibold">
             <i class="fas fa-dollar-sign mr-2"></i>Confirm Payment
         </button>
     </form>
 </div>
-
-<script src="https://js.stripe.com/v3/"></script>
 
 <script>
 (function() {
@@ -537,10 +538,10 @@ function getStatusBadgeClass($status) {
             page: params.page || (currentParams.get('page') ? parseInt(currentParams.get('page')) : 1),
             per_page: params.per_page || (currentParams.get('per_page') ? parseInt(currentParams.get('per_page')) : 25),
             status: params.status || currentParams.get('status') || 'all',
-            search: params.search || currentParams.get('search') || '',
-            start_date: params.start_date || currentParams.get('start_date') || '',
-            end_date: params.end_date || currentParams.get('end_date') || '',
-            invoice_id: params.invoice_id || '' // For detail view
+            search: currentParams.get('search') || '', // Keep search from URL if not overridden
+            start_date: currentParams.get('start_date') || '', // Keep start_date from URL if not overridden
+            end_date: currentParams.get('end_date') || '',     // Keep end_date from URL if not overridden
+            ...params // Override with any new parameters
         };
         window.loadCustomerSection('invoices', newParams);
     };
@@ -560,10 +561,14 @@ function getStatusBadgeClass($status) {
                 return;
             }
         }
-        window.loadCustomerInvoices({}); 
+        window.loadCustomerInvoices({});
     };
 
-    window.showPaymentForm = async function(invoiceId, invoiceNumber, amount) {
+    // Updated showPaymentForm with highly robust amount passing
+    window.showPaymentForm = async function(invoiceId, invoiceNumber, amountFromCallSite) {
+        // Amount is captured into a local constant immediately to prevent loss of context
+        const amount = amountFromCallSite;
+
         // Reset the payment form to its initial state
         const paymentFormElement = document.getElementById('payment-form');
         if (paymentFormElement) {
@@ -574,11 +579,11 @@ function getStatusBadgeClass($status) {
                 cardElement.update({disabled: false}); // Ensure it's re-enabled
             }
             document.getElementById('card-errors').textContent = '';
-            
+
             // Clear hidden fields related to saved cards
             const originalPaymentMethodIdHidden = document.getElementById('original-payment-method-id-hidden');
             if(originalPaymentMethodIdHidden) originalPaymentMethodIdHidden.value = '';
-            
+
             // Show new card details section by default
             const newCardDetailsSection = document.getElementById('new-card-details-section');
             if(newCardDetailsSection) newCardDetailsSection.classList.remove('hidden');
@@ -589,10 +594,31 @@ function getStatusBadgeClass($status) {
             }
         }
 
+        // --- START OF MODIFIED AMOUNT SETTING LOGIC ---
         document.getElementById('payment-invoice-id-display').textContent = `#${invoiceNumber}`;
         document.getElementById('payment-form-invoice-id').value = invoiceId;
         document.getElementById('payment-form-invoice-number').value = invoiceNumber;
-        document.getElementById('payment-form-amount').value = parseFloat(amount).toFixed(2);
+
+        // Clear the visible amount input explicitly before setting
+        document.getElementById('payment-amount').value = '';
+        // Clear the hidden amount input explicitly before setting (good practice)
+        document.getElementById('payment-form-amount').value = '';
+
+
+        const parsedAmount = parseFloat(amount); // Use the local constant 'amount'
+        if (!isNaN(parsedAmount) && parsedAmount >= 0) { // Check if it's a valid number and non-negative
+            const formattedAmount = parsedAmount.toFixed(2);
+            document.getElementById('payment-form-amount').value = formattedAmount; // Set hidden input
+            document.getElementById('payment-amount').value = formattedAmount; // Set visible input
+        } else {
+            // Log an error if amount is invalid, and perhaps show a default 0.00
+            console.error("Invalid amount passed to showPaymentForm:", amount);
+            document.getElementById('payment-form-amount').value = '0.00';
+            document.getElementById('payment-amount').value = '0.00';
+            window.showToast("Invoice amount could not be loaded. Please contact support.", 'error');
+        }
+        // --- END OF MODIFIED AMOUNT SETTING LOGIC ---
+
 
         document.getElementById('invoice-list-view').classList.add('hidden');
         document.getElementById('invoice-detail-view').classList.add('hidden');
@@ -601,38 +627,48 @@ function getStatusBadgeClass($status) {
         // Fetch and pre-select default payment method here
         try {
             const defaultMethodResponse = await fetch('/api/customer/payment_methods.php?action=get_default_method');
-            const defaultMethodData = await defaultMethodResponse.json();
+            if (!defaultMethodResponse.ok) {
+                const errorText = await defaultMethodResponse.text();
+                // Throw an error that includes the response text for easier debugging
+                throw new Error(`HTTP error! status: ${defaultMethodResponse.status}. Response: ${errorText}`);
+            }
+            const responseText = await defaultMethodResponse.text();
+            let defaultMethodData;
+            try {
+                defaultMethodData = JSON.parse(responseText);
+            } catch (parseError) {
+                console.error('JSON parse error from get_default_method:', parseError);
+                console.error('Raw response text for default method:', responseText); // Log raw response for debugging
+                window.showToast('Error loading saved cards. Please try refreshing. Details in console.', 'error');
+                defaultMethodData = { success: false };
+            }
 
             if (defaultMethodData.success && defaultMethodData.method) {
                 const defaultMethodId = defaultMethodData.method.id;
                 const savedCardsSelect = document.getElementById('saved-cards-select');
-                
+
                 if (savedCardsSelect) {
-                    // Check if the option exists in the dropdown before trying to set
                     const optionExists = Array.from(savedCardsSelect.options).some(option => option.value == defaultMethodId);
                     if (optionExists) {
-                        savedCardsSelect.value = defaultMethodId; 
-                        // Manually trigger change event if setting value doesn't naturally do it
+                        savedCardsSelect.value = defaultMethodId;
                         const event = new Event('change', { bubbles: true });
                         savedCardsSelect.dispatchEvent(event);
                     } else {
-                        // Default method exists in DB but not in dropdown (e.g., outdated list)
                         console.warn("Default payment method found in DB but not in dropdown. Falling back to 'Add New Card'.");
-                        savedCardsSelect.value = ''; // Ensure "Add New Card" is selected
+                        savedCardsSelect.value = '';
                         const event = new Event('change', { bubbles: true });
                         savedCardsSelect.dispatchEvent(event);
                     }
                 }
-                // Store original Stripe PM ID if using a saved card for payment processing
                 const originalPaymentMethodIdHidden = document.getElementById('original-payment-method-id-hidden');
-                if(originalPaymentMethodIdHidden) { // This element might not exist in this page's HTML, but in PaymentMethods page.
-                    // This is where Stripe PM ID from DB should be stored for processing.
+                if(originalPaymentMethodIdHidden) {
                     originalPaymentMethodIdHidden.value = defaultMethodData.method.braintree_payment_token;
                 }
 
             }
         } catch (error) {
             console.error("Error fetching default payment method:", error);
+            window.showToast(`Error fetching saved cards: ${error.message || 'An unknown error occurred'}.`, 'error');
             // Fallback: Ensure new card section is visible and selected
             const savedCardsSelect = document.getElementById('saved-cards-select');
             if(savedCardsSelect) savedCardsSelect.value = '';
@@ -648,17 +684,17 @@ function getStatusBadgeClass($status) {
             setTimeout(initializeStripeElements, 100);
             return;
         }
-        
+
         const stripeKey = 'pk_test_********************'; // Replace with your actual publishable key
         if (!stripeKey.startsWith('pk_')) {
-            console.error("Stripe key is not configured. Please ensure STRIPE_PUBLISHable_KEY is set in your .env file and starts with 'pk_'.");
+            console.error("Stripe key is not configured. Please ensure STRIPE_PUBLISHABLE_KEY is set in your .env file and starts with 'pk_'.");
             return;
         }
 
         stripe = Stripe(stripeKey);
         elements = stripe.elements(); // Assign to outer scope
         const style = { base: { fontSize: '16px', fontFamily: 'Inter, sans-serif' } };
-        
+
         const cardElementDiv = document.getElementById('card-element');
         // Only create and mount cardElement if it hasn't been mounted yet
         if (cardElementDiv && cardElementDiv.innerHTML === '') {
@@ -668,130 +704,283 @@ function getStatusBadgeClass($status) {
                 document.getElementById('card-errors').textContent = event.error ? event.error.message : '';
             });
         }
-        
+
         // No need to call attachPageEventListeners from here, dashboard.php handles it via DOMContentLoaded for the whole app.
     }
 
-    // Attach event listeners for the payment form itself (within the loaded content)
-    document.addEventListener('DOMContentLoaded', function() {
-        // This ensures Stripe elements are initialized ONLY when this specific HTML content is loaded
-        // and its DOM elements are available.
-        initializeStripeElements();
+    async function handlePaymentFormSubmit(event) {
+        event.preventDefault();
 
-        const paymentForm = document.getElementById('payment-form');
-        if (paymentForm) {
-            paymentForm.addEventListener('submit', handlePaymentFormSubmit);
+        const form = event.target;
+        const invoiceId = form.invoice_id.value;
+        const amount = form['payment-form-amount'].value; // In dollars, will be converted to cents on backend
+        const csrfToken = form.csrf_token.value;
+        const savedCardSelect = document.getElementById('saved-cards-select');
+        let paymentMethodId = null;
+        let originalPaymentMethodId = null;
+        let saveCard = false;
+
+        if (savedCardSelect.value !== '') {
+            // Using a saved card
+            originalPaymentMethodId = savedCardSelect.value;
+            // The Stripe PaymentMethod ID is fetched from the selected option's dataset
+            paymentMethodId = savedCardSelect.options[savedCardSelect.selectedIndex].dataset.stripePmId;
+        } else {
+            // Using a new card
+            const cardholderName = form.cardholder_name.value;
+            const billingAddress = form.billing_address.value;
+            saveCard = form.save_new_card.checked;
+
+            const {error: stripeError, paymentMethod} = await stripe.createPaymentMethod({
+                type: 'card',
+                card: cardElement,
+                billing_details: {
+                    name: cardholderName,
+                    address: { line1: billingAddress } // Add more address breakdown if needed
+                }
+            });
+            if (stripeError) {
+                document.getElementById('card-errors').textContent = stripeError.message;
+                window.showToast(stripeError.message, 'error');
+                return;
+            }
+            paymentMethodId = paymentMethod.id;
         }
 
-        const savedCardsSelect = document.getElementById('saved-cards-select');
-        const newCardDetailsSection = document.getElementById('new-card-details-section');
-        const cardholderNameInput = document.getElementById('cardholder-name');
-        const billingAddressInput = document.getElementById('billing-address');
+        window.showToast('Processing payment...', 'info');
 
-        if (savedCardsSelect) {
-            savedCardsSelect.addEventListener('change', function() {
-                if (this.value === '') { // "Add New Card" selected
-                    newCardDetailsSection.classList.remove('hidden');
-                    // Clear and enable card element
-                    if (cardElement) cardElement.update({disabled: false}); 
-                    if (cardElement) cardElement.clear();
-                    if (cardElement) cardElement.focus();
-                    cardholderNameInput.value = ''; // Clear cardholder name
-                    billingAddressInput.value = ''; // Clear billing address
-                } else { // A saved card selected
-                    newCardDetailsSection.classList.add('hidden');
-                    // Disable card element and clear errors for saved cards
-                    if (cardElement) cardElement.update({disabled: true});
-                    if (cardElement) cardElement.clear();
-                    document.getElementById('card-errors').textContent = '';
+        const formData = new FormData();
+        formData.append('action', 'pay_invoice');
+        formData.append('invoice_number', form.invoice_number.value); // Use full invoice number
+        formData.append('amount', amount);
+        formData.append('payment_method_id', paymentMethodId); // This is always Stripe PM ID
+        if (originalPaymentMethodId) { // Only send if a saved card was explicitly chosen
+            formData.append('original_payment_method_id', originalPaymentMethodId);
+        }
+        formData.append('save_card', saveCard ? '1' : '0');
+        formData.append('csrf_token', csrfToken); // CSRF token
 
-                    // Populate placeholder info for cardholder name from selected option
-                    const selectedOption = this.options[this.selectedIndex];
-                    cardholderNameInput.value = selectedOption.dataset.cardBrand + ' User'; // Placeholder name
-                    billingAddressInput.value = 'On file'; // Placeholder address
-                    
-                    // Set the originalPaymentMethodIdHidden for API submission
-                    const originalPaymentMethodIdHidden = document.getElementById('original-payment-method-id-hidden');
-                    if (originalPaymentMethodIdHidden) {
-                        originalPaymentMethodIdHidden.value = selectedOption.dataset.stripePmId;
+        // Add additional payment details for saved card use
+        formData.append('cardholder_name', form.cardholder_name.value);
+        formData.append('billing_address', form.billing_address.value);
+
+        try {
+            const response = await fetch('/api/customer/invoices.php', { // Target the centralized payments API
+                method: 'POST',
+                body: formData
+            });
+            const result = await response.json();
+
+            if (result.success) {
+                window.showToast('Payment successful!', 'success');
+                window.loadCustomerInvoices({invoice_id: invoiceId}); // Reload the invoice to show "paid" status
+            } else if (result.requires_action) {
+                // Handle 3D Secure or other required actions
+                const {error, paymentIntent} = await stripe.confirmCardPayment(result.payment_intent_client_secret);
+                if (error) {
+                    window.showToast(error.message, 'error');
+                } else if (paymentIntent.status === 'succeeded') {
+                    // If 3D Secure succeeded, the payment is confirmed on Stripe.
+                    // Now, tell your backend the payment is succeeded.
+                    const confirmFormData = new FormData();
+                    confirmFormData.append('action', 'pay_invoice'); // Use 'pay_invoice' again for consistency
+                    confirmFormData.append('invoice_number', form.invoice_number.value);
+                    confirmFormData.append('amount', amount);
+                    confirmFormData.append('payment_method_id', paymentIntent.payment_method); // Use the confirmed payment method
+                    confirmFormData.append('original_payment_method_id', originalPaymentMethodId);
+                    confirmFormData.append('save_card', saveCard ? '1' : '0');
+                    confirmFormData.append('csrf_token', csrfToken);
+                    confirmFormData.append('cardholder_name', form.cardholder_name.value);
+                    confirmFormData.append('billing_address', form.billing_address.value);
+
+
+                    const confirmResponse = await fetch('/api/customer/invoices.php', {
+                        method: 'POST',
+                        body: confirmFormData
+                    });
+                    const confirmResult = await confirmResponse.json();
+                    if (confirmResult.success) {
+                        window.showToast('Payment confirmed!', 'success');
+                        window.loadCustomerInvoices({invoice_id: invoiceId}); // Reload invoice
+                    } else {
+                        window.showToast(confirmResult.message, 'error');
                     }
                 }
-            });
-        }
-
-        // --- Bulk Delete Functionality (re-added as it might have been lost in previous merges) ---
-        const selectAllInvoicesCheckbox = document.getElementById('select-all-invoices');
-        const bulkDeleteInvoicesBtn = document.getElementById('bulk-delete-invoices-btn');
-
-        function toggleBulkDeleteButtonVisibility() {
-            const anyChecked = document.querySelectorAll('.invoice-checkbox:checked').length > 0;
-            if (bulkDeleteInvoicesBtn) {
-                bulkDeleteInvoicesBtn.classList.toggle('hidden', !anyChecked);
+            } else {
+                window.showToast(result.message, 'error');
             }
+        } catch (error) {
+            window.showToast('Payment error. Please try again.', 'error');
+            console.error(error);
         }
+    }
 
-        if (selectAllInvoicesCheckbox) {
-            selectAllInvoicesCheckbox.addEventListener('change', function() {
-                document.querySelectorAll('.invoice-checkbox').forEach(checkbox => {
-                    checkbox.checked = this.checked;
-                });
-                toggleBulkDeleteButtonVisibility();
-            });
-        }
+    function applyFilters(params = {}) {
+        const status = document.getElementById('status-filter') ? document.getElementById('status-filter').value : 'all';
+        const search = document.getElementById('search-input') ? document.getElementById('search-input').value : '';
+        const start_date = document.getElementById('start-date-filter') ? document.getElementById('start-date-filter').value : '';
+        const end_date = document.getElementById('end-date-filter') ? document.getElementById('end-date-filter').value : '';
+        const per_page = document.getElementById('items-per-page-select') ? document.getElementById('items-per-page-select').value : 25;
+        const page = params.page || 1;
+        window.loadCustomerInvoices({page, per_page, status, search, start_date, end_date});
+    }
 
-        document.body.addEventListener('change', function(event) { // Use body for delegation
-            if (event.target.classList.contains('invoice-checkbox')) {
-                if (selectAllInvoicesCheckbox && !event.target.checked) {
-                    selectAllInvoicesCheckbox.checked = false;
+    // Execute immediately
+    initializeStripeElements();
+
+    const paymentForm = document.getElementById('payment-form');
+    if (paymentForm) {
+        paymentForm.addEventListener('submit', handlePaymentFormSubmit);
+    }
+
+    const savedCardsSelect = document.getElementById('saved-cards-select');
+    const newCardDetailsSection = document.getElementById('new-card-details-section');
+    const cardholderNameInput = document.getElementById('cardholder-name');
+    const billingAddressInput = document.getElementById('billing-address');
+
+    if (savedCardsSelect) {
+        savedCardsSelect.addEventListener('change', function() {
+            if (this.value === '') { // "Add New Card" selected
+                newCardDetailsSection.classList.remove('hidden');
+                // Clear and enable card element
+                if (cardElement) cardElement.update({disabled: false});
+                if (cardElement) cardElement.clear();
+                if (cardElement) cardElement.focus();
+                cardholderNameInput.value = ''; // Clear cardholder name
+                billingAddressInput.value = ''; // Clear billing address
+            } else { // A saved card selected
+                newCardDetailsSection.classList.add('hidden');
+                // Disable card element and clear errors for saved cards
+                if (cardElement) cardElement.update({disabled: true});
+                if (cardElement) cardElement.clear();
+                document.getElementById('card-errors').textContent = '';
+
+                // Populate placeholder info for cardholder name from selected option
+                const selectedOption = this.options[this.selectedIndex];
+                cardholderNameInput.value = selectedOption.dataset.cardBrand + ' User'; // Placeholder name
+                billingAddressInput.value = 'On file'; // Placeholder address
+
+                // Set the originalPaymentMethodIdHidden for API submission
+                const originalPaymentMethodIdHidden = document.getElementById('original-payment-method-id-hidden');
+                if (originalPaymentMethodIdHidden) {
+                    originalPaymentMethodIdHidden.value = selectedOption.dataset.stripePmId;
                 }
-                toggleBulkDeleteButtonVisibility();
             }
         });
+    }
 
+    // Add event listeners for buttons
+    document.querySelectorAll('.view-invoice-details').forEach(btn => {
+        btn.addEventListener('click', () => window.showInvoiceDetails(btn.dataset.invoiceId));
+    });
+
+    document.querySelectorAll('.pay-invoice-btn, .pay-now-detail-btn').forEach(btn => {
+        // Add a click listener that reads the data AT THE MOMENT of the click
+        btn.addEventListener('click', function() {
+            // 'this' refers to the actual button element that was clicked
+            const invoiceId = this.dataset.invoiceId;
+            const invoiceNumber = this.dataset.invoiceNumber;
+            const amount = this.dataset.amount; // Read the current data-amount value
+
+            // Check if amount is undefined right here for better debugging
+            if (typeof amount === 'undefined') {
+                console.error("CRITICAL: The 'data-amount' attribute is missing from the clicked button:", this);
+                window.showToast("Cannot process payment: Amount data is missing.", "error");
+                return; // Stop execution
+            }
+
+            // Call the payment form function directly with the fresh values
+            window.showPaymentForm(invoiceId, invoiceNumber, amount);
+        });
+    });
+
+    const backToDetailsBtn = document.querySelector('.back-to-details-btn');
+    if (backToDetailsBtn) {
+        backToDetailsBtn.addEventListener('click', window.hideInvoiceDetails);
+    }
+
+    const toggleFiltersBtn = document.getElementById('toggle-filters-btn');
+    if (toggleFiltersBtn) {
+        toggleFiltersBtn.addEventListener('click', () => {
+            const filterSection = document.getElementById('filter-options-section');
+            filterSection.classList.toggle('hidden');
+            filterSection.classList.toggle('flex');
+        });
+    }
+
+    // --- Bulk Delete Functionality (re-added as it might have been lost in previous merges) ---
+    const selectAllInvoicesCheckbox = document.getElementById('select-all-invoices');
+    const bulkDeleteInvoicesBtn = document.getElementById('bulk-delete-invoices-btn');
+
+    function toggleBulkDeleteButtonVisibility() {
+        const anyChecked = document.querySelectorAll('.invoice-checkbox:checked').length > 0;
         if (bulkDeleteInvoicesBtn) {
-            bulkDeleteInvoicesBtn.addEventListener('click', function() {
-                const selectedIds = Array.from(document.querySelectorAll('.invoice-checkbox:checked')).map(cb => cb.value);
-                if (selectedIds.length === 0) {
-                    window.showToast('Please select at least one invoice to delete.', 'warning');
-                    return;
-                }
-
-                window.showConfirmationModal(
-                    'Delete Selected Invoices',
-                    `Are you sure you want to delete ${selectedIds.length} selected invoice(s)? This action cannot be undone and will delete associated bookings.`,
-                    async (confirmed) => {
-                        if (confirmed) {
-                            window.showToast('Deleting invoices...', 'info');
-                            const formData = new FormData();
-                            formData.append('action', 'delete_bulk'); // Action handled by api/customer/invoices.php
-                            formData.append('csrf_token', '<?php echo htmlspecialchars($csrf_token); ?>'); // Add CSRF token
-                            selectedIds.forEach(id => formData.append('invoice_ids[]', id)); // Send as invoice_ids
-
-                            try {
-                                const response = await fetch('/api/customer/invoices.php', { // Target the invoices API
-                                    method: 'POST',
-                                    body: formData
-                                });
-                                const result = await response.json();
-                                if (result.success) {
-                                    window.showToast(result.message, 'success');
-                                    window.loadCustomerInvoices({}); // Reload list after deletion
-                                } else {
-                                    window.showToast('Error: ' + result.message, 'error');
-                                }
-                            } catch (error) {
-                                window.showToast('An unexpected error occurred during bulk delete.', 'error');
-                                console.error('Bulk delete invoices API Error:', error);
-                            }
-                        }
-                    },
-                    'Delete Selected',
-                    'bg-red-600'
-                );
-            });
+            bulkDeleteInvoicesBtn.classList.toggle('hidden', !anyChecked);
         }
-        // Initial state of bulk delete button on page load
-        toggleBulkDeleteButtonVisibility();
+    }
 
-    }); // End DOMContentLoaded for this script
+    if (selectAllInvoicesCheckbox) {
+        selectAllInvoicesCheckbox.addEventListener('change', function() {
+            document.querySelectorAll('.invoice-checkbox').forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+            toggleBulkDeleteButtonVisibility();
+        });
+    }
+
+    document.body.addEventListener('change', function(event) { // Use body for delegation
+        if (event.target.classList.contains('invoice-checkbox')) {
+            if (selectAllInvoicesCheckbox && !event.target.checked) {
+                selectAllInvoicesCheckbox.checked = false;
+            }
+            toggleBulkDeleteButtonVisibility();
+        }
+    });
+
+    if (bulkDeleteInvoicesBtn) {
+        bulkDeleteInvoicesBtn.addEventListener('click', function() {
+            const selectedIds = Array.from(document.querySelectorAll('.invoice-checkbox:checked')).map(cb => cb.value);
+            if (selectedIds.length === 0) {
+                window.showToast('Please select at least one invoice to delete.', 'warning');
+                return;
+            }
+
+            window.showConfirmationModal(
+                'Delete Selected Invoices',
+                `Are you sure you want to delete ${selectedIds.length} selected invoice(s)? This action cannot be undone and will delete associated bookings.`,
+                async (confirmed) => {
+                    if (confirmed) {
+                        window.showToast('Deleting invoices...', 'info');
+                        const formData = new FormData();
+                        formData.append('action', 'delete_bulk'); // Action handled by api/customer/invoices.php
+                        formData.append('csrf_token', '<?php echo htmlspecialchars($csrf_token); ?>'); // Add CSRF token
+                        selectedIds.forEach(id => formData.append('invoice_ids[]', id)); // Send as invoice_ids
+
+                        try {
+                            const response = await fetch('/api/customer/invoices.php', { // Target the invoices API
+                                method: 'POST',
+                                body: formData
+                            });
+                            const result = await response.json();
+                            if (result.success) {
+                                window.showToast(result.message, 'success');
+                                window.loadCustomerInvoices({}); // Reload list after deletion
+                            } else {
+                                window.showToast('Error: ' + result.message, 'error');
+                            }
+                        } catch (error) {
+                            window.showToast('An unexpected error occurred during bulk delete.', 'error');
+                            console.error('Bulk delete invoices API Error:', error);
+                        }
+                    }
+                },
+                'Delete Selected',
+                'bg-red-600'
+            );
+        });
+    }
+    // Initial state of bulk delete button on page load
+    toggleBulkDeleteButtonVisibility();
+
 })();
+</script>
