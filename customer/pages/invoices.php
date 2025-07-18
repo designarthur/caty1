@@ -582,48 +582,62 @@ function getStatusBadgeClass($status) {
     };
 
     window.showPaymentForm = async function(invoiceId, invoiceNumber, amountFromCallSite) {
-        let amount = amountFromCallSite;
-        document.getElementById('payment-form').reset();
-        if (cardElement) {
-            cardElement.clear();
-            cardElement.update({ disabled: false });
-        }
-        document.getElementById('card-errors').textContent = '';
-        if (document.getElementById('original-payment-method-id-hidden')) document.getElementById('original-payment-method-id-hidden').value = '';
-        if (document.getElementById('new-card-details-section')) document.getElementById('new-card-details-section').classList.remove('hidden');
-        if (document.getElementById('saved-cards-select')) document.getElementById('saved-cards-select').value = '';
+    // --- 1. Reset the form to a clean state ---
+    document.getElementById('payment-form').reset();
+    if (cardElement) {
+        cardElement.clear();
+        cardElement.update({ disabled: false });
+    }
+    document.getElementById('card-errors').textContent = '';
+    const newCardDetailsSection = document.getElementById('new-card-details-section');
+    if (newCardDetailsSection) newCardDetailsSection.classList.remove('hidden');
 
-        if (typeof amount === 'undefined' || amount === null || amount === '') {
-            const detailGrandTotalSpan = document.getElementById('detail-grand-total-display');
-            if (detailGrandTotalSpan) {
-                const displayedText = detailGrandTotalSpan.textContent.replace('$', '').trim();
-                const parsedDisplayedAmount = parseFloat(displayedText);
-                if (!isNaN(parsedDisplayedAmount) && parsedDisplayedAmount >= 0) {
-                    amount = parsedDisplayedAmount.toFixed(2);
-                }
+    // --- 2. Populate form with invoice data ---
+    document.getElementById('payment-invoice-id-display').textContent = `#${invoiceNumber}`;
+    document.getElementById('payment-form-invoice-id').value = invoiceId;
+    document.getElementById('payment-form-invoice-number').value = invoiceNumber;
+    const parsedAmount = parseFloat(amountFromCallSite);
+    if (!isNaN(parsedAmount) && parsedAmount >= 0) {
+        const formattedAmount = parsedAmount.toFixed(2);
+        document.getElementById('payment-form-amount').value = formattedAmount;
+        document.getElementById('payment-amount').value = formattedAmount;
+    }
+
+    // --- 3. Show the payment form view ---
+    document.getElementById('invoice-list-view').classList.add('hidden');
+    document.getElementById('invoice-detail-view').classList.add('hidden');
+    document.getElementById('payment-form-view').classList.remove('hidden');
+
+    // --- 4. Fetch and set the default payment method ---
+    try {
+        const response = await fetch('/api/customer/payment_methods.php?action=get_default_method');
+        if (!response.ok) {
+            // Silently fail if we can't get the default card, it's not a critical error.
+            console.warn(`Could not fetch default payment method. Status: ${response.status}`);
+            return; 
+        }
+
+        const result = await response.json();
+        if (result.success && result.method) {
+            const defaultMethodId = result.method.id;
+            const savedCardsSelect = document.getElementById('saved-cards-select');
+
+            // Check if the default card option exists in the dropdown
+            if (savedCardsSelect && savedCardsSelect.querySelector(`option[value="${defaultMethodId}"]`)) {
+                // Set the dropdown value to the default card
+                savedCardsSelect.value = defaultMethodId;
+
+                // IMPORTANT: Manually trigger the 'change' event
+                // This tells the other script to hide the new card form fields.
+                const event = new Event('change', { bubbles: true });
+                savedCardsSelect.dispatchEvent(event);
             }
         }
-
-        document.getElementById('payment-invoice-id-display').textContent = `#${invoiceNumber}`;
-        document.getElementById('payment-form-invoice-id').value = invoiceId;
-        document.getElementById('payment-form-invoice-number').value = invoiceNumber;
-
-        document.getElementById('payment-amount').value = '';
-        document.getElementById('payment-form-amount').value = '';
-        const parsedAmount = parseFloat(amount);
-        if (!isNaN(parsedAmount) && parsedAmount >= 0) {
-            const formattedAmount = parsedAmount.toFixed(2);
-            document.getElementById('payment-form-amount').value = formattedAmount;
-            document.getElementById('payment-amount').value = formattedAmount;
-        } else {
-            document.getElementById('payment-form-amount').value = '0.00';
-            document.getElementById('payment-amount').value = '0.00';
-        }
-
-        document.getElementById('invoice-list-view').classList.add('hidden');
-        document.getElementById('invoice-detail-view').classList.add('hidden');
-        document.getElementById('payment-form-view').classList.remove('hidden');
-    };
+    } catch (error) {
+        console.warn("Could not pre-select default payment method:", error.message);
+        // It's okay if this fails, the user can still select a card manually.
+    }
+};
 
     function initializeStripeElements() {
         if (typeof Stripe === 'undefined') {
