@@ -93,7 +93,7 @@
         }
 
         .hero-background {
-            background-image: url('/assets/images/hero image for about us page.png');
+            background-image: url('/assets/images/hero image for contact us   page.png');
             background-size: cover;
             background-position: center;
             position: relative;
@@ -615,34 +615,34 @@
                 <h2 class="text-4xl md:text-5xl font-bold text-center text-gray-800 mb-20 animate-on-scroll">Choose Your Preferred Contact Method</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
                     <a href="#contact-form-section" class="contact-option-card animate-on-scroll delay-100">
-                        <div class="icon-large">📝</div>
+                        <div class="icon-large"><img src="/assets/images/Group 1000002927.png" height="80" width="80"></div>
                         <h3>Send Us a Message</h3>
                         <p>Fill out our quick online form for detailed inquiries or support requests. We aim to respond within 24-48 business hours.</p>
                     </a>
                     <a href="#" onclick="showAIChat('create-booking'); return false;" class="contact-option-card animate-on-scroll delay-200">
-                        <div class="icon-large">💬</div>
+                        <div class="icon-large"><img src="/assets/images/Group 1000002865.png" height="80" width="80"></div>
                         <h3>Live Chat Support</h3>
                         <p>Connect with a support agent in real-time for immediate assistance during business hours. Look for the chat bubble on our site.</p>
                     </a>
                     <a href="tel:+1-888-123-4567" class="contact-option-card animate-on-scroll delay-300">
-                        <div class="icon-large">📞</div>
+                        <div class="icon-large"><img src="/assets/images/Group 1000002866.png" height="80" width="80"></div>
                         <h3>Call Our Sales Team</h3>
                         <p>Prefer to speak to someone? Our sales experts are available to discuss your needs and provide tailored solutions.</p>
                         <p class="text-blue-custom font-semibold mt-2">+1-888-123-4567</p>
                     </a>
                     <a href="mailto:support@catdump.com" class="contact-option-card animate-on-scroll delay-400">
-                        <div class="icon-large">📧</div>
+                        <div class="icon-large"><img src="/assets/images/Group 1000002867.png" height="80" width="80"></div>
                         <h3>Email Support</h3>
                         <p>For non-urgent questions or to send attachments, you can email our support team directly. We'll get back to you promptly.</p>
                         <p class="text-blue-custom font-semibold mt-2">support@catdump.com</p>
                     </a>
                     <a href="/Resources/FAQs.php" class="contact-option-card animate-on-scroll delay-500">
-                        <div class="icon-large">❓</div>
+                        <div class="icon-large"><img src="/assets/images/Group 1000002886.png" height="80" width="80"></div>
                         <h3>Visit Our FAQs</h3>
                         <p>Find instant answers to frequently asked questions about our services, pricing, and account management.</p>
                     </a>
                     <a href="/customer/dashboard.php" class="contact-option-card animate-on-scroll delay-600">
-                        <div class="icon-large">🖥️</div>
+                        <div class="icon-large"><img src="/assets/images/Group 1000002881.png" height="80" width="80"></div>
                         <h3>Access Your Dashboard</h3>
                         <p>Manage existing rentals, track orders, view invoices, and communicate with suppliers directly through your customer portal.</p>
                     </a>

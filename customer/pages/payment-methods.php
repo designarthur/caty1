@@ -14,6 +14,8 @@ if (!is_logged_in()) {
     exit;
 }
 
+generate_csrf_token(); // Ensure a token is always generated
+
 $user_id = $_SESSION['user_id'];
 
 // Fetch saved payment methods from the database
@@ -23,15 +25,15 @@ $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $result = $stmt->get_result();
 while($row = $result->fetch_assoc()) {
-    $expMonth = htmlspecialchars($row['expiration_month'] ?? '');
-    $expYearFull = htmlspecialchars($row['expiration_year'] ?? '');
+    $expMonth = $row['expiration_month'] ?? '';
+    $expYearFull = $row['expiration_year'] ?? '';
     $expYearLastTwo = substr($expYearFull, -2);
-    $row['expiry_display'] = $expMonth . '/' . $expYearLastTwo;
-    $row['card_last_four'] = htmlspecialchars($row['last_four'] ?? '');
+    $row['expiry_display'] = htmlspecialchars($expMonth) . '/' . htmlspecialchars($expYearLastTwo);
+    $row['card_last_four'] = $row['last_four'] ?? '';
     // Ensure raw data for editing is also passed
-    $row['raw_expiration_month'] = htmlspecialchars($row['expiration_month'] ?? '');
-    $row['raw_expiration_year'] = htmlspecialchars($row['expiration_year'] ?? '');
-    $row['raw_billing_address'] = htmlspecialchars($row['billing_address'] ?? '');
+    $row['raw_expiration_month'] = $row['expiration_month'] ?? '';
+    $row['raw_expiration_year'] = $row['expiration_year'] ?? '';
+    $row['raw_billing_address'] = $row['billing_address'] ?? '';
 
     $saved_payment_methods[] = $row;
 }
@@ -63,17 +65,17 @@ $conn->close();
                     <?php foreach ($saved_payment_methods as $method): ?>
                         <tr
                             data-id="<?php echo htmlspecialchars($method['id']); ?>"
-                            data-stripe-pm-id="<?php echo htmlspecialchars($method['braintree_payment_token']); ?>"
-                            data-cardholder-name="<?php echo htmlspecialchars($method['cardholder_name']); ?>"
+                            data-stripe-pm-id="<?php echo htmlspecialchars($method['braintree_payment_token'] ?? ''); ?>"
+                            data-cardholder-name="<?php echo htmlspecialchars($method['cardholder_name'] ?? ''); ?>"
                             data-last-four="<?php echo htmlspecialchars($method['card_last_four']); ?>"
                             data-exp-month="<?php echo htmlspecialchars($method['raw_expiration_month']); ?>"
                             data-exp-year="<?php echo htmlspecialchars($method['raw_expiration_year']); ?>"
                             data-billing-address="<?php echo htmlspecialchars($method['raw_billing_address']); ?>"
                             data-is-default="<?php echo $method['is_default'] ? 'true' : 'false'; ?>"
                         >
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"><?php echo htmlspecialchars($method['cardholder_name']); ?></td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><?php echo htmlspecialchars($method['card_type']); ?> ending in **** <?php echo htmlspecialchars($method['card_last_four']); ?></td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><?php echo htmlspecialchars($method['expiry_display']); ?></td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"><?php echo htmlspecialchars($method['cardholder_name'] ?? ''); ?></td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><?php echo htmlspecialchars($method['card_type'] ?? ''); ?> ending in **** <?php echo htmlspecialchars($method['card_last_four']); ?></td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><?php echo $method['expiry_display']; ?></td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <?php echo $method['is_default'] ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'; ?>"><?php echo $method['is_default'] ? 'Default' : 'Active'; ?></span>
                             </td>
@@ -95,13 +97,14 @@ $conn->close();
 <div class="bg-white p-6 rounded-lg shadow-md border border-blue-200 max-w-2xl mx-auto">
     <h2 class="text-xl font-semibold text-gray-700 mb-4 flex items-center"><i class="fas fa-plus-circle mr-2 text-green-600"></i>Add New Payment Method</h2>
     <form id="add-payment-method-form">
+        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
         <div class="mb-5">
             <label for="new-cardholder-name" class="block text-sm font-medium text-gray-700 mb-2">Cardholder Name</label>
             <input type="text" id="new-cardholder-name" name="cardholder_name" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" required>
         </div>
         <div class="mb-5">
             <label for="new-card-element" class="block text-sm font-medium text-gray-700 mb-2">Credit or debit card</label>
-            <div id="new-card-element" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" style="min-height: 40px; padding: 12px;">
+            <div id="new-card-element" class="w-full p-3 border border-gray-300 rounded-lg" style="min-height: 40px; padding: 12px;">
                 </div>
             <div id="new-card-errors" role="alert" class="text-red-500 text-sm mt-2"></div>
         </div>
@@ -126,6 +129,7 @@ $conn->close();
         <h3 class="text-xl font-bold mb-4">Edit Payment Method</h3>
         <form id="edit-payment-method-form">
             <input type="hidden" id="edit-method-id" name="id">
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
             <div class="mb-5">
                 <label for="edit-cardholder-name" class="block text-sm font-medium text-gray-700 mb-2">Cardholder Name</label>
                 <input type="text" id="edit-cardholder-name" name="cardholder_name" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" required>
@@ -163,322 +167,133 @@ $conn->close();
 
 
 <script>
-    // IIFE to encapsulate the script and prevent global variable conflicts
     (function() {
-        // Define stripe and elements in the outer scope
         let stripeInstance;
         let elementsInstance;
-        let newCardElementInstance; // To hold the card element instance
+        let newCardElementInstance;
 
-        // Function to initialize Stripe elements and form handling
+        function getCsrfToken() {
+            return document.querySelector('input[name="csrf_token"]').value;
+        }
+
         function initializeStripeElements() {
-            // Check if Stripe is actually loaded before proceeding
-            if (typeof Stripe === 'undefined') {
-                console.warn('Stripe.js not yet loaded. Retrying initialization...');
-                setTimeout(initializeStripeElements, 100); // Retry after 100ms
+            if (typeof Stripe === 'undefined') { setTimeout(initializeStripeElements, 100); return; }
+            const stripePublishableKey = '<?php echo $_ENV['STRIPE_PUBLISHABLE_KEY'] ?? getenv('STRIPE_PUBLISHABLE_KEY'); ?>';
+            if (!stripePublishableKey || stripePublishableKey.includes('your_publishable_key')) {
+                console.error('Stripe Publishable Key is not configured.');
+                window.showToast('Payment system not fully configured.', 'error');
+                return;
+            }
+            stripeInstance = Stripe(stripePublishableKey);
+            elementsInstance = stripeInstance.elements();
+            const style = { base: { color: '#32325d', fontFamily: 'Inter, sans-serif', fontSmoothing: 'antialiased', fontSize: '16px', '::placeholder': { color: '#aab7c4' } }, invalid: { color: '#fa755a', iconColor: '#fa755a' } };
+            newCardElementInstance = elementsInstance.create('card', { style: style });
+            newCardElementInstance.mount('#new-card-element');
+            newCardElementInstance.addEventListener('change', (event) => {
+                document.getElementById('new-card-errors').textContent = event.error ? event.error.message : '';
+            });
+        }
+        initializeStripeElements();
+
+        async function handleApiRequest(formData) {
+            try {
+                const response = await fetch('/api/customer/payment_methods.php', { method: 'POST', body: formData });
+                const result = await response.json();
+                if (result.success) {
+                    window.showToast(result.message || 'Action completed successfully!', 'success');
+                    window.loadCustomerSection('payment-methods');
+                } else {
+                    window.showToast(result.message || 'An unknown error occurred.', 'error');
+                }
+            } catch (error) {
+                console.error('API Request Error:', error);
+                window.showToast('A critical error occurred. Please contact support.', 'error');
+            }
+        }
+
+        document.getElementById('add-payment-method-form')?.addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            window.showToast('Adding card...', 'info');
+
+            const { paymentMethod, error } = await stripeInstance.createPaymentMethod({
+                type: 'card',
+                card: newCardElementInstance,
+                billing_details: { name: document.getElementById('new-cardholder-name').value.trim() },
+            });
+
+            if (error) {
+                window.showToast('Failed to add card: ' + error.message, 'error');
+                submitBtn.disabled = false;
+                return;
+            }
+            
+            const formData = new FormData(event.target);
+            formData.set('action', 'add_method');
+            formData.set('payment_method_id', paymentMethod.id);
+            await handleApiRequest(formData);
+            submitBtn.disabled = false;
+        });
+        
+        document.getElementById('edit-payment-method-form')?.addEventListener('submit', async function(event) {
+            event.preventDefault();
+            window.showToast('Saving changes...', 'info');
+            const formData = new FormData(event.target);
+            formData.set('action', 'update_method');
+            await handleApiRequest(formData);
+            window.hideModal('edit-payment-modal');
+        });
+
+        document.addEventListener('click', async function(event) {
+            const csrfToken = getCsrfToken();
+            if (!csrfToken) {
+                window.showToast('Security token missing. Please refresh.', 'error');
                 return;
             }
 
-            // Get Stripe Publishable Key from PHP environment variable
-            const stripePublishableKey = '<?php echo $_ENV['STRIPE_PUBLISHABLE_KEY'] ?? getenv('STRIPE_PUBLISHABLE_KEY'); ?>';
-
-            // Check if the key is present
-            if (!stripePublishableKey || stripePublishableKey.includes('your_publishable_key')) {
-                console.error('Stripe Publishable Key is not configured. Please set STRIPE_PUBLISHABLE_KEY in your .env file.');
-                // Optionally display a user-friendly message
-                window.showToast('Payment system not fully configured. Please contact support.', 'error');
-                return; // Stop initialization if key is missing
-            }
-
-
-            stripeInstance = Stripe(stripePublishableKey);
-            elementsInstance = stripeInstance.elements();
-
-            // Custom styling for Stripe Elements
-            const style = {
-                base: {
-                    color: '#32325d',
-                    fontFamily: 'Inter, sans-serif',
-                    fontSmoothing: 'antialiased',
-                    fontSize: '16px',
-                    '::placeholder': {
-                        color: '#aab7c4'
-                    },
-                    // Explicitly set height and line-height for better rendering consistency
-                    lineHeight: '1.5em', // Adjust as needed based on your input height
-                    height: '1.5em',     // Adjust as needed based on your input height
-                },
-                invalid: {
-                    color: '#fa755a',
-                    iconColor: '#fa755a'
-                }
-            };
-
-            // Create an instance of the card Element for adding new methods
-            newCardElementInstance = elementsInstance.create('card', { style: style });
-            newCardElementInstance.mount('#new-card-element'); // Mount it to the div for new cards
-
-            // Handle real-time validation errors from the card Element for new cards.
-            newCardElementInstance.addEventListener('change', function(event) {
-                const displayError = document.getElementById('new-card-errors');
-                if (event.error) {
-                    displayError.textContent = event.error.message;
-                } else {
-                    displayError.textContent = '';
-                }
-            });
-        }
-
-        // Call the initialization function directly (without DOMContentLoaded)
-        // This ensures the Stripe elements are mounted immediately when the script runs
-        // as the dynamic content is loaded.
-        initializeStripeElements();
-
-
-        // --- Client-side validation for expiration date (MM/YY) ---
-        function isValidExpiryDate(month, year) {
-            if (!/^(0[1-9]|1[0-2])$/.test(month) || !/^\d{4}$/.test(year)) {
-                return false;
-            }
-
-            const currentYear = new Date().getFullYear();
-            const currentMonth = new Date().getMonth() + 1; // Month is 0-indexed
-
-            const expMonth = parseInt(month, 10);
-            const expYear = parseInt(year, 10);
-
-            if (expYear < currentYear) {
-                return false; // Expired year
-            }
-            if (expYear === currentYear && expMonth < currentMonth) {
-                return false; // Expired month in current year
-            }
-            return true;
-        }
-
-        // --- Add Payment Method Form Handling ---
-        const addPaymentMethodForm = document.getElementById('add-payment-method-form');
-        const addCardSubmitBtn = document.getElementById('add-card-submit-btn');
-
-        if (addPaymentMethodForm) {
-            addPaymentMethodForm.addEventListener('submit', async function(event) {
-                event.preventDefault(); // Prevent default form submission
-
-                addCardSubmitBtn.disabled = true; // Disable button to prevent double submission
-                window.showToast('Adding new payment method...', 'info');
-
-                const cardholderName = document.getElementById('new-cardholder-name').value.trim();
-                const billingAddress = document.getElementById('new-billing-address').value.trim();
-                const setDefault = document.getElementById('set-default').checked;
-
-                // Create a PaymentMethod from the card Element
-                // Ensure stripeInstance and newCardElementInstance are defined
-                if (!stripeInstance || !newCardElementInstance) {
-                    window.showToast('Payment system not ready. Please try again.', 'error');
-                    addCardSubmitBtn.disabled = false;
-                    return;
-                }
-
-                const { paymentMethod, error } = await stripeInstance.createPaymentMethod({
-                    type: 'card',
-                    card: newCardElementInstance, // Use the mounted element
-                    billing_details: {
-                        name: cardholderName,
-                        address: {
-                            line1: billingAddress.split(',')[0]?.trim(),
-                            city: billingAddress.split(',')[1]?.trim(),
-                            state: billingAddress.split(',')[2]?.trim().split(' ')[0],
-                            postal_code: billingAddress.split(',')[2]?.trim().split(' ')[1]
-                        },
-                    },
-                });
-
-                if (error) {
-                    document.getElementById('new-card-errors').textContent = error.message;
-                    window.showToast('Failed to add card: ' + error.message, 'error');
-                    addCardSubmitBtn.disabled = false;
-                    return;
-                }
-
-                // Send the PaymentMethod ID and other form data to your backend
-                const formData = new FormData();
-                formData.append('action', 'add_method');
-                formData.append('payment_method_id', paymentMethod.id); // Send Stripe's PaymentMethod ID
-                formData.append('cardholder_name', cardholderName);
-                formData.append('billing_address', billingAddress);
-                formData.append('set_default', setDefault ? 'on' : 'off');
-                // No need to send raw card number, expiry, cvv. Stripe handles that.
-
-                try {
-                    const response = await fetch('/api/customer/payment_methods.php', {
-                        method: 'POST',
-                        body: formData
-                    });
-
-                    const result = await response.json();
-
-                    if (result.success) {
-                        window.showToast(result.message || 'Payment method added successfully!', 'success');
-                        addPaymentMethodForm.reset(); // Clear form
-                        newCardElementInstance.clear(); // Clear Stripe Element
-                        document.getElementById('new-card-errors').textContent = '';
-                        window.loadCustomerSection('payment-methods'); // Reload the section to show the new method in the list
-                    } else {
-                        window.showToast(result.message || 'Failed to add payment method.', 'error');
-                    }
-                } catch (error) {
-                    console.error('Add payment method API Error:', error);
-                    window.showToast('An error occurred while adding payment method. Please try again.', 'error');
-                } finally {
-                    addCardSubmitBtn.disabled = false; // Re-enable button
-                }
-            });
-        }
-
-        // --- Edit Payment Method Form Handling (NEW) ---
-        const editPaymentMethodForm = document.getElementById('edit-payment-method-form');
-        if (editPaymentMethodForm) {
-            editPaymentMethodForm.addEventListener('submit', async function(event) {
-                event.preventDefault();
-
-                const methodId = document.getElementById('edit-method-id').value;
-                const cardholderName = document.getElementById('edit-cardholder-name').value.trim();
-                const expirationMonth = document.getElementById('edit-expiry-month').value.trim();
-                const expirationYear = document.getElementById('edit-expiry-year').value.trim(); // YYYY format
-                const billingAddress = document.getElementById('edit-billing-address').value.trim();
-                const setDefault = document.getElementById('edit-set-default').checked;
-
-                // Client-side validation for edit form
-                if (!cardholderName || !expirationMonth || !expirationYear || !billingAddress) {
-                    window.showToast('Please fill in all fields.', 'error');
-                    return;
-                }
-                if (!isValidExpiryDate(expirationMonth, expirationYear)) {
-                    window.showToast('Please enter a valid expiration date (MM/YYYY) that is not expired.', 'error');
-                    return;
-                }
-
-                window.showToast('Saving changes...', 'info');
-
-                const formData = new FormData();
-                formData.append('action', 'update_method'); // New action for the API
-                formData.append('id', methodId);
-                formData.append('cardholder_name', cardholderName);
-                formData.append('expiration_month', expirationMonth);
-                formData.append('expiration_year', expirationYear);
-                formData.append('billing_address', billingAddress);
-                formData.append('set_default', setDefault ? 'on' : 'off'); // Send 'on' or 'off' as expected by PHP
-
-                try {
-                    const response = await fetch('/api/customer/payment_methods.php', {
-                        method: 'POST',
-                        body: formData
-                    });
-
-                    const result = await response.json();
-
-                    if (result.success) {
-                        window.showToast(result.message || 'Payment method updated successfully!', 'success');
-                        window.hideModal('edit-payment-modal'); // Hide the modal on success
-                        window.loadCustomerSection('payment-methods'); // Reload to reflect changes
-                    } else {
-                        window.showToast(result.message || 'Failed to update payment method.', 'error');
-                    }
-                } catch (error) {
-                    console.error('Update payment method API Error:', error);
-                    window.showToast('An error occurred while updating payment method. Please try again.', 'error');
-                }
-            });
-        }
-
-        // --- Event listeners for table buttons (Edit, Set Default, Delete) ---
-        document.addEventListener('click', async function(event) {
-            // Handle "Edit" button click
             if (event.target.classList.contains('edit-payment-btn')) {
                 const row = event.target.closest('tr');
                 document.getElementById('edit-method-id').value = row.dataset.id;
                 document.getElementById('edit-cardholder-name').value = row.dataset.cardholderName;
                 document.getElementById('edit-card-number-display').value = '**** **** **** ' + row.dataset.lastFour;
                 document.getElementById('edit-expiry-month').value = row.dataset.expMonth;
-                document.getElementById('edit-expiry-year').value = row.dataset.expYear; // Full 4-digit year
+                document.getElementById('edit-expiry-year').value = row.dataset.expYear;
                 document.getElementById('edit-billing-address').value = row.dataset.billingAddress;
                 document.getElementById('edit-set-default').checked = (row.dataset.isDefault === 'true');
                 window.showModal('edit-payment-modal');
             }
 
-            // Handle "Set Default" button click
             if (event.target.classList.contains('set-default-payment-btn')) {
                 const methodId = event.target.dataset.id;
-                window.showConfirmationModal(
-                    'Set Default Payment Method',
-                    'Are you sure you want to set this as your default payment method?',
+                window.showConfirmationModal('Set as Default?', 'Set this card as your default payment method?',
                     async (confirmed) => {
                         if (confirmed) {
-                            window.showToast('Setting default payment method...', 'info');
                             const formData = new FormData();
                             formData.append('action', 'set_default');
                             formData.append('id', methodId);
-
-                            try {
-                                const response = await fetch('/api/customer/payment_methods.php', {
-                                    method: 'POST',
-                                    body: formData
-                                });
-                                const result = await response.json();
-                                if (result.success) {
-                                    window.showToast(result.message || 'Default payment method updated!', 'success');
-                                    window.loadCustomerSection('payment-methods'); // Reload to reflect changes
-                                } else {
-                                    window.showToast(result.message || 'Failed to set default payment method.', 'error');
-                                }
-                            } catch (error) {
-                                console.error('Set default payment method API Error:', error);
-                                window.showToast('An error occurred. Please try again.', 'error');
-                            }
+                            formData.append('csrf_token', csrfToken);
+                            await handleApiRequest(formData);
                         }
-                    },
-                    'Set Default', // Confirm button text
-                    'bg-green-600' // Confirm button color
-                );
+                    }, 'Set Default', 'bg-green-600');
             }
 
-            // Handle "Delete" button click
             if (event.target.classList.contains('delete-payment-btn')) {
-                const methodId = event.target.dataset.id;
-                const stripePmId = event.target.closest('tr').dataset.stripePmId; // Retrieve Stripe PM ID
-
-                window.showConfirmationModal(
-                    'Delete Payment Method',
-                    'Are you sure you want to delete this payment method? This action cannot be undone.',
+                const row = event.target.closest('tr');
+                const methodId = row.dataset.id;
+                const stripePmId = row.dataset.stripePmId;
+                window.showConfirmationModal('Delete Method?', 'Are you sure you want to delete this payment method?',
                     async (confirmed) => {
                         if (confirmed) {
-                            window.showToast('Deleting payment method...', 'info');
                             const formData = new FormData();
                             formData.append('action', 'delete_method');
                             formData.append('id', methodId);
-                            formData.append('stripe_pm_id', stripePmId); // Send Stripe PM ID
-
-                            try {
-                                const response = await fetch('/api/customer/payment_methods.php', {
-                                    method: 'POST',
-                                    body: formData
-                                });
-                                const result = await response.json();
-                                if (result.success) {
-                                    window.showToast(result.message || 'Payment method deleted!', 'success');
-                                    window.loadCustomerSection('payment-methods'); // Reload to reflect changes
-                                } else {
-                                    window.showToast(result.message || 'Failed to delete payment method.', 'error');
-                                    }
-                                } catch (error) {
-                                    console.error('Delete payment method API Error:', error);
-                                    window.showToast('An error occurred. Please try again.', 'error');
-                                }
-                            }
-                        },
-                        'Delete', // Confirm button text
-                        'bg-red-600' // Confirm button color
-                    );
-                }
-            });
-        })(); // End of IIFE
+                            formData.append('stripe_pm_id', stripePmId);
+                            formData.append('csrf_token', csrfToken);
+                            await handleApiRequest(formData);
+                        }
+                    }, 'Delete', 'bg-red-600');
+            }
+        });
+    })();
+</script>

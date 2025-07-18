@@ -389,7 +389,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
                     <div class="feature-card animate-on-scroll delay-200">
                         <div class="icon-wrapper">
-                            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <img src="/assets/images/Group 1000002898.png" width="80" height="80">
                         </div>
                         <h4>Exceptional Cleanliness</h4>
                         <p>Our portable toilets are meticulously cleaned and sanitized before delivery and serviced regularly, guaranteeing a hygienic experience for all users.</p>
@@ -397,7 +397,7 @@
 
                     <div class="feature-card animate-on-scroll delay-300">
                         <div class="icon-wrapper">
-                            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                            <img src="/assets/images/Group 1000002899.png" width="80" height="80">
                         </div>
                         <h4>Diverse Unit Selection</h4>
                         <p>Choose from standard units, ADA-compliant accessible toilets, luxury flushing options, and separate handwashing stations to meet specific event or site needs.</p>
@@ -405,7 +405,7 @@
 
                     <div class="feature-card animate-on-scroll delay-400">
                         <div class="icon-wrapper">
-                            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <img src="/assets/images/Group 1000002900.png" width="80" height="80">
                         </div>
                         <h4>Rapid Delivery & Setup</h4>
                         <p>Our network of local providers ensures timely delivery and professional setup of your portable toilets, so they're ready for use exactly when you need them.</p>
@@ -413,7 +413,7 @@
 
                     <div class="feature-card animate-on-scroll delay-500">
                         <div class="icon-wrapper">
-                            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                            <img src="/assets/images/Group 1000002903.png" width="80" height="80">
                         </div>
                         <h4>Competitive, Transparent Pricing</h4>
                         <p>Leverage our marketplace to compare quotes from top local suppliers and secure the most cost-effective solution for your portable sanitation requirements.</p>
@@ -421,7 +421,7 @@
 
                     <div class="feature-card animate-on-scroll delay-600">
                         <div class="icon-wrapper">
-                            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
+                            <img src="/assets/images/Group 1000002902.png" width="80" height="80">
                         </div>
                         <h4>Seamless Management</h4>
                         <p>Manage your portable toilet rentals, schedule servicing, and communicate with suppliers easily through your intuitive Catdump dashboard or mobile app.</p>
@@ -429,7 +429,7 @@
 
                     <div class="feature-card animate-on-scroll delay-700">
                         <div class="icon-wrapper">
-                            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2-1.343-2-3-2z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.105A9.763 9.763 0 0112 4c4.97 0 9 3.582 9 8z"></path></svg>
+                            <img src="/assets/images/Group 1000002901.png" width="80" height="80">
                         </div>
                         <h4>Dedicated Support Team</h4>
                         <p>Our expert support team is always available to help you determine the right number and type of units, ensuring your event or project runs smoothly.</p>
@@ -443,27 +443,27 @@
                 <h2 class="text-4xl md:text-5xl font-bold text-center text-gray-800 mb-20 animate-on-scroll">Our Range of Portable Toilet Solutions</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
                     <div class="unit-type-card animate-on-scroll delay-100">
-                        <img src="https://placehold.co/250x180/1a73e8/ffffff?text=Standard+Unit" alt="Standard Portable Toilet">
+                        <img src="/assets/images/Group 1000002834.png" alt="Standard Portable Toilet">
                         <h3>Standard Portable Toilets</h3>
                         <p>The most common and versatile option, perfect for construction sites, festivals, or any event needing basic, reliable sanitation facilities.</p>
                     </div>
                     <div class="unit-type-card animate-on-scroll delay-200">
-                        <img src="https://placehold.co/250x180/34a853/ffffff?text=ADA+Unit" alt="ADA Compliant Portable Toilet">
+                        <img src="/assets/images/Group 1000002834.png" alt="ADA Compliant Portable Toilet">
                         <h3>ADA Compliant Units</h3>
                         <p>Spacious, wheelchair-accessible portable toilets designed to meet ADA requirements, ensuring comfort and accessibility for all guests and workers.</p>
                     </div>
                     <div class="unit-type-card animate-on-scroll delay-300">
-                        <img src="https://placehold.co/250x180/1a73e8/ffffff?text=Flushing+Unit" alt="Flushing Portable Toilet">
+                        <img src="/assets/images/Group 1000002834.png" alt="Flushing Portable Toilet">
                         <h3>Flushing Portable Toilets</h3>
                         <p>Offer a more upscale experience with a foot-pump flushing system, ideal for weddings, corporate events, or longer-term projects requiring enhanced comfort.</p>
                     </div>
                     <div class="unit-type-card animate-on-scroll delay-400">
-                        <img src="https://placehold.co/250x180/34a853/ffffff?text=Handwash+Station" alt="Handwashing Station">
+                        <img src="/assets/images/Group 1000002834.png" alt="Handwashing Station">
                         <h3>Portable Handwashing Stations</h3>
                         <p>Essential for hygiene, these standalone units provide fresh water, soap dispensers, and paper towel dispensers, perfect for pairing with any portable toilet setup.</p>
                     </div>
                     <div class="unit-type-card animate-on-scroll delay-500">
-                        <img src="https://placehold.co/250x180/1a73e8/ffffff?text=Restroom+Trailer" alt="Restroom Trailer">
+                        <img src="/assets/images/Group.png" alt="Restroom Trailer">
                         <h3>Luxury Restroom Trailers</h3>
                         <p>For high-end events, these trailers feature multiple stalls, sinks with running water, air conditioning, and enhanced interiors for a premium experience.</p>
                     </div>
@@ -480,7 +480,7 @@
                 <div class="how-it-works-container">
                     <div class="how-it-works-row animate-on-scroll delay-100">
                         <div class="how-it-works-image-box">
-                            <img src="https://placehold.co/300x200/e0e7ff/1a73e8?text=Chat+Toilet+Needs" alt="Chat for Toilet Needs">
+                            <img src="/assets/images/Group 1000002833.png" alt="Chat for Toilet Needs">
                         </div>
                         <div class="how-it-works-content">
                             <p class="how-it-works-step-number">Step 1</p>
@@ -492,7 +492,7 @@
 
                     <div class="how-it-works-row animate-on-scroll delay-300">
                         <div class="how-it-works-image-box">
-                            <img src="https://placehold.co/300x200/e0e7ff/34a853?text=Compare+Toilet+Prices" alt="Compare Toilet Prices">
+                            <img src="/assets/images/Group 1000002832.png" alt="Compare Toilet Prices">
                         </div>
                         <div class="how-it-works-content">
                             <p class="how-it-works-step-number">Step 2</p>
@@ -504,7 +504,7 @@
 
                     <div class="how-it-works-row animate-on-scroll delay-500">
                         <div class="how-it-works-image-box">
-                            <img src="https://placehold.co/300x200/e0e7ff/1a73e8?text=Book+Track+Toilet" alt="Book & Track Toilet">
+                            <img src="/assets/images/Group 1000002831.png" alt="Book & Track Toilet">
                         </div>
                         <div class="how-it-works-content">
                             <p class="how-it-works-step-number">Step 3</p>

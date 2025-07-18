@@ -189,32 +189,17 @@ if ($requested_invoice_id || $requested_quote_id) {
     $stmt_list->close();
 }
 
-// Fetch saved payment methods before closing the connection
-$saved_cards_options = '';
-$user_stripe_customer_id = null;
-$stmt_user_stripe_id = $conn->prepare("SELECT stripe_customer_id FROM users WHERE id = ?");
-$stmt_user_stripe_id->bind_param("i", $user_id);
-$stmt_user_stripe_id->execute();
-$user_stripe_data = $stmt_user_stripe_id->get_result()->fetch_assoc();
-if ($user_stripe_data && !empty($user_stripe_data['stripe_customer_id'])) {
-    $user_stripe_customer_id = $user_stripe_data['stripe_customer_id'];
+// Fetch the default payment method
+$default_payment_method = null;
+$stmt_default_method = $conn->prepare("SELECT id, card_type, last_four FROM user_payment_methods WHERE user_id = ? AND is_default = TRUE");
+$stmt_default_method->bind_param("i", $user_id);
+$stmt_default_method->execute();
+$result_default_method = $stmt_default_method->get_result();
+if ($result_default_method->num_rows > 0) {
+    $default_payment_method = $result_default_method->fetch_assoc();
 }
-$stmt_user_stripe_id->close();
+$stmt_default_method->close();
 
-if ($user_stripe_customer_id) {
-    $stmt_saved_methods = $conn->prepare("SELECT id, braintree_payment_token, card_type, last_four, expiration_month, expiration_year, cardholder_name, is_default, billing_address FROM user_payment_methods WHERE user_id = ? ORDER BY is_default DESC, created_at DESC");
-    $stmt_saved_methods->bind_param("i", $user_id);
-    $stmt_saved_methods->execute();
-    $result_saved_methods = $stmt_saved_methods->get_result();
-    while ($method = $result_saved_methods->fetch_assoc()) {
-        $expiry_month = $method['expiration_month'] ?? '';
-        $expiry_year = $method['expiration_year'] ?? '';
-        $expiry_display = htmlspecialchars($expiry_month) . '/' . substr(htmlspecialchars($expiry_year), -2);
-        $is_default_attr = $method['is_default'] ? 'data-is-default="true"' : 'data-is-default="false"';
-        $saved_cards_options .= '<option value="' . htmlspecialchars($method['id']) . '" data-card-brand="' . htmlspecialchars($method['card_type'] ?? '') . '" data-last-four="' . htmlspecialchars($method['last_four'] ?? '') . '" data-exp-month="' . htmlspecialchars($expiry_month) . '" data-exp-year="' . htmlspecialchars($expiry_year) . '" ' . $is_default_attr . ' data-stripe-pm-id="' . htmlspecialchars($method['braintree_payment_token'] ?? '') . '">' . htmlspecialchars($method['card_type'] ?? '') . ' ending in ' . htmlspecialchars($method['last_four'] ?? '') . ' (Expires ' . $expiry_display . ')' . ($method['is_default'] ? ' (Default)' : '') . '</option>';
-    }
-    $stmt_saved_methods->close();
-}
 
 $conn->close();
 generate_csrf_token();
@@ -485,8 +470,8 @@ function getStatusBadgeClass($status) {
 
 <div id="payment-actions" class="flex justify-end mt-6">
     <?php if ($invoice_detail['status'] == 'pending' || $invoice_detail['status'] == 'partially_paid'): ?>
-        <button class="py-2 px-5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 show-payment-form-btn pay-now-detail-btn" 
-                data-invoice-id="<?php echo htmlspecialchars($invoice_detail['id']); ?>" 
+        <button class="py-2 px-5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 show-payment-form-btn pay-now-detail-btn"
+                data-invoice-id="<?php echo htmlspecialchars($invoice_detail['id']); ?>"
                 data-invoice-number="<?php echo htmlspecialchars($invoice_detail['invoice_number']); ?>"
                 data-amount="<?php echo htmlspecialchars(number_format((float)($invoice_detail['amount'] ?? 0), 2, '.', '')); ?>">
             <i class="fas fa-dollar-sign mr-2"></i>Pay Now
@@ -506,41 +491,31 @@ function getStatusBadgeClass($status) {
         <input type="hidden" name="invoice_number" id="payment-form-invoice-number">
         <input type="hidden" name="amount" id="payment-form-amount">
         <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
-        <input type="hidden" id="original-payment-method-id-hidden" name="original_payment_method_id">
-        <div class="mb-5">
-            <label for="saved-cards-select" class="block text-sm font-medium text-gray-700 mb-2">Use Saved Card</label>
-            <select id="saved-cards-select" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                <option value="">-- Add New Card --</option>
-                <?php echo $saved_cards_options; ?>
-            </select>
-        </div>
+        <input type="hidden" id="original-payment-method-id-hidden" name="original_payment_method_id" value="<?php echo htmlspecialchars($default_payment_method['id'] ?? ''); ?>">
 
-        <div id="new-card-details-section">
-            <div class="mb-5">
-                <label for="cardholder-name" class="block text-sm font-medium text-gray-700 mb-2">Cardholder Name</label>
-                <input type="text" id="cardholder-name" name="cardholder_name" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="John Doe">
-            </div>
-            <div class="mb-5">
-                <label for="card-element" class="block text-sm font-medium text-gray-700 mb-2">Credit or debit card</label>
-                <div id="card-element" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" style="min-height: 40px; padding: 12px;">
+        <?php if ($default_payment_method): ?>
+            <div class="mb-5 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p class="text-sm font-medium text-gray-700 mb-2">Default Payment Method:</p>
+                <div class="flex items-center">
+                    <i class="fab fa-cc-<?php echo strtolower(htmlspecialchars($default_payment_method['card_type'])); ?> text-2xl mr-3 text-blue-600"></i>
+                    <div>
+                        <p class="font-semibold text-gray-800"><?php echo htmlspecialchars($default_payment_method['card_type']); ?> ending in **** <?php echo htmlspecialchars($default_payment_method['last_four']); ?></p>
+                        <a href="#" onclick="loadCustomerSection('payment-methods')" class="text-xs text-blue-600 hover:underline">Change default card</a>
                     </div>
-                <div id="card-errors" role="alert" class="text-red-500 text-sm mt-2"></div>
+                </div>
             </div>
-            <div class="mb-5">
-                <label for="billing-address" class="block text-sm font-medium text-gray-700 mb-2">Billing Address</label>
-                <input type="text" id="billing-address" name="billing_address" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="123 Example St, City, State, Zip">
+        <?php else: ?>
+            <div class="mb-5 p-4 bg-yellow-50 border border-yellow-300 rounded-lg text-yellow-800 text-sm">
+                <i class="fas fa-exclamation-triangle mr-2"></i>
+                You have no default payment method set up. Please <a href="#" onclick="loadCustomerSection('payment-methods')" class="font-bold underline">add a payment method</a> to proceed.
             </div>
-            <div class="mb-5 flex items-center">
-                <input type="checkbox" id="save-new-card" name="save_card" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-                <label for="save-new-card" class="ml-2 block text-sm text-gray-900">Save this card for future use</label>
-            </div>
-        </div>
+        <?php endif; ?>
 
         <div class="mb-5">
             <label for="payment-amount" class="block text-sm font-medium text-gray-700 mb-2">Amount to Pay</label>
-            <input type="number" id="payment-amount" class="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 focus:ring-blue-500 focus:border-blue-500" step="0.01" value="0.00" readonly>
+            <input type="number" id="payment-amount" class="w-full p-3 border border-gray-300 rounded-lg bg-gray-100" step="0.01" value="0.00" readonly>
         </div>
-        <button type="submit" id="submit-payment-btn" class="w-full py-3 px-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 shadow-lg font-semibold">
+        <button type="submit" id="submit-payment-btn" class="w-full py-3 px-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 shadow-lg font-semibold <?php echo !$default_payment_method ? 'opacity-50 cursor-not-allowed' : ''; ?>" <?php echo !$default_payment_method ? 'disabled' : ''; ?>>
             <i class="fas fa-dollar-sign mr-2"></i>Confirm Payment
         </button>
     </form>
@@ -548,15 +523,13 @@ function getStatusBadgeClass($status) {
 
 <script>
 (function() {
-    let stripe, elements, cardElement;
-
     window.loadCustomerInvoices = function(params = {}) {
         const currentParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
         const newParams = {
             page: params.page || (currentParams.get('page') ? parseInt(currentParams.get('page')) : 1),
             per_page: params.per_page || (currentParams.get('per_page') ? parseInt(currentParams.get('per_page')) : 25),
             status: params.status || currentParams.get('status') || 'all',
-            search: currentParams.get('search') || '',
+            search: params.search || '',
             start_date: currentParams.get('start_date') || '',
             end_date: currentParams.get('end_date') || '',
             ...params
@@ -569,131 +542,41 @@ function getStatusBadgeClass($status) {
     };
 
     window.hideInvoiceDetails = function() {
-        const paymentFormView = document.getElementById('payment-form-view');
-        const invoiceDetailView = document.getElementById('invoice-detail-view');
-        if (paymentFormView && !paymentFormView.classList.contains('hidden')) {
-            paymentFormView.classList.add('hidden');
-            if (invoiceDetailView) {
-                invoiceDetailView.classList.remove('hidden');
-                return;
-            }
-        }
         window.loadCustomerInvoices({});
     };
 
-    window.showPaymentForm = async function(invoiceId, invoiceNumber, amountFromCallSite) {
-    // --- 1. Reset the form to a clean state ---
-    document.getElementById('payment-form').reset();
-    if (cardElement) {
-        cardElement.clear();
-        cardElement.update({ disabled: false });
-    }
-    document.getElementById('card-errors').textContent = '';
-    const newCardDetailsSection = document.getElementById('new-card-details-section');
-    if (newCardDetailsSection) newCardDetailsSection.classList.remove('hidden');
-
-    // --- 2. Populate form with invoice data ---
-    document.getElementById('payment-invoice-id-display').textContent = `#${invoiceNumber}`;
-    document.getElementById('payment-form-invoice-id').value = invoiceId;
-    document.getElementById('payment-form-invoice-number').value = invoiceNumber;
-    const parsedAmount = parseFloat(amountFromCallSite);
-    if (!isNaN(parsedAmount) && parsedAmount >= 0) {
-        const formattedAmount = parsedAmount.toFixed(2);
-        document.getElementById('payment-form-amount').value = formattedAmount;
-        document.getElementById('payment-amount').value = formattedAmount;
-    }
-
-    // --- 3. Show the payment form view ---
-    document.getElementById('invoice-list-view').classList.add('hidden');
-    document.getElementById('invoice-detail-view').classList.add('hidden');
-    document.getElementById('payment-form-view').classList.remove('hidden');
-
-    // --- 4. Fetch and set the default payment method ---
-    try {
-        const response = await fetch('/api/customer/payment_methods.php?action=get_default_method');
-        if (!response.ok) {
-            // Silently fail if we can't get the default card, it's not a critical error.
-            console.warn(`Could not fetch default payment method. Status: ${response.status}`);
-            return; 
+    window.showPaymentForm = function(invoiceId, invoiceNumber, amountFromCallSite) {
+        document.getElementById('payment-form').reset();
+        
+        document.getElementById('payment-invoice-id-display').textContent = `#${invoiceNumber}`;
+        document.getElementById('payment-form-invoice-id').value = invoiceId;
+        document.getElementById('payment-form-invoice-number').value = invoiceNumber;
+        const parsedAmount = parseFloat(amountFromCallSite);
+        if (!isNaN(parsedAmount) && parsedAmount >= 0) {
+            const formattedAmount = parsedAmount.toFixed(2);
+            document.getElementById('payment-form-amount').value = formattedAmount;
+            document.getElementById('payment-amount').value = formattedAmount;
         }
 
-        const result = await response.json();
-        if (result.success && result.method) {
-            const defaultMethodId = result.method.id;
-            const savedCardsSelect = document.getElementById('saved-cards-select');
-
-            // Check if the default card option exists in the dropdown
-            if (savedCardsSelect && savedCardsSelect.querySelector(`option[value="${defaultMethodId}"]`)) {
-                // Set the dropdown value to the default card
-                savedCardsSelect.value = defaultMethodId;
-
-                // IMPORTANT: Manually trigger the 'change' event
-                // This tells the other script to hide the new card form fields.
-                const event = new Event('change', { bubbles: true });
-                savedCardsSelect.dispatchEvent(event);
-            }
-        }
-    } catch (error) {
-        console.warn("Could not pre-select default payment method:", error.message);
-        // It's okay if this fails, the user can still select a card manually.
-    }
-};
-
-    function initializeStripeElements() {
-        if (typeof Stripe === 'undefined') {
-            setTimeout(initializeStripeElements, 100);
-            return;
-        }
-        const stripeKey = 'pk_test_********************'; // Replace with your key
-        stripe = Stripe(stripeKey);
-        elements = stripe.elements();
-        const cardElementDiv = document.getElementById('card-element');
-        if (cardElementDiv && cardElementDiv.innerHTML === '') {
-            cardElement = elements.create('card', { style: { base: { fontSize: '16px' } } });
-            cardElement.mount(cardElementDiv);
-            cardElement.on('change', event => {
-                document.getElementById('card-errors').textContent = event.error ? event.error.message : '';
-            });
-        }
-    }
-
+        document.getElementById('invoice-list-view').classList.add('hidden');
+        document.getElementById('invoice-detail-view').classList.add('hidden');
+        document.getElementById('payment-form-view').classList.remove('hidden');
+    };
+    
     async function handlePaymentFormSubmit(event) {
         event.preventDefault();
         const form = event.target;
         const formData = new FormData(form);
         formData.append('action', 'pay_invoice');
-        const savedCardSelect = document.getElementById('saved-cards-select');
-        let paymentMethodId = null;
-        if (savedCardSelect.value !== '') {
-            paymentMethodId = savedCardSelect.options[savedCardSelect.selectedIndex].dataset.stripePmId;
-        } else {
-            const { error, paymentMethod } = await stripe.createPaymentMethod({
-                type: 'card',
-                card: cardElement,
-                billing_details: { name: formData.get('cardholder_name'), address: { line1: formData.get('billing_address') } }
-            });
-            if (error) {
-                window.showToast(error.message, 'error');
-                return;
-            }
-            paymentMethodId = paymentMethod.id;
-        }
-        formData.set('payment_method_id', paymentMethodId);
+        
         window.showToast('Processing payment...', 'info');
+
         try {
             const response = await fetch('/api/customer/invoices.php', { method: 'POST', body: formData });
             const result = await response.json();
             if (result.success) {
                 window.showToast('Payment successful!', 'success');
                 window.loadCustomerInvoices({ invoice_id: formData.get('invoice_id') });
-            } else if (result.requires_action) {
-                const { error, paymentIntent } = await stripe.confirmCardPayment(result.payment_intent_client_secret);
-                if (error) {
-                    window.showToast(error.message, 'error');
-                } else if (paymentIntent.status === 'succeeded') {
-                    window.showToast('Payment confirmed!', 'success');
-                    window.loadCustomerInvoices({ invoice_id: formData.get('invoice_id') });
-                }
             } else {
                 window.showToast(result.message, 'error');
             }
@@ -715,74 +598,26 @@ function getStatusBadgeClass($status) {
         });
     }
 
-    initializeStripeElements();
-    
-    // --- Attaching Event Listeners ---
-    
-    // Use event delegation on a static parent for dynamically loaded content
     document.body.addEventListener('click', function(event) {
-        
-        // Listener for Pay Now Buttons
         const payButton = event.target.closest('.pay-invoice-btn, .pay-now-detail-btn');
         if (payButton) {
-            // This is the corrected logic
-            const invoiceId = payButton.getAttribute('data-invoice-id');
-            const invoiceNumber = payButton.getAttribute('data-invoice-number');
-            const amount = payButton.getAttribute('data-amount');
-
-            if (amount === null || invoiceNumber === null) {
-                window.showToast("Cannot process payment: Critical data is missing.", "error");
-                return;
-            }
+            const invoiceId = payButton.dataset.invoiceId;
+            const invoiceNumber = payButton.dataset.invoiceNumber;
+            const amount = payButton.dataset.amount;
             window.showPaymentForm(invoiceId, invoiceNumber, amount);
-            return; // Stop further processing
+            return;
         }
 
-        // Listener for View Details Buttons
         const viewButton = event.target.closest('.view-invoice-details');
         if (viewButton) {
             window.showInvoiceDetails(viewButton.dataset.invoiceId);
             return;
         }
-
-        // Listener for Back Buttons
-        const backButton = event.target.closest('.back-to-details-btn');
-        if (backButton) {
-            window.hideInvoiceDetails();
-            return;
-        }
-
-        // Listener for Bulk Delete
-        const bulkDeleteButton = event.target.closest('#bulk-delete-invoices-btn');
-        if (bulkDeleteButton) {
-             const selectedIds = Array.from(document.querySelectorAll('.invoice-checkbox:checked')).map(cb => cb.value);
-             if(selectedIds.length === 0) return;
-             // Confirmation and fetch logic for bulk delete...
-        }
     });
 
-    // Listener for Payment Form Submission
-   // ...
-const paymentForm = document.getElementById('payment-form');
-if (paymentForm) {
-    paymentForm.addEventListener('submit', handlePaymentFormSubmit);
-}
-
-// --- ADD THE NEW CODE BLOCK HERE ---
-const savedCardsSelect = document.getElementById('saved-cards-select');
-const newCardDetailsSection = document.getElementById('new-card-details-section');
-if (savedCardsSelect) {
-    savedCardsSelect.addEventListener('change', function() {
-        if (this.value === '') { // "Add New Card" is selected
-            newCardDetailsSection.classList.remove('hidden');
-            if (cardElement) cardElement.update({ disabled: false });
-        } else { // A saved card is selected
-            newCardDetailsSection.classList.add('hidden');
-            if (cardElement) cardElement.update({ disabled: true });
-        }
-    });
-}
-// ----------------------------------
-
+    const paymentForm = document.getElementById('payment-form');
+    if (paymentForm) {
+        paymentForm.addEventListener('submit', handlePaymentFormSubmit);
+    }
 })();
 </script>

@@ -414,22 +414,22 @@ if (!$companyName) {
                 <h2 class="text-4xl md:text-5xl font-bold text-gray-800 mb-20 animate-on-scroll">Catdump by the Numbers</h2>
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12">
                     <div class="stat-item animate-on-scroll delay-100">
-                        <div class="icon-large">✅</div>
+                        <div class="icon-large" style="display:flex; justify-content:center;"><img src="/assets/images/Group 1000002923.png" width="80" height="80"></div>
                         <p class="stat-number" data-target="10000">0</p>
                         <p class="stat-label">Rentals Completed</p>
                     </div>
                     <div class="stat-item animate-on-scroll delay-200">
-                        <div class="icon-large">🤝</div>
+                        <div class="icon-large" style="display:flex; justify-content:center;"><img src="/assets/images/Group 1000002924.png" width="80" height="80"></div>
                         <p class="stat-number" data-target="500">0</p>
                         <p class="stat-label">Verified Partners</p>
                     </div>
                     <div class="stat-item animate-on-scroll delay-300">
-                        <div class="icon-large">🌍</div>
+                        <div class="icon-large" style="display:flex; justify-content:center;"><img src="/assets/images/Group 1000002925.png" width="80" height="80"></div>
                         <p class="stat-number" data-target="150">0</p>
                         <p class="stat-label">Cities Served</p>
                     </div>
                     <div class="stat-item animate-on-scroll delay-400">
-                        <div class="icon-large">⭐</div>
+                        <div class="icon-large" style="display:flex; justify-content:center;"><img src="/assets/images/Group 1000002926.png" width="80" height="80"></div>
                         <p class="stat-number" data-target="98">%</p>
                         <p class="stat-label">Customer Satisfaction</p>
                     </div>

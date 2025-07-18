@@ -93,9 +93,7 @@ try {
 
 } catch (Exception $e) {
     // Catch any exceptions thrown from handler functions
-    if (version_compare(PHP_VERSION, '5.5.0', '>=') && $conn->in_transaction) { // Check for transaction compatibility// Check if a transaction is active before rolling back
-        $conn->rollback();
-    }
+    $conn->rollback(); // Attempt to rollback any active transaction.
     http_response_code(400); // Bad Request for most client-side errors
     error_log("Customer Invoices API Error: " . $e->getMessage());
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);

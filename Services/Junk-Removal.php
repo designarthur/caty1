@@ -390,7 +390,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
                     <div class="feature-card animate-on-scroll delay-200">
                         <div class="icon-wrapper">
-                            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                            <img src="/assets/images/Group 10000028861.png" width="80" height="80">
                         </div>
                         <h4>AI-Powered Photo Quoting</h4>
                         <p>Simply upload photos or videos of your junk, and our advanced AI will analyze it to provide you with an accurate, no-obligation quote instantly. No on-site estimates needed.</p>
@@ -398,7 +398,7 @@
 
                     <div class="feature-card animate-on-scroll delay-300">
                         <div class="icon-wrapper">
-                            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7v8l4-4 4 4V7m0 3a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                            <img src="/assets/images/Group 1000002887.png" width="80" height="80">
                         </div>
                         <h4>Transparent & Fair Pricing</h4>
                         <p>Our intelligent system ensures you get a fair and competitive price based on the actual volume and type of junk, with no hidden fees or surprises.</p>
@@ -406,7 +406,7 @@
 
                     <div class="feature-card animate-on-scroll delay-400">
                         <div class="icon-wrapper">
-                            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <img src="/assets/images/Group 1000002888.png" width="80" height="80">
                         </div>
                         <h4>Flexible & Fast Scheduling</h4>
                         <p>Book your junk removal pickup at a time that suits you. We work with local, vetted crews to ensure prompt and efficient service, often with same-day or next-day availability.</p>
@@ -414,7 +414,7 @@
 
                     <div class="feature-card animate-on-scroll delay-500">
                         <div class="icon-wrapper">
-                            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M7 11.5V14m0-2.5V8a2.5 2.5 0 115 0v2.5M7 11.5h6m6 0h.01M17 12h.01"></path></svg>
+                            <img src="/assets/images/Group 1000002891.png" width="80" height="80">
                         </div>
                         <h4>Eco-Friendly Disposal</h4>
                         <p>We prioritize responsible disposal, aiming to donate usable items, recycle materials, and only landfill what's absolutely necessary, minimizing environmental impact.</p>
@@ -422,7 +422,7 @@
 
                     <div class="feature-card animate-on-scroll delay-600">
                         <div class="icon-wrapper">
-                            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V8a2 2 0 00-2-2h-4m2 0V4a2 2 0 00-2-2H8a2 2 0 00-2 2v2m0 0h.01M16 6h.01"></path></svg>
+                            <img src="/assets/images/Group 1000002890.png" width="80" height="80">
                         </div>
                         <h4>Professional & Courteous Crews</h4>
                         <p>Our network comprises experienced and friendly junk removal specialists who handle your items with care and ensure a smooth, efficient cleanout process.</p>
@@ -430,7 +430,7 @@
 
                     <div class="feature-card animate-on-scroll delay-700">
                         <div class="icon-wrapper">
-                            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M11 4a2 2 0 100 4m-4 12a2 2 0 100-4m14-4a2 2 0 100-4m-4 4a2 2 0 100 4m-6-4a2 2 0 100 4m-2 2a2 2 0 100 4m0-12a2 2 0 100 4"></path></svg>
+                            <img src="/assets/images/Group 1000002889.png" width="80" height="80">
                         </div>
                         <h4>Handles a Wide Range of Items</h4>
                         <p>From old furniture and appliances to construction debris and yard waste, we can remove almost anything you need gone, simplifying your cleanup.</p>
@@ -487,32 +487,32 @@
                 <h2 class="text-4xl md:text-5xl font-bold text-center text-gray-800 mb-20 animate-on-scroll">What Kind of Junk Can We Remove for You?</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
                     <div class="junk-item-category animate-on-scroll delay-100">
-                        <div class="icon-large">🛋️</div>
+                        <div class="icon-large" style="display:flex; justify-content:center;"><img src="/assets/images/Group 1000002892.png" width="80" height="80"></div>
                         <h3>Furniture & Appliances</h3>
                         <p>Old sofas, chairs, tables, beds, mattresses, refrigerators, washing machines, dryers, and more. We handle single items or full house clear-outs.</p>
                     </div>
                     <div class="junk-item-category animate-on-scroll delay-200">
-                        <div class="icon-large">🔨</div>
+                        <div class="icon-large" style="display:flex; justify-content:center;"><img src="/assets/images/Group 1000002893.png" width="80" height="80"></div>
                         <h3>Construction & Demolition Debris</h3>
                         <p>Wood, drywall, concrete, bricks, tiles, roofing materials, scrap metal, and other debris from renovation or construction projects.</p>
                     </div>
                     <div class="junk-item-category animate-on-scroll delay-300">
-                        <div class="icon-large">🌳</div>
+                        <div class="icon-large" style="display:flex; justify-content:center;"><img src="/assets/images/Group 1000002894.png" width="80" height="80"></div>
                         <h3>Yard Waste & Landscaping Debris</h3>
                         <p>Branches, leaves, brush, grass clippings, old fencing, landscaping timbers, and other garden waste. Keep your outdoor space tidy.</p>
                     </div>
                     <div class="junk-item-category animate-on-scroll delay-400">
-                        <div class="icon-large">💻</div>
+                        <div class="icon-large" style="display:flex; justify-content:center;"><img src="/assets/images/Group 1000002895.png" width="80" height="80"></div>
                         <h3>Electronics & E-Waste</h3>
                         <p>Old computers, monitors, TVs, printers, and other electronic devices. We ensure responsible recycling of e-waste to minimize environmental impact.</p>
                     </div>
                     <div class="junk-item-category animate-on-scroll delay-500">
-                        <div class="icon-large">📦</div>
+                        <div class="icon-large" style="display:flex; justify-content:center;"><img src="/assets/images/Group 1000002896.png" width="80" height="80"></div>
                         <h3>Household Clutter & Rubbish</h3>
                         <p>Boxes, old clothes, toys, books, general household junk, trash, and anything else taking up valuable space in your home or office.</p>
                     </div>
                     <div class="junk-item-category animate-on-scroll delay-600">
-                        <div class="icon-large">🚗</div>
+                        <div class="icon-large" style="display:flex; justify-content:center;"><img src="/assets/images/Group 1000002897.png" width="80" height="80"></div>
                         <h3>Tires & Scrap Metal</h3>
                         <p>Used car tires, bicycle parts, metal scraps, and other metallic waste. Note: hazardous materials generally cannot be accepted.</p>
                     </div>

@@ -92,7 +92,7 @@
         }
 
         .hero-background {
-            background-image: url('https://placehold.co/1920x900/f0e0ee/1a73e8?text=Storage+Containers+Hero');
+            background-image: url('/assets/images/container.png');
             background-size: cover;
             background-position: center;
             position: relative;
@@ -387,7 +387,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
                     <div class="feature-card animate-on-scroll delay-200">
                         <div class="icon-wrapper">
-                            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a2 2 0 00-2-2H8a2 2 0 00-2 2v3m-2 4h.01M18 14h.01"></path></svg>
+                            <img src="/assets/images/Group 1000002908.png" height="80" width="80">
                         </div>
                         <h4>Superior Security</h4>
                         <p>Our storage containers are built from heavy-duty steel, featuring secure locking mechanisms to ensure your equipment, tools, and inventory are safe from theft and vandalism.</p>
@@ -395,7 +395,7 @@
 
                     <div class="feature-card animate-on-scroll delay-300">
                         <div class="icon-wrapper">
-                            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9a2 2 0 012 2v7m-4 0h8a2 2 0 002-2V7a2 2 0 00-2-2H6a2 2 0 00-2 2v7a2 2 0 002 2zm-5 0h.01M19 14h.01"></path></svg>
+                            <img src="/assets/images/Group 1000002909.png" height="80" width="80">
                         </div>
                         <h4>Weatherproof Protection</h4>
                         <p>Each container is designed to be fully watertight and wind-resistant, providing complete protection against rain, snow, and extreme temperatures for your sensitive items.</p>
@@ -403,7 +403,7 @@
 
                     <div class="feature-card animate-on-scroll delay-400">
                         <div class="icon-wrapper">
-                            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <img src="/assets/images/Group 1000002910.png" height="80" width="80">
                         </div>
                         <h4>Flexible Rental Terms</h4>
                         <p>Whether you need short-term storage for a renovation or a long-term solution for excess inventory, our flexible rental periods can be tailored to your exact needs.</p>
@@ -411,7 +411,7 @@
 
                     <div class="feature-card animate-on-scroll delay-500">
                         <div class="icon-wrapper">
-                            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                            <img src="/assets/images/Group 1000002913.png" height="80" width="80">
                         </div>
                         <h4>Competitive Pricing</h4>
                         <p>Our AI-powered marketplace connects you with multiple local suppliers, ensuring you receive the most competitive quotes and best value for your storage container rental.</p>
@@ -419,7 +419,7 @@
 
                     <div class="feature-card animate-on-scroll delay-600">
                         <div class="icon-wrapper">
-                            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
+                            <img src="/assets/images/Group 1000002912.png" height="80" width="80">
                         </div>
                         <h4>Hassle-Free Delivery</h4>
                         <p>We handle all aspects of delivery and placement, bringing the container directly to your specified location with professional precision and efficiency.</p>
@@ -427,7 +427,7 @@
 
                     <div class="feature-card animate-on-scroll delay-700">
                         <div class="icon-wrapper">
-                            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2-1.343-2-3-2z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.105A9.763 9.763 0 0112 4c4.97 0 9 3.582 9 8z"></path></svg>
+                            <img src="/assets/images/Group 1000002911.png" height="80" width="80">
                         </div>
                         <h4>Variety of Sizes Available</h4>
                         <p>From compact 10-foot containers to large 40-foot units, we offer a range of sizes to perfectly accommodate your storage volume requirements.</p>
@@ -441,17 +441,17 @@
                 <h2 class="text-4xl md:text-5xl font-bold text-center text-gray-800 mb-20 animate-on-scroll">Our Popular Storage Container Sizes</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
                     <div class="unit-type-card animate-on-scroll delay-100">
-                        <img src="https://placehold.co/250x180/1a73e8/ffffff?text=10ft+Container" alt="10ft Storage Container">
+                        <img src="/assets/images/Group 1000002827.png" alt="10ft Storage Container">
                         <h3>10ft Storage Container</h3>
                         <p>Perfect for small projects, seasonal items, or extra household storage. Compact yet secure, ideal for limited spaces.</p>
                     </div>
                     <div class="unit-type-card animate-on-scroll delay-200">
-                        <img src="https://placehold.co/250x180/34a853/ffffff?text=20ft+Container" alt="20ft Storage Container">
+                        <img src="/assets/images/Group 1000002826.png" alt="20ft Storage Container">
                         <h3>20ft Storage Container</h3>
                         <p>Our most popular size, versatile for residential renovations, commercial inventory, or mid-sized construction site storage.</p>
                     </div>
                     <div class="unit-type-card animate-on-scroll delay-300">
-                        <img src="https://placehold.co/250x180/1a73e8/ffffff?text=40ft+Container" alt="40ft Storage Container">
+                        <img src="/assets/images/Group 1000002825.png" alt="40ft Storage Container">
                         <h3>40ft Storage Container</h3>
                         <p>Max capacity for large-scale construction, extensive commercial storage, or multiple residential projects. Offers ample space.</p>
                     </div>
@@ -468,7 +468,7 @@
                 <div class="how-it-works-container">
                     <div class="how-it-works-row animate-on-scroll delay-100">
                         <div class="how-it-works-image-box">
-                            <img src="https://placehold.co/300x200/e0e7ff/1a73e8?text=Chat+Storage+Needs" alt="Chat for Storage Needs">
+                            <img src="/assets/images/Group 1000002830.png" alt="Chat for Storage Needs">
                         </div>
                         <div class="how-it-works-content">
                             <p class="how-it-works-step-number">Step 1</p>
@@ -480,7 +480,7 @@
 
                     <div class="how-it-works-row animate-on-scroll delay-300">
                         <div class="how-it-works-image-box">
-                            <img src="https://placehold.co/300x200/e0e7ff/34a853?text=Compare+Storage+Prices" alt="Compare Storage Prices">
+                            <img src="/assets/images/Group 1000002829.png" alt="Compare Storage Prices">
                         </div>
                         <div class="how-it-works-content">
                             <p class="how-it-works-step-number">Step 2</p>
@@ -492,7 +492,7 @@
 
                     <div class="how-it-works-row animate-on-scroll delay-500">
                         <div class="how-it-works-image-box">
-                            <img src="https://placehold.co/300x200/e0e7ff/1a73e8?text=Book+Track+Storage" alt="Book & Track Storage">
+                            <img src="/assets/images/Group 1000002828.png" alt="Book & Track Storage">
                         </div>
                         <div class="how-it-works-content">
                             <p class="how-it-works-step-number">Step 3</p>

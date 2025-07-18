@@ -444,7 +444,7 @@ if (!$companyName) {
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
                     <div class="feature-card animate-on-scroll delay-200">
                         <div class="icon-wrapper">
-                            <img src="/assets/images/Mask group8.png" width="80" height="80">
+                            <img src="/assets/images/Group 1000002859.png" width="80" height="80">
                         </div>
                         <h4>AI-Driven Best Price Guarantee</h4>
                         <p>Our intelligent system uses advanced algorithms to source the most competitive quotes from our network of local suppliers, ensuring you always get the best price available.</p>
@@ -452,7 +452,7 @@ if (!$companyName) {
 
                     <div class="feature-card animate-on-scroll delay-300">
                         <div class="icon-wrapper">
-                            <img src="/assets/images/Mask group9.png" width="80" height="80">
+                            <img src="/assets/images/Group 1000002874.png" width="80" height="80">
                         </div>
                         <h4>No Hidden Fees</h4>
                         <p>What you see is what you pay. We pride ourselves on transparent pricing with no surprise charges, so you can budget with confidence.</p>
@@ -460,7 +460,7 @@ if (!$companyName) {
 
                     <div class="feature-card animate-on-scroll delay-400">
                         <div class="icon-wrapper">
-                            <img src="/assets/images/Mask group10.png" width="80" height="80">
+                            <img src="/assets/images/Group 1000002875.png" width="80" height="80">
                         </div>
                         <h4>Customized Solutions</h4>
                         <p>Every project is unique. Our pricing adapts to your specific requirements, from rental duration to equipment type and quantity, ensuring optimal value.</p>
@@ -468,7 +468,7 @@ if (!$companyName) {
 
                     <div class="feature-card animate-on-scroll delay-500">
                         <div class="icon-wrapper">
-                            <img src="/assets/images/Mask group11.png" width="80" height="80">
+                            <img src="/assets/images/Group 1000002877.png" width="80" height="80">
                         </div>
                         <h4>Flexible Payment Options</h4>
                         <p>We accept all major credit cards and offer secure ACH transfers. For larger projects, inquire about our flexible financing plans to ease your cash flow.</p>
@@ -476,7 +476,7 @@ if (!$companyName) {
 
                     <div class="feature-card animate-on-scroll delay-600">
                         <div class="icon-wrapper">
-                            <img src="/assets/images/Mask group12.png" width="80" height="80">
+                            <img src="/assets/images/Group 1000002876.png" width="80" height="80">
                         </div>
                         <h4>Managed from Your Dashboard</h4>
                         <p>View all your quotes, invoices, and payment history in one secure, intuitive customer dashboard. Pay with confidence and track your budget effortlessly.</p>
@@ -584,14 +584,14 @@ if (!$companyName) {
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
                     <div class="feature-card animate-on-scroll delay-200">
                         <div class="icon-wrapper">
-                            <img src="/assets/images/Mask group11.png" width="80" height="80">
+                            <img src="/assets/images/Group 1000002871.png" width="80" height="80">
                         </div>
                         <h4>Flexible Payment Plans</h4>
                         <p>Spread the cost of your large rentals over time with customizable payment schedules that align with your project's cash flow.</p>
                     </div>
                     <div class="feature-card animate-on-scroll delay-300">
                         <div class="icon-wrapper">
-                            <img src="/assets/images/Mask group13.png" width="80" height="80">
+                            <img src="/assets/images/Group 1000002872.png" width="80" height="80">
                         </div>
                         <h4>Streamlined Application</h4>
                         <p>Our simple application process for financing ensures quick approvals, so you can get the equipment you need without unnecessary delays.</p>
