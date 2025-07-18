@@ -306,6 +306,36 @@ function get_prefill_value($data, $key) {
         .modal-button:last-child {
             margin-bottom: 0;
         }
+        
+        
+        /* Keyframe animation for the thumbs-up icon */
+@keyframes pop-in {
+    0% { transform: scale(0.5); opacity: 0; }
+    60% { transform: scale(1.1); opacity: 1; }
+    100% { transform: scale(1); }
+}
+
+.success-icon {
+    /* Animation will be triggered by JS */
+}
+
+.success-icon.animate {
+    animation: pop-in 0.5s ease-out forwards;
+}
+
+/* Adjust modal content for the new layout */
+#success-modal .modal-content {
+    max-width: 500px; /* A bit wider for the message */
+    text-align: center;
+}
+
+/* Ensure modal buttons can be side-by-side on small screens and up */
+#success-modal .modal-button {
+    display: inline-block;
+    width: auto;
+    margin-bottom: 0;
+    text-decoration: none; /* For the <a> tag */
+}
     </style>
 </head>
 <body class="antialiased">
@@ -610,6 +640,26 @@ function get_prefill_value($data, $key) {
                 </form>
             </div>
         </section>
+        
+        
+        <div id="success-modal" class="modal hidden">
+    <div class="modal-content text-center p-8">
+        <div class="mb-4">
+            <i class="fas fa-thumbs-up text-green-500 text-6xl success-icon"></i>
+        </div>
+        <h2 class="text-3xl font-bold text-gray-800 mb-3">Request Submitted!</h2>
+        <p id="success-modal-message" class="text-gray-600 mb-8 text-base">
+            </p>
+        <div class="flex flex-col sm:flex-row justify-center gap-4">
+            <button type="button" id="request-another-quote-btn" class="modal-button bg-blue-600 text-white hover:bg-blue-700 px-6 py-3">
+                Request Another Quote
+            </button>
+            <a href="/customer/login.php" class="modal-button bg-gray-700 text-white hover:bg-gray-800 px-6 py-3">
+                Login to Dashboard
+            </a>
+        </div>
+    </div>
+</div>
     </main>
 
     <?php include __DIR__ . '/includes/public_footer.php'; ?>
@@ -723,6 +773,10 @@ function get_prefill_value($data, $key) {
 
         document.addEventListener('DOMContentLoaded', function() {
             const quoteForm = document.getElementById('quote-form');
+             const successModal = document.getElementById('success-modal');
+        const successModalMessage = document.getElementById('success-modal-message');
+        const requestAnotherQuoteBtn = document.getElementById('request-another-quote-btn');
+        const successIcon = successModal.querySelector('.success-icon');
             const tabEquipmentRental = document.getElementById('tab-equipment-rental');
             const tabJunkRemoval = document.getElementById('tab-junk-removal');
             const contentEquipmentRental = document.getElementById('content-equipment-rental');
@@ -755,16 +809,26 @@ function get_prefill_value($data, $key) {
 
             // --- Helper for Modals ---
             function showModal(modalId) {
-                document.getElementById(modalId).classList.remove('hidden');
-                document.getElementById(modalId).classList.add('flex'); // Ensure it's flex for centering
-                document.body.classList.add('overflow-hidden'); // Prevent scrolling body
+            const modal = document.getElementById(modalId);
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.body.classList.add('overflow-hidden');
+            // Trigger animation for the success icon if it's the success modal
+            if (modalId === 'success-modal') {
+                successIcon.classList.add('animate');
             }
+        }
 
-            function hideModal(modalId) {
-                document.getElementById(modalId).classList.add('hidden');
-                document.getElementById(modalId).classList.remove('flex');
-                document.body.classList.remove('overflow-hidden'); // Re-enable scrolling
+        function hideModal(modalId) {
+            const modal = document.getElementById(modalId);
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            document.body.classList.remove('overflow-hidden');
+             // Remove animation class so it can re-trigger next time
+            if (modalId === 'success-modal') {
+                successIcon.classList.remove('animate');
             }
+        }
 
             // --- Mobile Device Detection ---
             function isMobileDevice() {
@@ -1206,115 +1270,110 @@ function get_prefill_value($data, $key) {
             }
 
             // --- Form Submission Logic ---
-            quoteForm.addEventListener('submit', async function(event) {
-                event.preventDefault();
+          // --- Form Submission Logic ---
+quoteForm.addEventListener('submit', async function(event) {
+    event.preventDefault();
 
-                const serviceType = hiddenServiceType.value;
-                let isValid = true;
+    const serviceType = hiddenServiceType.value;
+    let isValid = true;
 
-                // Common fields validation
-                const commonFields = ['name', 'email', 'phone', 'address', 'city', 'state', 'zip-code'];
-                commonFields.forEach(id => {
-                    const input = document.getElementById(id);
-                    if (!input.value.trim()) {
-                        input.style.borderColor = 'red';
-                        isValid = false;
-                    } else {
-                        input.style.borderColor = ''; // Reset border
-                    }
-                });
-                const emailInput = document.getElementById('email');
-                if (!emailInput.value.includes('@')) {
-                    emailInput.style.borderColor = 'red';
-                    isValid = false;
-                } else {
-                    emailInput.style.borderColor = '';
-                }
+    // Common fields validation
+    const commonFields = ['name', 'email', 'phone', 'address', 'city', 'state', 'zip-code'];
+    commonFields.forEach(id => {
+        const input = document.getElementById(id);
+        if (!input.value.trim()) {
+            input.style.borderColor = 'red';
+            isValid = false;
+        } else {
+            input.style.borderColor = ''; // Reset border
+        }
+    });
+    const emailInput = document.getElementById('email');
+    if (!emailInput.value.includes('@')) {
+        emailInput.style.borderColor = 'red';
+        isValid = false;
+    } else {
+        emailInput.style.borderColor = '';
+    }
 
-                let serviceData = {};
-                const formData = new FormData();
-                formData.append('csrf_token', document.querySelector('input[name="csrf_token"]').value);
-                formData.append('service_type', serviceType);
-                formData.append('name', document.getElementById('name').value);
-                formData.append('email', document.getElementById('email').value);
-                formData.append('phone', document.getElementById('phone').value);
-                formData.append('company', document.getElementById('company').value);
-                formData.append('address', document.getElementById('address').value);
-                formData.append('city', document.getElementById('city').value);
-                formData.append('state', document.getElementById('state').value);
-                formData.append('zip_code', document.getElementById('zip-code').value);
-                
-                // Conditional service-specific data collection
-                if (serviceType === 'equipment_rental') {
-                    if (equipmentItems.length === 0) {
-                        showToast('Please add at least one equipment item.', 'error');
-                        isValid = false;
-                    }
-                    // For equipment, package the entire equipmentItems array
-                    formData.append('equipment_details', JSON.stringify(equipmentItems));
-                } else if (serviceType === 'junk_removal') {
-                    if (junkItems.length === 0) {
-                        showToast('Please add at least one junk item.', 'error');
-                        isValid = false;
-                    }
-                    const junkRemovalDate = document.getElementById('junk-removal-date').value;
-                    const junkRemovalTime = document.getElementById('junk-removal-time').value;
-                    const junkProjectDescription = document.getElementById('junk-project-description').value;
+    // Manually create FormData to include JS arrays
+    const formData = new FormData(quoteForm);
+    
+    // Conditional service-specific data collection
+    if (serviceType === 'equipment_rental') {
+        if (equipmentItems.length === 0) {
+            showToast('Please add at least one equipment item.', 'error');
+            isValid = false;
+        }
+        // Add the equipment array to the form data
+        formData.append('equipment_details', JSON.stringify(equipmentItems));
 
-                    if (!junkRemovalDate || !junkRemovalTime) {
-                         showToast('Preferred date and time are required for Junk Removal.', 'error');
-                         isValid = false;
-                    }
+    } else if (serviceType === 'junk_removal') {
+        if (junkItems.length === 0) {
+            showToast('Please add at least one junk item.', 'error');
+            isValid = false;
+        }
+        const junkRemovalDate = document.getElementById('junk-removal-date').value;
+        const junkRemovalTime = document.getElementById('junk-removal-time').value;
+        const junkProjectDescription = document.getElementById('junk-project-description').value;
 
-                    // For junk removal, package the junk_items array and other specific fields
-                    serviceData.junk_items = junkItems;
-                    serviceData.preferred_date = junkRemovalDate;
-                    serviceData.preferred_time = junkRemovalTime;
-                    serviceData.additional_comment = junkProjectDescription;
-                    formData.append('junk_details', JSON.stringify(serviceData));
-                }
+        if (!junkRemovalDate) { // Basic check for date
+             showToast('Preferred date is required for Junk Removal.', 'error');
+             isValid = false;
+        }
 
-                if (!isValid) return;
+        // Package junk data into a single object
+        const junkData = {
+            junk_items: junkItems,
+            preferred_date: junkRemovalDate,
+            preferred_time: junkRemovalTime,
+            additional_comment: junkProjectDescription
+        };
+        // Add the junk data object to the form data
+        formData.append('junk_details', JSON.stringify(junkData));
+    }
 
-                showToast('Submitting your request...', 'info');
-                
-                // Submit to new API endpoint
-                try {
-                    const response = await fetch('/api/public/quote_submission.php', {
-                        method: 'POST',
-                        body: formData
-                    });
-                    const result = await response.json();
+    if (!isValid) {
+        showToast('Please fix the errors before submitting.', 'warning');
+        return;
+    }
 
-                    if (result.success) {
-                        showToast(result.message, 'success');
-                        // Display thank you message and clear form
-                        quoteForm.reset();
-                        equipmentItems = [];
-                        junkItems = [];
-                        renderEquipmentList(); // Clear equipment list
-                        renderJunkItemsList(); // Clear junk list
-                        equipmentTypeSelect.value = ''; // Reset equipment type dropdown
-                        equipmentFieldsContainers.forEach(field => field.classList.add('hidden')); // Hide all equipment fields
-                        addEquipmentItemBtn.classList.add('hidden'); // Hide add button
-                        document.getElementById('no-equipment-message').classList.remove('hidden'); // Show no equipment message
-                        
-                        // Show the final success message with details
-                        alert("Thank you for your submission! You will receive pricing within 60 minutes on our working hours. Once we find the best deal, we will notify you so you can view the pricing on your dashboard.");
-                        
-                        // Optionally redirect to a dashboard if the user is now logged in or needs to see their quotes
-                        // if (result.redirect_url) {
-                        //     window.location.href = result.redirect_url;
-                        // }
-                    } else {
-                        showToast(result.message, 'error');
-                    }
-                } catch (error) {
-                    console.error('Quote submission error:', error);
-                    showToast('An unexpected error occurred during submission. Please try again.', 'error');
-                }
-            });
+    showToast('Submitting your request...', 'info');
+    
+    try {
+        const response = await fetch('/api/public/quote_submission.php', {
+            method: 'POST',
+            body: formData // Send the correctly built form data
         });
+        const result = await response.json();
+
+        if (result.success) {
+            // Reset the form fields first
+            quoteForm.reset();
+            equipmentItems = [];
+            junkItems = [];
+            renderEquipmentList();
+            renderJunkItemsList();
+            equipmentTypeSelect.value = '';
+            equipmentFieldsContainers.forEach(field => field.classList.add('hidden'));
+            addEquipmentItemBtn.classList.add('hidden');
+            document.getElementById('no-equipment-message').classList.remove('hidden');
+            
+            // Set the detailed success message for the modal
+            successModalMessage.innerHTML = "Thank you for your submission! You will receive pricing within 60 minutes during our working hours. We've sent a confirmation to your email. If you're a new customer, an account has been created for you. You can log in to view your quote status.";
+
+            // Show the new interactive modal
+            showModal('success-modal');
+
+        } else {
+            showToast(result.message, 'error');
+        }
+    } catch (error) {
+        console.error('Quote submission error:', error);
+        showToast('An unexpected error occurred during submission. Please try again.', 'error');
+    }
+});
+    });
     </script>
 </body>
 </html>

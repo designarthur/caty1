@@ -5,7 +5,7 @@
 session_start();
 require_once __DIR__ . '/../../includes/db.php';
 require_once __DIR__ . '/../../includes/session.php';
-require_once __DIR__ . '/../../includes/functions.php';
+require_once __DIR__ . '/../../includes/functions.php'; // Ensure functions.php is included for generateToken() and validate_csrf_token()
 
 header('Content-Type: application/json');
 
@@ -22,6 +22,9 @@ $action = $_REQUEST['action'] ?? ''; // Use $_REQUEST to handle GET or POST acti
 
 try {
     if ($request_method === 'POST') {
+        // All POST requests should validate CSRF token
+        validate_csrf_token(); // Ensure CSRF token is validated
+
         switch ($action) {
             case 'update_status':
                 handleUpdateStatus($conn);
@@ -37,6 +40,9 @@ try {
                 break;
             case 'delete_bulk':
                 handleDeleteBulk($conn);
+                break;
+            case 'generate_driver_link':
+                handleGenerateDriverLink($conn);
                 break;
             default:
                 throw new Exception('Invalid POST action specified.');
@@ -55,10 +61,16 @@ try {
     }
 } catch (Exception $e) {
     // Catch any exceptions thrown from handler functions
+    // Attempt to rollback any active transaction if an exception occurs
+    // Removed $conn->in_transaction check for broader compatibility
+    if (isset($conn) && $conn instanceof mysqli) { // Ensure $conn is a mysqli object
+        $conn->rollback(); // This will safely do nothing if no transaction is active, or rollback if one is.
+    }
     http_response_code(400); // Bad Request for most client-side errors
     error_log("Admin Bookings API Error: " . $e->getMessage());
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 } finally {
+    // Ensure the database connection is closed
     if (isset($conn) && $conn->ping()) {
         $conn->close();
     }
@@ -67,6 +79,13 @@ try {
 
 // --- Handler Functions ---
 
+/**
+ * Handles driver-initiated booking status updates.
+ * Validates the access token and enforces valid status transitions.
+ *
+ * @param mysqli $conn The database connection object.
+ * @throws Exception If parameters are invalid, token is invalid, or status transition is not allowed.
+ */
 function handleUpdateStatus($conn) {
     $booking_id = filter_input(INPUT_POST, 'booking_id', FILTER_VALIDATE_INT);
     $newStatus = trim($_POST['status'] ?? '');
@@ -77,9 +96,9 @@ function handleUpdateStatus($conn) {
     }
 
     $allowedStatuses = [
-        'pending', 'scheduled', 'assigned', 'pickedup', 'out_for_delivery',
+        'pending', 'scheduled', 'assigned', 'out_for_delivery',
         'delivered', 'in_use', 'awaiting_pickup', 'completed', 'cancelled',
-        'relocated', 'swapped'
+        'relocation_requested', 'swap_requested', 'relocated', 'swapped', 'extended'
     ];
     if (!in_array($newStatus, $allowedStatuses)) {
         throw new Exception('Invalid status value provided.');
@@ -97,8 +116,9 @@ function handleUpdateStatus($conn) {
         throw new Exception("Booking not found.");
     }
     if ($booking_data['old_status'] === $newStatus) {
+        // If status is already the same, no update needed. Commit and return success.
+        $conn->commit();
         echo json_encode(['success' => true, 'message' => 'Booking status is already set. No update needed.']);
-        $conn->rollback();
         return;
     }
 
@@ -130,7 +150,13 @@ function handleUpdateStatus($conn) {
     echo json_encode(['success' => true, 'message' => 'Booking status updated successfully!']);
 }
 
-
+/**
+ * Handles assigning a vendor to a booking.
+ *
+ * @param mysqli $conn The database connection object.
+ * @return array Response array with success status and message.
+ * @throws Exception If parameters are invalid or database errors occur.
+ */
 function handleAssignVendor($conn) {
     $booking_id = filter_input(INPUT_POST, 'booking_id', FILTER_VALIDATE_INT);
     $vendor_id = filter_input(INPUT_POST, 'vendor_id', FILTER_VALIDATE_INT);
@@ -161,6 +187,13 @@ function handleAssignVendor($conn) {
     $stmt_update->close();
 }
 
+/**
+ * Handles adding an additional charge to a booking.
+ *
+ * @param mysqli $conn The database connection object.
+ * @return array Response array with success status and message.
+ * @throws Exception If parameters are invalid or database errors occur.
+ */
 function handleAddCharge($conn) {
     $booking_id = filter_input(INPUT_POST, 'booking_id', FILTER_VALIDATE_INT);
     $charge_type = trim($_POST['charge_type'] ?? '');
@@ -209,7 +242,7 @@ function handleAddCharge($conn) {
     $invoice_id = $conn->insert_id;
     $stmt_invoice->close();
     
-    // --- FIX: Add line item for additional charge ---
+    // Add line item for additional charge
     $stmt_insert_item = $conn->prepare("INSERT INTO invoice_items (invoice_id, description, quantity, unit_price, total) VALUES (?, ?, 1, ?, ?)");
     $item_description = "Additional Charge ({$charge_type}) for Booking #{$booking_number}: {$description}";
     $stmt_insert_item->bind_param("isdd", $invoice_id, $item_description, $amount, $amount);
@@ -258,6 +291,14 @@ function handleGetBookingByQuoteId($conn) {
     $stmt->close();
 }
 
+/**
+ * Handles approving a rental extension request.
+ * Creates an invoice for the extension and notifies the customer.
+ *
+ * @param mysqli $conn The database connection object.
+ * @return array Response array with success status and message.
+ * @throws Exception If parameters are invalid or database errors occur.
+ */
 function handleApproveExtension($conn) {
     $booking_id = filter_input(INPUT_POST, 'booking_id', FILTER_VALIDATE_INT);
     $request_id = filter_input(INPUT_POST, 'extension_request_id', FILTER_VALIDATE_INT);
@@ -308,7 +349,7 @@ function handleApproveExtension($conn) {
     $invoice_id = $conn->insert_id;
     $stmt_invoice->close();
     
-    // --- FIX: Add line item for rental extension ---
+    // Add line item for rental extension
     $stmt_insert_item = $conn->prepare("INSERT INTO invoice_items (invoice_id, description, quantity, unit_price, total) VALUES (?, ?, 1, ?, ?)");
     $item_description = "Rental Extension for Booking #{$booking['booking_number']} ({$extension_days} days)";
     $stmt_insert_item->bind_param("isdd", $invoice_id, $item_description, $extension_cost, $extension_cost);
@@ -385,5 +426,54 @@ function handleDeleteBulk($conn) {
         $conn->rollback();
         error_log("Bulk delete bookings error: " . $e->getMessage());
         throw $e;
+    }
+}
+
+/**
+ * Handles generating or retrieving a unique driver access link for a booking.
+ * Stores a new token if one doesn't exist for the booking.
+ * @param mysqli $conn The database connection object.
+ * @throws Exception If booking ID is missing or database error occurs.
+ */
+function handleGenerateDriverLink($conn) {
+    $booking_id = filter_input(INPUT_POST, 'booking_id', FILTER_VALIDATE_INT);
+    if (!$booking_id) {
+        throw new Exception('Booking ID is required.');
+    }
+
+    $conn->begin_transaction();
+    try {
+        // Check if a token already exists for this booking
+        $stmt_check_token = $conn->prepare("SELECT driver_access_token FROM bookings WHERE id = ?");
+        $stmt_check_token->bind_param("i", $booking_id);
+        $stmt_check_token->execute();
+        $result = $stmt_check_token->get_result();
+        $existing_token = $result->fetch_assoc()['driver_access_token'] ?? null;
+        $stmt_check_token->close();
+
+        $token = $existing_token;
+        if (empty($token)) {
+            // Generate a new unique token if none exists
+            $token = generateToken(32); // Using a 32-character hex token (64 actual chars)
+            $stmt_update_token = $conn->prepare("UPDATE bookings SET driver_access_token = ? WHERE id = ?");
+            $stmt_update_token->bind_param("si", $token, $booking_id);
+            if (!$stmt_update_token->execute()) {
+                throw new Exception("Failed to save driver access token: " . $stmt_update_token->error);
+            }
+            $stmt_update_token->close();
+        }
+
+        // Construct the full driver link. Ensure the domain is dynamically correct.
+        $base_url = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://{$_SERVER['HTTP_HOST']}";
+        $driver_link = $base_url . "/driver/update_booking.php?token=" . $token;
+
+        $conn->commit();
+        echo json_encode(['success' => true, 'message' => 'Driver link generated successfully!', 'driver_link' => $driver_link]);
+
+    } catch (Exception $e) {
+        $conn->rollback();
+        // Log the error for debugging
+        error_log("Failed to generate driver link for booking ID {$booking_id}: " . $e->getMessage());
+        throw new Exception('Failed to generate driver link: ' . $e->getMessage());
     }
 }

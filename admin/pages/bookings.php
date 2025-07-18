@@ -7,6 +7,10 @@ if (session_status() == PHP_SESSION_NONE) {
 }
 require_once __DIR__ . '/../../includes/db.php';
 require_once __DIR__ . '/../../includes/session.php';
+require_once __DIR__ . '/../../includes/functions.php'; // Required for generateToken() and generate_csrf_token()
+
+// Generate CSRF token for this page's forms
+generate_csrf_token(); // Ensures a CSRF token is available for this page's forms
 
 if (!is_logged_in() || !has_role('admin')) {
     echo '<div class="text-red-500 text-center p-8">Unauthorized access.</div>';
@@ -56,6 +60,7 @@ if ($requested_booking_id) {
             b.delivery_location, b.pickup_location, b.delivery_instructions, b.pickup_instructions,
             b.total_price, b.created_at, b.live_load_requested, b.is_urgent,
             b.equipment_details, b.junk_details, b.vendor_id, b.pickup_date, b.pickup_time,
+            b.driver_access_token,
             u.id as user_id, u.first_name, u.last_name, u.email, u.phone_number, u.address, u.city, u.state, u.zip_code,
             inv.invoice_number, inv.amount AS invoice_amount, inv.status AS invoice_status,
             q.id AS quote_id, q.daily_rate, q.swap_charge AS quote_swap_charge, q.relocation_charge AS quote_relocation_charge,
@@ -219,12 +224,14 @@ function getAdminStatusBadgeClass($status) {
 }
 function getTimelineIconClass($status) {
      switch ($status) {
-        case 'pending': case 'scheduled': return 'fa-calendar-alt';
+        case 'pending': return 'fa-hourglass-half';
+        case 'scheduled': return 'fa-calendar-alt';
         case 'assigned': return 'fa-user-check';
-        case 'out_for_delivery': return 'fa-truck';
+        case 'out_for_delivery': return 'fa-truck-loading';
         case 'delivered': return 'fa-box-open';
         case 'in_use': return 'fa-tools';
         case 'awaiting_pickup': return 'fa-clock';
+        case 'pickedup': return 'fa-truck-ramp-box';
         case 'completed': return 'fa-check-circle';
         case 'cancelled': return 'fa-times-circle';
         case 'relocation_requested': return 'fa-map-marker-alt';
@@ -257,16 +264,16 @@ function getTimelineIconClass($status) {
                 <option value="scheduled" <?php echo $filter_status === 'scheduled' ? 'selected' : ''; ?>>Scheduled</option>
                 <option value="assigned" <?php echo $filter_status === 'assigned' ? 'selected' : ''; ?>>Assigned</option>
                 <option value="out_for_delivery" <?php echo $filter_status === 'out_for_delivery' ? 'selected' : ''; ?>>Out for Delivery</option>
-                <option value="delivered" <?php echo $filter_status === 'delivered' ? 'selected' : ''; ?>>Delivered</option>
-                <option value="in_use" <?php echo $filter_status === 'in_use' ? 'selected' : ''; ?>>In Use</option>
-                <option value="awaiting_pickup" <?php echo $filter_status === 'awaiting_pickup' ? 'selected' : ''; ?>>Awaiting Pickup</option>
-                <option value="completed" <?php echo $filter_status === 'completed' ? 'selected' : ''; ?>>Completed</option>
-                <option value="cancelled" <?php echo $filter_status === 'cancelled' ? 'selected' : ''; ?>>Cancelled</option>
-                <option value="relocation_requested" <?php echo $filter_status === 'relocation_requested' ? 'selected' : ''; ?>>Relocation Requested</option>
-                <option value="swap_requested" <?php echo $filter_status === 'swap_requested' ? 'selected' : ''; ?>>Swap Requested</option>
-                <option value="relocated" <?php echo $filter_status === 'relocated' ? 'selected' : ''; ?>>Relocated</option>
-                <option value="swapped" <?php echo $filter_status === 'swapped' ? 'selected' : ''; ?>>Swapped</option>
-                <option value="extended" <?php echo $filter_status === 'extended' ? 'selected' : ''; ?>>Extended</option>
+                <option value="delivered" <?php echo ($filter_status === 'delivered') ? 'selected' : ''; ?>>Delivered</option>
+                <option value="in_use" <?php echo ($filter_status === 'in_use') ? 'selected' : ''; ?>>In Use</option>
+                <option value="awaiting_pickup" <?php echo ($filter_status === 'awaiting_pickup') ? 'selected' : ''; ?>>Awaiting Pickup</option>
+                <option value="completed" <?php echo ($filter_status === 'completed') ? 'selected' : ''; ?>>Completed</option>
+                <option value="cancelled" <?php echo ($filter_status === 'cancelled') ? 'selected' : ''; ?>>Cancelled</option>
+                <option value="relocation_requested" <?php echo ($filter_status === 'relocation_requested') ? 'selected' : ''; ?>>Relocation Requested</option>
+                <option value="swap_requested" <?php echo ($filter_status === 'swap_requested') ? 'selected' : ''; ?>>Swap Requested</option>
+                <option value="relocated" <?php echo ($filter_status === 'relocated') ? 'selected' : ''; ?>>Relocated</option>
+                <option value="swapped" <?php echo ($filter_status === 'swapped') ? 'selected' : ''; ?>>Swapped</option>
+                <option value="extended" <?php echo ($filter_status === 'extended') ? 'selected' : ''; ?>>Extended</option>
             </select>
         </div>
 
@@ -356,7 +363,6 @@ function getTimelineIconClass($status) {
                             <span class="sr-only">Previous</span>
                             <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                                 <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
-                                <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
                             </svg>
                         </button>
                         <?php for ($i = 1; $i <= $total_pages; $i++): ?>
@@ -369,8 +375,7 @@ function getTimelineIconClass($status) {
                                class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
                             <span class="sr-only">Next</span>
                             <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1
-                                0 01-1.414 0z" clip-rule="evenodd" />
+                                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
                             </svg>
                         </button>
                     </nav>
@@ -400,33 +405,33 @@ function getTimelineIconClass($status) {
         <h2 class="text-2xl font-bold text-gray-800 mb-6">Booking #BK-<?php echo htmlspecialchars($booking_detail_view_data['booking_number']); ?> Details</h2>
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6 pb-6 border-b border-gray-200">
             <div>
-                <p class="text-gray-600"><span class="font-medium">Customer:</span> <?php echo htmlspecialchars($booking_detail_view_data['first_name'] . ' ' . $booking_detail_view_data['last_name']); ?></p>
-                <p class="text-gray-600"><span class="font-medium">Customer Email:</span> <?php echo htmlspecialchars($booking_detail_view_data['email']); ?></p>
-                <p class="text-gray-600"><span class="font-medium">Customer Phone:</span> <?php echo htmlspecialchars($booking_detail_view_data['phone_number']); ?></p>
-                <p class="text-gray-600"><span class="font-medium">Customer Address:</span> <?php echo htmlspecialchars($booking_detail_view_data['address'] . ', ' . $booking_detail_view_data['city'] . ', ' . $booking_detail_view_data['state'] . ' ' . $booking_detail_view_data['zip_code']); ?></p>
+                <p class="text-gray-600 mb-2"><span class="font-medium">Customer:</span> <?php echo htmlspecialchars($booking_detail_view_data['first_name'] . ' ' . $booking_detail_view_data['last_name']); ?></p>
+                <p class="text-gray-600 mb-2"><span class="font-medium">Customer Email:</span> <?php echo htmlspecialchars($booking_detail_view_data['email']); ?></p>
+                <p class="text-gray-600 mb-2"><span class="font-medium">Customer Phone:</span> <?php echo htmlspecialchars($booking_detail_view_data['phone_number']); ?></p>
+                <p class="text-gray-600 mb-2"><span class="font-medium">Customer Address:</span> <?php echo htmlspecialchars($booking_detail_view_data['address'] . ', ' . $booking_detail_view_data['city'] . ', ' . $booking_detail_view_data['state'] . ' ' . $booking_detail_view_data['zip_code']); ?></p>
                 <p class="text-gray-600 mt-2"><a href="#" onclick="loadAdminSection('users', {user_id: '<?php echo $booking_detail_view_data['user_id'] ?? ''; ?>'}); return false;" class="text-blue-600 hover:underline"><i class="fas fa-external-link-alt mr-1"></i>View Customer Profile</a></p>
             </div>
             <div>
-                <p class="text-gray-600"><span class="font-medium">Service Type:</span> <?php echo htmlspecialchars(ucwords(str_replace('_', ' ', $booking_detail_view_data['service_type']))); ?></p>
-                <p class="text-gray-600"><span class="font-medium">Current Status:</span> <span class="px-2 py-1 rounded-full text-xs font-semibold <?php echo getAdminStatusBadgeClass($booking_detail_view_data['status']); ?>"><?php echo htmlspecialchars(strtoupper(str_replace('_', ' ', $booking_detail_view_data['status']))); ?></span></p>
-                <p class="text-gray-600"><span class="font-medium">Start Date:</span> <?php echo htmlspecialchars($booking_detail_view_data['start_date']); ?></p>
-                 <p class="text-gray-600"><span class="font-medium">End Date:</span> <?php echo htmlspecialchars($booking_detail_view_data['end_date'] ?? 'N/A'); ?>
+                <p class="text-gray-600 mb-2"><span class="font-medium">Service Type:</span> <?php echo htmlspecialchars(ucwords(str_replace('_', ' ', $booking_detail_view_data['service_type']))); ?></p>
+                <p class="text-gray-600 mb-2"><span class="font-medium">Current Status:</span> <span class="px-2 py-1 rounded-full text-xs font-semibold <?php echo getAdminStatusBadgeClass($booking_detail_view_data['status']); ?>"><?php echo htmlspecialchars(strtoupper(str_replace('_', ' ', $booking_detail_view_data['status']))); ?></span></p>
+                <p class="text-gray-600 mb-2"><span class="font-medium">Start Date:</span> <?php echo htmlspecialchars($booking_detail_view_data['start_date']); ?></p>
+                 <p class="text-gray-600 mb-2"><span class="font-medium">End Date:</span> <?php echo htmlspecialchars($booking_detail_view_data['end_date'] ?? 'N/A'); ?>
                     <?php if (isset($booking_detail_view_data['remaining_days']) && $booking_detail_view_data['remaining_days'] !== 'N/A'): ?>
                         <span class="font-bold <?php echo $booking_detail_view_data['remaining_days'] < 3 ? 'text-red-500' : 'text-green-500'; ?>">
                             (<?php echo $booking_detail_view_data['remaining_days']; ?> days remaining)
                         </span>
                     <?php endif; ?>
                  </p>
-                 <p class="text-gray-600"><span class="font-medium">Delivery Location:</span> <?php echo htmlspecialchars($booking_detail_view_data['delivery_location']); ?></p>
-                <p class="text-gray-600"><span class="font-medium">Delivery Instructions:</span> <?php echo htmlspecialchars($booking_detail_view_data['delivery_instructions'] ?? 'None'); ?></p>
+                 <p class="text-gray-600 mb-2"><span class="font-medium">Delivery Location:</span> <?php echo htmlspecialchars($booking_detail_view_data['delivery_location']); ?></p>
+                <p class="text-gray-600 mb-2"><span class="font-medium">Delivery Instructions:</span> <?php echo htmlspecialchars($booking_detail_view_data['delivery_instructions'] ?? 'None'); ?></p>
                 <?php if (!empty($booking_detail_view_data['pickup_date'])): ?>
-                    <p class="text-gray-600"><span class="font-medium">Scheduled Pickup Date:</span> <?php echo htmlspecialchars($booking_detail_view_data['pickup_date']); ?></p>
-                    <p class="text-gray-600"><span class="font-medium">Scheduled Pickup Time:</span> <?php echo htmlspecialchars($booking_detail_view_data['pickup_time']); ?></p>
-                    <p class="text-gray-600"><span class="font-medium">Pickup Location:</span> <?php echo htmlspecialchars($booking_detail_view_data['pickup_location'] ?? 'Same as delivery'); ?></p>
-                    <p class="text-gray-600"><span class="font-medium">Pickup Instructions:</span> <?php echo htmlspecialchars($booking_detail_view_data['pickup_instructions'] ?? 'None'); ?></p>
+                    <p class="text-gray-600 mb-2"><span class="font-medium">Scheduled Pickup Date:</span> <?php echo htmlspecialchars($booking_detail_view_data['pickup_date']); ?></p>
+                    <p class="text-gray-600 mb-2"><span class="font-medium">Scheduled Pickup Time:</span> <?php echo htmlspecialchars($booking_detail_view_data['pickup_time']); ?></p>
+                    <p class="text-gray-600 mb-2"><span class="font-medium">Pickup Location:</span> <?php echo htmlspecialchars($booking_detail_view_data['pickup_location'] ?? 'Same as delivery'); ?></p>
+                    <p class="text-gray-600 mb-2"><span class="font-medium">Pickup Instructions:</span> <?php echo htmlspecialchars($booking_detail_view_data['pickup_instructions'] ?? 'None'); ?></p>
                 <?php endif; ?>
-                 <p class="text-gray-600"><span class="font-medium">Live Load Requested:</span> <?php echo $booking_detail_view_data['live_load_requested'] ? 'Yes' : 'No'; ?></p>
-                <p class="text-gray-600"><span class="font-medium">Urgent Request:</span> <?php echo $booking_detail_view_data['is_urgent'] ? 'Yes' : 'No'; ?></p>
+                 <p class="text-gray-600 mb-2"><span class="font-medium">Live Load Requested:</span> <?php echo $booking_detail_view_data['live_load_requested'] ? 'Yes' : 'No'; ?></p>
+                <p class="text-gray-600 mb-2"><span class="font-medium">Urgent Request:</span> <?php echo $booking_detail_view_data['is_urgent'] ? 'Yes' : 'No'; ?></p>
             </div>
         </div>
 
@@ -436,7 +441,7 @@ function getTimelineIconClass($status) {
                 <?php if ($booking_detail_view_data['service_type'] === 'equipment_rental'): ?>
                     <h4 class="font-semibold mt-4 mb-2 text-gray-800">Equipment Booked:</h4>
                     <?php if (!empty($booking_detail_view_data['equipment_details'])): ?>
-                        <ul class="list-disc list-inside space-y-2 pl-4">
+                        <ul class="list-disc list-inside space-y-2 pl-4 mb-4">
                             <?php foreach ($booking_detail_view_data['equipment_details'] as $item): ?>
                                 <li><strong><?php echo htmlspecialchars($item['quantity']); ?>x</strong> <?php echo htmlspecialchars($item['equipment_name']); ?> (<?php echo htmlspecialchars($item['duration_days']); ?> days)</li>
                                 <?php if (!empty($item['specific_needs'])): ?>
@@ -450,7 +455,7 @@ function getTimelineIconClass($status) {
                 <?php elseif ($booking_detail_view_data['service_type'] === 'junk_removal'): ?>
                     <h4 class="font-semibold mt-4 mb-2 text-gray-800">Junk Removal Details:</h4>
                     <?php if (!empty($booking_detail_view_data['junk_details'])): ?>
-                        <ul class="list-disc list-inside space-y-2 pl-4">
+                        <ul class="list-disc list-inside space-y-2 pl-4 mb-4">
                             <?php if (!empty($booking_detail_view_data['junk_details']['junkItems'])): ?>
                                 <?php foreach ($booking_detail_view_data['junk_details']['junkItems'] as $item): ?>
                                     <li><?php echo htmlspecialchars($item['itemType'] ?? 'N/A'); ?> (Qty: <?php echo htmlspecialchars($item['quantity'] ?? 'N/A'); ?>)</li>
@@ -570,8 +575,65 @@ function getTimelineIconClass($status) {
                         </div>
                     <?php endif; ?>
                 </div>
+
+                <!-- Driver Actions Section -->
+                <div class="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+                    <h3 class="text-xl font-semibold text-gray-700 mb-4">Driver Actions</h3>
+                    <?php if (in_array($booking_detail_view_data['status'], ['assigned', 'out_for_delivery', 'delivered', 'awaiting_pickup', 'in_use'])): ?>
+                        <div class="mb-4">
+                            <button type="button" id="generate-driver-link-btn" class="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-semibold shadow-md" data-id="<?php echo htmlspecialchars($booking_detail_view_data['id']); ?>">
+                                <i class="fas fa-link mr-2"></i>Generate Driver Update Link
+                            </button>
+                        </div>
+                        <div id="driver-link-display-section" class="mt-4 <?php echo !empty($booking_detail_view_data['driver_access_token']) ? '' : 'hidden'; ?>">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Driver Update Link:</label>
+                            <div class="flex items-center space-x-2">
+                                <input type="text" id="driver-update-link-input" class="flex-grow p-2 border border-gray-300 rounded-md bg-gray-100 text-sm" value="<?php echo !empty($booking_detail_view_data['driver_access_token']) ? ((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://{$_SERVER['HTTP_HOST']}/driver/update_booking.php?token=" . htmlspecialchars($booking_detail_view_data['driver_access_token'])) : ''; ?>" readonly>
+                                <button type="button" id="copy-driver-link-btn" class="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm">
+                                    <i class="fas fa-copy mr-1"></i>Copy
+                                </button>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">Share this link with the assigned driver for direct status updates.</p>
+                        </div>
+                    <?php else: ?>
+                        <p class="text-gray-600">Driver link generation is available once a booking is assigned or active.</p>
+                    <?php endif; ?>
+                </div>
             </div>
         </div>
+
+        <!-- Timeline View - Added to Admin Booking Details -->
+        <?php if (!empty($booking_detail_view_data['status_history'])): ?>
+            <div class="mt-8 pt-6 border-t border-gray-200">
+                <h3 class="text-2xl font-bold text-gray-800 mb-6 text-center">Booking History</h3>
+                <div class="timeline">
+                    <?php foreach ($booking_detail_view_data['status_history'] as $index => $history_item):
+                        $is_current = ($history_item['status'] === $booking_detail_view_data['status']);
+                    ?>
+                        <div class="timeline-item">
+                            <div class="timeline-item-dot <?php echo $is_current ? 'current' : ''; ?>">
+                                <i class="fas <?php echo getTimelineIconClass($history_item['status']); ?>"></i>
+                            </div>
+                            <div class="timeline-item-content">
+                                <div class="timeline-item-date">
+                                    <?php echo (new DateTime($history_item['status_time']))->format('M d, Y h:i A'); ?>
+                                </div>
+                                <div class="timeline-item-status">
+                                    <?php echo htmlspecialchars(ucwords(str_replace('_', ' ', $history_item['status']))); ?>
+                                </div>
+                                <?php if (!empty($history_item['notes'])): ?>
+                                    <div class="timeline-item-notes">
+                                        <?php echo htmlspecialchars($history_item['notes']); ?>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        <?php endif; ?>
+        <!-- End Timeline View -->
+
 
     <?php else: ?>
         <p class="text-center text-red-500 py-8">The requested booking was not found.</p>
@@ -725,8 +787,6 @@ function getTimelineIconClass($status) {
                         selectedIds.forEach(id => formData.append('booking_ids[]', id));
 
                         try {
-                            // You'll need to create this /api/admin/bookings.php endpoint if it doesn't exist
-                            // or add a 'delete_bulk' action to an existing one.
                             const response = await fetch('/api/admin/bookings.php', {
                                 method: 'POST',
                                 body: formData
@@ -776,6 +836,9 @@ function getTimelineIconClass($status) {
                         formData.append('action', 'update_status');
                         formData.append('booking_id', bookingId);
                         formData.append('status', newStatus);
+                        // Ensure CSRF token is included for POST requests
+                        const csrfToken = '<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>';
+                        formData.append('csrf_token', csrfToken);
 
                         try {
                             const response = await fetch('/api/admin/bookings.php', {
@@ -820,6 +883,9 @@ function getTimelineIconClass($status) {
                          formData.append('action', 'assign_vendor');
                          formData.append('booking_id', bookingId);
                          formData.append('vendor_id', newVendorId);
+                         // Ensure CSRF token is included for POST requests
+                        const csrfToken = '<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>';
+                        formData.append('csrf_token', csrfToken);
 
                          try {
                             const response = await fetch('/api/admin/bookings.php', {
@@ -868,6 +934,51 @@ function getTimelineIconClass($status) {
 
             window.showModal('approve-extension-modal');
         }
+
+        // Generate Driver Link button listener
+        if (target.id === 'generate-driver-link-btn') {
+            const bookingId = target.dataset.id;
+            window.showToast('Generating driver link...', 'info');
+
+            const formData = new FormData();
+            formData.append('action', 'generate_driver_link');
+            formData.append('booking_id', bookingId);
+            
+            // Ensure CSRF token is included for POST requests
+            const csrfToken = '<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>';
+            formData.append('csrf_token', csrfToken);
+
+            fetch('/api/admin/bookings.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    const driverLinkInput = document.getElementById('driver-update-link-input');
+                    const driverLinkDisplaySection = document.getElementById('driver-link-display-section');
+
+                    driverLinkInput.value = result.driver_link;
+                    driverLinkDisplaySection.classList.remove('hidden');
+                    window.showToast(result.message, 'success');
+                } else {
+                    window.showToast('Error: ' + result.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Generate driver link API Error:', error);
+                window.showToast('An unexpected error occurred.', 'error');
+            });
+        }
+
+        // Copy Driver Link button listener
+        if (target.id === 'copy-driver-link-btn') {
+            const linkInput = document.getElementById('driver-update-link-input');
+            linkInput.select();
+            linkInput.setSelectionRange(0, 99999); // For mobile devices
+            document.execCommand('copy'); // Deprecated but widely supported
+            window.showToast('Driver link copied to clipboard!', 'success');
+        }
     });
 
     const addChargeForm = document.getElementById('add-charge-form');
@@ -876,6 +987,10 @@ function getTimelineIconClass($status) {
             event.preventDefault();
             const formData = new FormData(this);
             formData.append('action', 'add_charge');
+            // Ensure CSRF token is included for POST requests
+            const csrfToken = '<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>';
+            formData.append('csrf_token', csrfToken);
+
 
             if (!formData.get('charge_type') || !formData.get('amount') || !formData.get('description')) {
                 window.showToast('All fields are required.', 'error');
@@ -944,6 +1059,10 @@ function getTimelineIconClass($status) {
             const formData = new FormData(this);
             formData.append('action', 'approve_extension');
             formData.append('pricing_option', pricingOption.value);
+            // Ensure CSRF token is included for POST requests
+            const csrfToken = '<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>';
+            formData.append('csrf_token', csrfToken);
+
 
             if (!formData.get('extension_days')) {
                 window.showToast('Extension days are required.', 'error');
@@ -971,3 +1090,139 @@ function getTimelineIconClass($status) {
     }
 
 </script>
+<style>
+    /* Timeline specific styles (copied from driver/update_booking.php) */
+    .timeline {
+        position: relative;
+        margin: 0 auto;
+        padding: 20px 0;
+    }
+    .timeline::before {
+        content: '';
+        position: absolute;
+        left: 50%;
+        top: 0;
+        width: 2px;
+        height: 100%;
+        background: #cbd5e0; /* gray-300 */
+        transform: translateX(-50%);
+    }
+    .timeline-item {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 20px;
+        position: relative;
+    }
+    .timeline-item:last-child {
+        margin-bottom: 0;
+    }
+    .timeline-item-content {
+        width: calc(50% - 20px);
+        padding: 15px;
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        position: relative;
+    }
+    .timeline-item:nth-child(odd) .timeline-item-content {
+        text-align: right;
+    }
+    .timeline-item:nth-child(even) .timeline-item-content {
+        text-align: left;
+        margin-left: calc(50% + 20px);
+    }
+    .timeline-item-content::after {
+        content: '';
+        position: absolute;
+        top: 20px;
+        width: 0;
+        height: 0;
+        border-style: solid;
+    }
+    .timeline-item:nth-child(odd) .timeline-item-content::after {
+        border-width: 10px 0 10px 10px;
+        border-color: transparent transparent transparent #fff;
+        right: -10px;
+    }
+    .timeline-item:nth-child(even) .timeline-item-content::after {
+        border-width: 10px 10px 10px 0;
+        border-color: transparent #fff transparent transparent;
+        left: -10px;
+    }
+    .timeline-item-dot {
+        position: absolute;
+        left: 50%;
+        top: 20px;
+        width: 20px;
+        height: 20px;
+        background: #2563eb; /* blue-600 */
+        border-radius: 50%;
+        transform: translateX(-50%);
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 0.75rem;
+    }
+    .timeline-item-dot.current {
+        background: #10b981; /* green-500 */
+        animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+        70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+    .timeline-item-date {
+        font-size: 0.85rem;
+        color: #6b7280; /* gray-500 */
+        margin-bottom: 5px;
+    }
+    .timeline-item-status {
+        font-weight: 600;
+        color: #1f2937; /* gray-800 */
+    }
+    .timeline-item-notes {
+        font-size: 0.9rem;
+        color: #4b5563; /* gray-700 */
+        margin-top: 5px;
+    }
+
+    /* Responsive adjustments for timeline */
+    @media (max-width: 768px) {
+        .timeline::before {
+            left: 20px;
+            transform: translateX(0);
+        }
+        .timeline-item {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .timeline-item-content {
+            width: calc(100% - 40px);
+            margin-left: 40px;
+            text-align: left;
+        }
+        .timeline-item-content::after {
+            border-width: 10px 10px 10px 0;
+            border-color: transparent #fff transparent transparent;
+            left: 30px;
+            right: auto;
+            top: 20px;
+        }
+        .timeline-item:nth-child(odd) .timeline-item-content {
+            text-align: left;
+        }
+        .timeline-item:nth-child(odd) .timeline-item-content::after {
+            left: 30px;
+            right: auto;
+            border-width: 10px 10px 10px 0;
+            border-color: transparent #fff transparent transparent;
+        }
+        .timeline-item-dot {
+            left: 20px;
+            transform: translateX(-50%);
+        }
+    }
+</style>
