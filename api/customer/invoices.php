@@ -93,7 +93,7 @@ try {
 
 } catch (Exception $e) {
     // Catch any exceptions thrown from handler functions
-    if ($conn->in_transaction) { // Check if a transaction is active before rolling back
+    if (version_compare(PHP_VERSION, '5.5.0', '>=') && $conn->in_transaction) { // Check for transaction compatibility// Check if a transaction is active before rolling back
         $conn->rollback();
     }
     http_response_code(400); // Bad Request for most client-side errors
