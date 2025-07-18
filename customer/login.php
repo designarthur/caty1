@@ -226,7 +226,7 @@ $csrf_token = generate_csrf_token();
                 <button type="submit" class="btn-submit">Log In</button>
             </form>
             <p class="mt-8 text-gray-700">Don't have an account? <a href="register.php" class="text-blue-custom font-semibold hover:underline">Sign Up</a></p>
-            <p class="privacy-text">By logging in, you agree to our <a href="../PrivacyPolicy.html">Privacy Policy</a> and <a href="../Terms and Conditions.html">Terms and Conditions</a>.</p>
+            <p class="privacy-text">By logging in, you agree to our <a href="../PrivacyPolicy.php">Privacy Policy</a> and <a href="../TermsandConditions.php">Terms and Conditions</a>.</p>
         </div>
     </main>
 

@@ -208,7 +208,7 @@ if (!$companyName) {
                 <p class="text-xl md:text-2xl lg:text-3xl text-gray-700 mb-12 max-w-5xl mx-auto animate-on-scroll delay-300">
                     Seamlessly find and book the perfect dumpster for your project. From home cleanouts to construction debris, we've got you covered with competitive pricing and reliable service.
                 </p>
-                <a href="#" class="btn-primary inline-block" onclick="showAIChat('junk-removal-service'); return false;" class="btn-primary inline-block animate-on-scroll delay-600">Get Your Instant Quote!</a>
+                <a href="../request_quote.php" class="btn-primary inline-block"  class="btn-primary inline-block animate-on-scroll delay-600">Get Your Instant Quote!</a>
             </div>
         </section>
 
@@ -217,7 +217,7 @@ if (!$companyName) {
                 <h2 class="text-4xl md:text-5xl font-bold text-center text-gray-800 mb-16">Our Dumpster Sizes & Uses</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
                     <div class="p-8 rounded-2xl shadow-xl flex flex-col items-center text-center">
-                        <img src="/assets/images/Group 1000002824.png" alt="10 Yard Dumpster" class="rounded-lg mb-6 shadow-md border border-gray-300">
+                        <img src="/assets/images/10 Yard Dumpster.jpg" alt="10 Yard Dumpster" class="rounded-lg mb-6 shadow-md border border-gray-300">
                         <h3 class="text-2xl font-semibold text-gray-800 mb-4">10 Yard Dumpster</h3>
                         <p class="text-gray-600 leading-relaxed mb-6">Ideal for small projects like garage cleanouts, single room renovations, or dirt/concrete removal. Holds about 3 pickup truck loads.</p>
                         <ul class="text-left text-gray-700 w-full mb-6 space-y-2">
@@ -225,10 +225,10 @@ if (!$companyName) {
                             <li class="flex items-center"><i class="fas fa-check-circle text-green-500 mr-2"></i>Concrete/dirt removal (heavy items)</li>
                             <li class="flex items-center"><i class="fas fa-check-circle text-green-500 mr-2"></i>Bathroom remodels</li>
                         </ul>
-                        <a href="#" class="text-blue-custom hover:underline font-medium flex items-center justify-center">Get Quote for 10 Yard <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg></a>
+                        <a href="../request_quote.php" class="text-blue-custom hover:underline font-medium flex items-center justify-center">Get Quote for 10 Yard <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg></a>
                     </div>
                     <div class="p-8 rounded-2xl shadow-xl flex flex-col items-center text-center">
-                        <img src="/assets/images/Group 1000002822.png" alt="20 Yard Dumpster" class="rounded-lg mb-6 shadow-md border border-gray-300">
+                        <img src="/assets/images/20 Yard Dumpster.jpg" alt="20 Yard Dumpster" class="rounded-lg mb-6 shadow-md border border-gray-300">
                         <h3 class="text-2xl font-semibold text-gray-800 mb-4">20 Yard Dumpster</h3>
                         <p class="text-gray-600 leading-relaxed mb-6">Our most popular size, perfect for medium-sized renovations, decluttering projects, or general construction debris. Holds about 6 pickup truck loads.</p>
                         <ul class="text-left text-gray-700 w-full mb-6 space-y-2">
@@ -236,10 +236,10 @@ if (!$companyName) {
                             <li class="flex items-center"><i class="fas fa-check-circle text-green-500 mr-2"></i>Roofing projects (2500-3000 sq ft)</li>
                             <li class="flex items-center"><i class="fas fa-check-circle text-green-500 mr-2"></i>Deck removal</li>
                         </ul>
-                        <a href="#" class="text-blue-custom hover:underline font-medium flex items-center justify-center">Get Quote for 20 Yard <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg></a>
+                        <a href="../request_quote.php" class="text-blue-custom hover:underline font-medium flex items-center justify-center">Get Quote for 20 Yard <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg></a>
                     </div>
                     <div class="p-8 rounded-2xl shadow-xl flex flex-col items-center text-center">
-                        <img src="/assets/images/Group 1000002823.png" alt="30 Yard Dumpster" class="rounded-lg mb-6 shadow-md border border-gray-300">
+                        <img src="/assets/images/30 Yard Dumpster.jpg" alt="30 Yard Dumpster" class="rounded-lg mb-6 shadow-md border border-gray-300">
                         <h3 class="text-2xl font-semibold text-gray-800 mb-4">30 Yard Dumpster</h3>
                         <p class="text-gray-600 leading-relaxed mb-6">Great for major home additions, large construction sites, or commercial cleanouts. Holds about 9 pickup truck loads.</p>
                         <ul class="text-left text-gray-700 w-full mb-6 space-y-2">
@@ -247,11 +247,11 @@ if (!$companyName) {
                             <li class="flex items-center"><i class="fas fa-check-circle text-green-500 mr-2"></i>New home construction</li>
                             <li class="flex items-center"><i class="fas fa-check-circle text-green-500 mr-2"></i>Commercial cleanouts</li>
                         </ul>
-                        <a href="#" class="text-blue-custom hover:underline font-medium flex items-center justify-center">Get Quote for 30 Yard <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg></a>
+                        <a href="../request_quote.php" class="text-blue-custom hover:underline font-medium flex items-center justify-center">Get Quote for 30 Yard <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg></a>
                     </div>
                 </div>
                 <div class="text-center mt-16">
-                    <a href="#" class="btn-secondary inline-block">Need help choosing a size?</a>
+                    <a href="#" class="btn-secondary inline-block" onclick="showAIChat('junk-removal-service'); return false;">Need help choosing a size?</a>
                 </div>
             </div>
         </section>
@@ -290,7 +290,7 @@ if (!$companyName) {
                 <p class="text-xl text-gray-700 mb-12 max-w-3xl mx-auto">
                     Get your free, no-obligation quote today and experience the easiest way to rent a dumpster. Our AI assistant is ready to help you find the perfect solution.
                 </p>
-                <a href="#" class="btn-primary inline-block">Get a Free Dumpster Quote</a>
+                <a href="../request_quote.php" class="btn-primary inline-block">Get a Free Dumpster Quote</a>
             </div>
         </section>
 

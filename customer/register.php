@@ -220,7 +220,7 @@ $csrf_token = generate_csrf_token();
                 <button type="submit" class="btn-submit">Register Account</button>
             </form>
             <p class="mt-8 text-gray-700">Already have an account? <a href="login.php" class="text-blue-custom font-semibold hover:underline">Log In</a></p>
-            <p class="privacy-text">By registering, you agree to our <a href="../PrivacyPolicy.html">Privacy Policy</a> and <a href="../Terms and Conditions.html">Terms and Conditions</a>.</p>
+            <p class="privacy-text">By registering, you agree to our <a href="../PrivacyPolicy.php">Privacy Policy</a> and <a href="../TermsandConditions.php">Terms and Conditions</a>.</p>
         </div>
     </main>
 

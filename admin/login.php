@@ -138,7 +138,7 @@ $conn->close();
 <body>
     <div class="login-container">
         <div class="flex justify-center mb-6">
-            <img src="/assets/images/logo.png" alt="<?php echo htmlspecialchars($companyName); ?> Logo" class="h-20 w-20 rounded-full shadow-lg">
+            <img src="../assets/images/logocatdump.png" alt="<?php echo htmlspecialchars($companyName); ?> Logo" class="h-20 w-20 rounded-full shadow-lg">
         </div>
         <h2 class="text-3xl font-extrabold text-gray-800 mb-2">Admin Login</h2>
         <p class="text-gray-500 mb-8">Access your <?php echo htmlspecialchars($companyName); ?> administration panel.</p>

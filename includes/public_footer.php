@@ -77,8 +77,8 @@ $supportPhone = '+1 (555) 123-4567';
             <div class="border-t border-gray-700 mt-8 pt-8 text-center text-gray-500 text-sm">
                 <p>&copy; <?php echo date("Y"); ?> <?php echo htmlspecialchars($companyName); ?>. All rights reserved.</p>
                 <p class="mt-2">
-                    <a href="/PrivacyPolicy.html" class="hover:text-blue-custom transition duration-200">Privacy Policy</a> |
-                    <a href="/Terms and Conditions.html" class="hover:text-blue-custom transition duration-200">Terms & Conditions</a>
+                    <a href="./PrivacyPolicy.php" class="hover:text-blue-custom transition duration-200">Privacy Policy</a> |
+                    <a href="./TermsandConditions.php" class="hover:text-blue-custom transition duration-200">Terms & Conditions</a>
                 </p>
             </div>
         </div>

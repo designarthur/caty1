@@ -431,7 +431,7 @@ if (!$companyName) {
                 <p class="text-xl md:text-2xl lg:text-3xl text-gray-700 mb-12 max-w-5xl mx-auto animate-on-scroll delay-300">
                     Get clear, competitive pricing upfront for all your equipment rentals and services. Explore financing solutions designed for your project budget.
                 </p>
-                <a href="#" onclick="showAIChat('create-booking'); return false;" class="btn-primary inline-block animate-on-scroll delay-600">Get an Instant Quote!</a>
+                <a href="../request_quote.php" class="btn-primary inline-block animate-on-scroll delay-600">Get an Instant Quote!</a>
             </div>
         </section>
 
@@ -542,7 +542,7 @@ if (!$companyName) {
                             <li><svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>Basic Junk Removal</li>
                             <li><svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>7-Day Rental Period</li>
                         </ul>
-                        <a href="#" onclick="showAIChat('create-booking'); return false;" class="btn-select-plan">Get Quote</a>
+                        <a href="../request_quote.php" class="btn-select-plan">Get Quote</a>
                     </div>
                     <div class="pricing-plan-card highlighted animate-on-scroll delay-200">
                         <h3 class="plan-title">Medium Projects</h3>
@@ -554,7 +554,7 @@ if (!$companyName) {
                             <li><svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>Standard Storage Container</li>
                             <li><svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>14-Day Rental Period</li>
                         </ul>
-                        <a href="#" onclick="showAIChat('create-booking'); return false;" class="btn-select-plan">Get Quote</a>
+                        <a href="../request_quote.php" class="btn-select-plan">Get Quote</a>
                     </div>
                     <div class="pricing-plan-card animate-on-scroll delay-300">
                         <h3 class="plan-title">Large Projects</h3>
@@ -566,7 +566,7 @@ if (!$companyName) {
                             <li><svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>Large Storage Container</li>
                             <li><svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>30-Day Rental Period</li>
                         </ul>
-                        <a href="#" onclick="showAIChat('create-booking'); return false;" class="btn-select-plan">Get Quote</a>
+                        <a href="../request_quote.php" class="btn-select-plan">Get Quote</a>
                     </div>
                 </div>
                 <div class="text-center mt-20 animate-on-scroll delay-400">
@@ -583,22 +583,22 @@ if (!$companyName) {
                 </p>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
                     <div class="feature-card animate-on-scroll delay-200">
-                        <div class="icon-wrapper">
-                            <img src="/assets/images/Group 1000002871.png" width="80" height="80">
+                        <div class="icon-wrapper mb-3" style="margin:auto;">
+                            <img src="/assets/images/Group 1000002871.png" width="80" height="80" style="margin-bottom: 20px;">
                         </div>
                         <h4>Flexible Payment Plans</h4>
                         <p>Spread the cost of your large rentals over time with customizable payment schedules that align with your project's cash flow.</p>
                     </div>
                     <div class="feature-card animate-on-scroll delay-300">
-                        <div class="icon-wrapper">
-                            <img src="/assets/images/Group 1000002872.png" width="80" height="80">
+                        <div class="icon-wrapper mb-3" style="margin:auto;">
+                            <img src="/assets/images/Group 1000002872.png" width="80" height="80" style="margin-bottom: 20px;">
                         </div>
                         <h4>Streamlined Application</h4>
                         <p>Our simple application process for financing ensures quick approvals, so you can get the equipment you need without unnecessary delays.</p>
                     </div>
                 </div>
                 <div class="text-center mt-20 animate-on-scroll delay-400">
-                    <a href="#" onclick="showAIChat('create-booking'); return false;" class="btn-secondary inline-block">Contact Us About Financing</a>
+                    <a href="/Resources/Contact.php" class="btn-secondary inline-block">Contact Us About Financing</a>
                 </div>
             </div>
         </section>
@@ -679,7 +679,7 @@ if (!$companyName) {
                 <p class="text-xl text-gray-700 mb-12 max-w-3xl mx-auto animate-on-scroll delay-100">
                     Experience transparent pricing and flexible options. Get your instant, personalized quote for any equipment rental or service with Catdump today!
                 </p>
-                <a href="#" onclick="showAIChat('create-booking'); return false;" class="btn-primary inline-block shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition duration-300 animate-on-scroll delay-200">Get Your Free Quote Now!</a>
+                <a href="../request_quote.php" class="btn-primary inline-block shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition duration-300 animate-on-scroll delay-200">Get Your Free Quote Now!</a>
             </div>
         </section>
     </main>

@@ -389,7 +389,7 @@ if (!$companyName) {
                 <h2 class="text-4xl md:text-5xl font-bold text-center text-gray-800 mb-16 animate-on-scroll">Our Mission & Values: Driving Your Success</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
                     <div class="animate-on-scroll delay-100">
-                        <img src="/assets/images/5001295_5244712.png" alt="Our Mission" class="rounded-2xl shadow-xl w-full h-auto">
+                        <img src="/assets/images/Driving Your Success.png" alt="Our Mission" class="rounded-2xl shadow-xl w-full h-auto">
                     </div>
                     <div class="animate-on-scroll delay-200">
                         <h3 class="text-3xl font-bold text-gray-800 mb-6">Our Mission</h3>
@@ -443,7 +443,7 @@ if (!$companyName) {
                 <p class="text-xl text-gray-700 mb-12 max-w-3xl mx-auto animate-on-scroll delay-100">
                     Experience the unparalleled ease and efficiency of AI-powered equipment rental and waste management with Catdump.
                 </p>
-                <a href="#" class="btn-primary inline-block shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition duration-300 animate-on-scroll delay-200">Get Started Today!</a>
+                <a href="/customer/register.php" class="btn-primary inline-block shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition duration-300 animate-on-scroll delay-200">Get Started Today!</a>
             </div>
         </section>
     </main>

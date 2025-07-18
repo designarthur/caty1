@@ -688,7 +688,7 @@
                         </div>
                         <button type="submit" class="btn-submit">Send message</button>
                     </form>
-                    <p class="privacy-text">By clicking on "send message" button, you agree to our <a href="/PrivacyPolicy.html">Privacy Policy</a>.</p>
+                    <p class="privacy-text">By clicking on "send message" button, you agree to our <a href="/PrivacyPolicy.php">Privacy Policy</a>.</p>
                 </div>
             </div>
         </section>

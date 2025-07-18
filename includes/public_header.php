@@ -117,7 +117,7 @@ if (!$companyName) {
 </head>
 <body class="antialiased">
 
-    <header class="bg-white py-3 shadow-md sticky top-0 z-50 transition-all duration-300 ease-in-out" id="main-header">
+    <header class="bg-white shadow-md sticky top-0 z-50 transition-all duration-300 ease-in-out" id="main-header">
         <nav class="container-box mx-auto flex items-center justify-between p-3" aria-label="Global">
             <div class="flex lg:flex-1">
                 <a href="/index.php" class="-m-1.5 p-1.5">
@@ -231,7 +231,7 @@ if (!$companyName) {
             </div>
             <div class="hidden lg:flex lg:flex-1 lg:justify-end lg:gap-x-4">
                 <a href="/customer/login.php" class="btn-header-secondary">Log in</a>
-                <a href="#" onclick="showAIChat('general'); return false;" class="btn-header-primary">Sign up</a>
+                <a href="/customer/register.php" class="btn-header-primary">Sign up</a>
             </div>
         </nav>
         <div class="mobile-menu-drawer fixed inset-0 z-50 bg-black bg-opacity-50 backdrop-blur-md hidden" role="dialog" aria-modal="true" id="mobile-menu-drawer">
@@ -299,7 +299,7 @@ if (!$companyName) {
                         </div>
                         <div class="py-6">
                             <a href="/customer/login.php" class="-mx-3 block rounded-lg px-3 py-2.5 text-base/7 font-semibold text-gray-900 hover:bg-gray-50">Log in</a>
-                            <a href="#" onclick="showAIChat('general'); return false;" class="-mx-3 block rounded-lg px-3 py-2.5 text-base/7 font-semibold text-gray-900 hover:bg-gray-50">Sign up</a>
+                            <a href="/customer/register.php"  class="-mx-3 block rounded-lg px-3 py-2.5 text-base/7 font-semibold text-gray-900 hover:bg-gray-50">Sign up</a>
                         </div>
                     </div>
                 </div>

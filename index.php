@@ -617,8 +617,8 @@ if (!$companyName) {
                            Just tell our AI what you need. We'll connect with our local network and get you the best price, guaranteed, within the hour. No more waiting, no more hassle.
                         </p>
                         <div class="flex flex-col sm:flex-row justify-center lg:justify-start gap-4">
-                            <a href="#" onclick="showAIChat('general'); return false;" class="btn-primary inline-block">Start a New Booking</a>
-                            <a href="#how-it-works-section" class="btn-secondary inline-block">How It Works</a>
+                            <a href="./request_quote.php" class="btn-primary inline-block">Get A Quote</a>
+                            <a href="./request_quote.php" class="btn-secondary inline-block">Request Junk Removal</a>
                         </div>
                     </div>
                     <!--<div class="w-full max-w-lg mx-auto lg:mx-0 animate-on-scroll delay-200 flex items-center justify-center min-h-[300px] border border-dashed border-gray-300 rounded-2xl bg-gray-50 text-gray-500">-->
@@ -662,7 +662,7 @@ if (!$companyName) {
                         <h4>Best Price Guarantee</h4>
                         <p>Our innovative marketplace model ensures you always receive the most competitive pricing from a network of top local, vetted suppliers, guaranteeing exceptional value.</p>
                         <p class="mt-auto">Need financing for a large project? We offer flexible payment options and plans tailored to your needs, helping you acquire equipment faster.</p>
-                        <a href="#" onclick="showAIChat('general'); return false;" class="btn-start-trial mt-6">
+                        <a href="./request_quote.php" class="btn-start-trial mt-6">
                             Get a Free Quote
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
                         </a>
@@ -738,27 +738,27 @@ if (!$companyName) {
                 <h2 class="text-4xl md:text-5xl font-bold text-center text-gray-800 mb-20 animate-on-scroll">Our Core Rental Services</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
                     <div class="p-10 rounded-2xl shadow-xl flex flex-col items-center text-center card-hover-effect animate-on-scroll delay-100">
-                        <img src="/assets/images/green-dump-truck-with-white-background 1.png" alt="Dumpster Rentals" class="rounded-lg mb-6 shadow-md border border-gray-300">
+                        <img src="/assets/images/Group 1000002930.png" alt="Dumpster Rentals" class="rounded-lg mb-6 shadow-md border border-gray-300">
                         <h3 class="text-2xl font-semibold text-gray-800 mb-4">Dumpster Rentals</h3>
                         <p class="text-gray-600 leading-relaxed mb-6">From extensive home cleanouts to large-scale construction projects, easily find the perfect size dumpster to efficiently handle any waste disposal need, ensuring a clean and safe site for your operations.</p>
-                        <a href="#" onclick="showAIChat('general'); return false;" class="text-blue-custom hover:underline font-medium flex items-center justify-center">Learn More & Get Quote <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg></a>
+                        <a href="./request_quote.php" class="text-blue-custom hover:underline font-medium flex items-center justify-center">Learn More & Get Quote <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg></a>
                     </div>
                     <div class="p-10 rounded-2xl shadow-xl flex flex-col items-center text-center card-hover-effect animate-on-scroll delay-200">
-                        <img src="/assets/images/portable-toilets-woods-transparent-background 1.png" alt="Temporary Toilets" class="rounded-lg mb-6 shadow-md border border-gray-300">
+                        <img src="/assets/images/Group 1000002929.png" alt="Temporary Toilets" class="rounded-lg mb-6 shadow-md border border-gray-300">
                         <h3 class="text-2xl font-semibold text-gray-800 mb-4">Temporary Toilets</h3>
                         <p class="text-gray-600 leading-relaxed mb-6">Ensure comfort and sanitation with our clean, reliable, and regularly serviced portable toilets, ideal for events, busy job sites, and emergency situations requiring immediate facilities on demand.</p>
-                        <a href="#" onclick="showAIChat('general'); return false;" class="text-blue-custom hover:underline font-medium flex items-center justify-center">Learn More & Get Quote <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg></a>
+                        <a href="./request_quote.php" class="text-blue-custom hover:underline font-medium flex items-center justify-center">Learn More & Get Quote <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg></a>
                     </div>
                     <div class="p-10 rounded-2xl shadow-xl flex flex-col items-center text-center card-hover-effect animate-on-scroll delay-300">
-                        <img src="/assets/images/blue-cargo-container-transparent-background 1.png" alt="Storage Containers" class="rounded-lg mb-6 shadow-md border border-gray-300">
+                        <img src="/assets/images/Group 1000002931.png" alt="Storage Containers" class="rounded-lg mb-6 shadow-md border border-gray-300">
                         <h3 class="text-2xl font-semibold text-gray-800 mb-4">Storage Containers</h3>
                         <p class="text-gray-600 leading-relaxed mb-6">Secure your valuable equipment and materials with our robust, weatherproof on-site storage containers, conveniently delivered right to your specified location for maximum accessibility and protection.</p>
-                        <a href="#" onclick="showAIChat('general'); return false;" class="text-blue-custom hover:underline font-medium flex items-center justify-center">Learn More & Get Quote <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg></a>
+                        <a href="./request_quote.php"  class="text-blue-custom hover:underline font-medium flex items-center justify-center">Learn More & Get Quote <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg></a>
                     </div>
                 </div>
-                <div class="text-center mt-20 animate-on-scroll delay-400">
-                    <a href="/Services/Dumpster-Rentals.php" class="btn-secondary inline-block">View All Services</a>
-                </div>
+                <!--<div class="text-center mt-20 animate-on-scroll delay-400">-->
+                <!--    <a href="/Services/Dumpster-Rentals.php" class="btn-secondary inline-block">View All Services</a>-->
+                <!--</div>-->
             </div>
         </section>
 
@@ -769,13 +769,13 @@ if (!$companyName) {
                     <img src="/assets/images/Group 1000002815.png" alt="Junk Removal Services" class="rounded-lg mb-6 shadow-md border border-gray-300">
                     <h3 class="text-2xl font-semibold text-gray-800 mb-4">Advanced Junk Removal Services</h3>
                     <p class="text-gray-600 leading-relaxed mb-6">For efficient junk removal, simply upload images and even videos of your items. Our advanced system analyzes the content to generate a precise, fair quote. If you're satisfied with the quotation, we'll generate an invoice for you to conveniently pay directly from your personalized dashboard.</p>
-                    <a href="#" onclick="showAIChat('general'); return false;" class="text-blue-custom hover:underline font-medium flex items-center justify-center">Learn More & Get Quote <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg></a>
+                    <a href="./request_quote.php" class="text-blue-custom hover:underline font-medium flex items-center justify-center">Learn More & Get Quote <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg></a>
                 </div>
                 <div class="p-10 rounded-2xl shadow-xl flex flex-col items-center text-center card-hover-effect animate-on-scroll delay-200">
                     <img src="/assets/images/Group 1000002816.png" alt="Relocation & Swap Services" class="rounded-lg mb-6 shadow-md border border-gray-300">
                     <h3 class="text-2xl font-semibold text-gray-800 mb-4">Relocation & Swap Services</h3>
                     <p class="text-gray-600 leading-relaxed mb-6">Project running longer than expected? Need a different size unit for your evolving needs? We offer seamless relocation or swap services for your rental unit, ensuring your project stays on track and on budget without interruption.</p>
-                    <a href="#" onclick="showAIChat('general'); return false;" class="text-blue-custom hover:underline font-medium flex items-center justify-center">Learn More & Get Quote <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg></a>
+                    <a href="./request_quote.php" class="text-blue-custom hover:underline font-medium flex items-center justify-center">Learn More & Get Quote <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg></a>
                 </div>
             </div>
         </section>
@@ -828,7 +828,15 @@ if (!$companyName) {
                         <li class="flex items-center"><svg class="w-6 h-6 mr-3 text-green-custom" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>Receive instant notifications and updates.</li>
                         <li class="flex items-center"><svg class="w-6 h-6 mr-3 text-green-custom" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>View complete rental history and reorder with ease.</li>
                     </ul>
-                    <a href="/customer/login.php" class="btn-primary inline-block">Login to Dashboard</a>
+                    <!--<a href="/customer/login.php" class="btn-primary inline-block">Login to Dashboard</a>-->
+                    <div class="flex flex-col sm:flex-row gap-5 mt-6 md:mt-0">
+                        <a href="https://apps.apple.com/us/app/cat-dump-customer/id6740006148 " class="inline-block transform hover:scale-105 transition duration-300">
+                            <img src="https://placehold.co/150x50/000000/FFFFFF?text=App+Store" alt="Download on App Store" class="rounded-lg shadow-md">
+                        </a>
+                        <a href="https://play.google.com/store/apps/details?id=com.playservice.catdumpcustomer&pcampaignid=web_share" class="inline-block transform hover:scale-105 transition duration-300">
+                            <img src="https://placehold.co/150x50/000000/FFFFFF?text=Google+Play" alt="Get it on Google Play" class="rounded-lg shadow-md">
+                        </a>
+                    </div>
                 </div>
                 <div class="lg:w-1/2 flex justify-center items-center relative animate-on-scroll delay-300">
                     <img src="/assets/images/Group 1000002797.png" alt="Mobile App Screen 1" class="w-1/2 md:w-1/3 lg:w-auto max-w-xs rounded-xl shadow-2xl transform rotate-3 translate-x-8 z-10 border-4 border-gray-300">
@@ -975,7 +983,7 @@ if (!$companyName) {
                             </div>
                             <button type="submit" class="btn-submit">Send message</button>
                         </form>
-                        <p class="privacy-text">By clicking on "send message" button, you agree to our <a href="#">Privacy Policy</a>.</p>
+                        <p class="privacy-text">By clicking on "send message" button, you agree to our <a href="./PrivacyPolicy.php">Privacy Policy</a>.</p>
                     </div>
                 </div>
             </div>
@@ -987,7 +995,7 @@ if (!$companyName) {
                 <p class="text-xl text-gray-700 mb-12 max-w-3xl mx-auto animate-on-scroll delay-100">
                     Experience the future of equipment rentals. Get a free, no-obligation quote in seconds and streamline your project needs with <?php echo htmlspecialchars($companyName); ?>'s powerful, intuitive platform.
                 </p>
-                <a href="#" onclick="showAIChat('general'); return false;" class="btn-primary inline-block shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition duration-300 mb-16 animate-on-scroll delay-200">Get Started & Get a Quote</a>
+                <a href="./customer/register.php" class="btn-primary inline-block shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition duration-300 mb-16 animate-on-scroll delay-200">Get Started & Get a Quote</a>
 
                 <div class="bg-gray-100 p-12 rounded-2xl shadow-xl flex flex-col md:flex-row items-center justify-center gap-10 animate-on-scroll delay-300">
                     <div class="icon-box bg-blue-custom text-white flex-shrink-0">
@@ -1000,10 +1008,10 @@ if (!$companyName) {
                         </p>
                     </div>
                     <div class="flex flex-col sm:flex-row gap-5 mt-6 md:mt-0">
-                        <a href="#" class="inline-block transform hover:scale-105 transition duration-300">
+                        <a href="https://apps.apple.com/us/app/cat-dump-customer/id6740006148 " class="inline-block transform hover:scale-105 transition duration-300">
                             <img src="https://placehold.co/150x50/000000/FFFFFF?text=App+Store" alt="Download on App Store" class="rounded-lg shadow-md">
                         </a>
-                        <a href="#" class="inline-block transform hover:scale-105 transition duration-300">
+                        <a href="https://play.google.com/store/apps/details?id=com.playservice.catdumpcustomer&pcampaignid=web_share" class="inline-block transform hover:scale-105 transition duration-300">
                             <img src="https://placehold.co/150x50/000000/FFFFFF?text=Google+Play" alt="Get it on Google Play" class="rounded-lg shadow-md">
                         </a>
                     </div>

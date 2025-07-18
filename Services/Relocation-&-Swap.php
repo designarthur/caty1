@@ -93,7 +93,7 @@
         }
 
         .hero-background {
-            background-image: url('https://placehold.co/1920x900/d9eaf0/1a73e8?text=Relocation+Swap+Hero');
+            background-image: url('/assets/images/relocation and swap.png');
             background-size: cover;
             background-position: center;
             position: relative;
@@ -373,7 +373,7 @@
                 <p class="text-xl md:text-2xl lg:text-3xl text-gray-700 mb-12 max-w-5xl mx-auto animate-on-scroll delay-300">
                     Project running longer? Need a different size unit? Catdump adapts to your changing needs with seamless rental extensions, unit swaps, and on-site relocations.
                 </p>
-                <a href="#" onclick="showAIChat('create-booking'); return false;" class="btn-primary inline-block animate-on-scroll delay-600">Request a Service Change Now!</a>
+                <a href="../request_quote.php" class="btn-primary inline-block animate-on-scroll delay-600">Request a Service Change Now!</a>
             </div>
         </section>
 
@@ -386,7 +386,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
                     <div class="feature-card animate-on-scroll delay-200">
                         <div class="icon-wrapper">
-                            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h.01M7 16h.01M17 16h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <img src="/assets/images/Group 1000002917.png" width="80" height="80">
                         </div>
                         <h4>Seamless Project Continuity</h4>
                         <p>Avoid delays and disruptions. Our services ensure your equipment needs evolve with your project, preventing downtime and keeping work flowing smoothly.</p>
@@ -394,7 +394,7 @@
 
                     <div class="feature-card animate-on-scroll delay-300">
                         <div class="icon-wrapper">
-                            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                            <img src="/assets/images/Group 1000002914.png" width="80" height="80">
                         </div>
                         <h4>Cost-Efficient Adjustments</h4>
                         <p>Modifying existing rentals can often be more cost-effective than starting new ones. Our system helps you find the most economical solution for changes.</p>
@@ -402,7 +402,7 @@
 
                     <div class="feature-card animate-on-scroll delay-400">
                         <div class="icon-wrapper">
-                            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
+                            <img src="/assets/images/Group 1000002915.png" width="80" height="80">
                         </div>
                         <h4>Dashboard-Driven Simplicity</h4>
                         <p>Request extensions, swaps, or relocations directly through your intuitive Catdump dashboard with just a few clicks, making management effortless.</p>
@@ -410,7 +410,7 @@
 
                     <div class="feature-card animate-on-scroll delay-500">
                         <div class="icon-wrapper">
-                            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                            <img src="/assets/images/Group 10000029191.png" width="80" height="80">
                         </div>
                         <h4>Wide Range of Adaptability</h4>
                         <p>Whether it's a longer rental, a different size dumpster, or moving a storage container, we offer solutions to fit diverse project evolutions.</p>
@@ -418,7 +418,7 @@
 
                     <div class="feature-card animate-on-scroll delay-600">
                         <div class="icon-wrapper">
-                            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2-1.343-2-3-2z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.105A9.763 9.763 0 0112 4c4.97 0 9 3.582 9 8z"></path></svg>
+                            <img src="/assets/images/Group 1000002916.png" width="80" height="80">
                         </div>
                         <h4>Expert Support On-Demand</h4>
                         <p>Our dedicated team is ready to guide you through any rental adjustment, ensuring clear communication and a smooth transition for your equipment.</p>
@@ -433,7 +433,7 @@
                 <div class="how-it-works-container">
                     <div class="how-it-works-row animate-on-scroll delay-100">
                         <div class="how-it-works-image-box">
-                            <img src="https://placehold.co/300x200/e0e7ff/1a73e8?text=Extend+Rental+Dashboard" alt="Extend Rental Period">
+                            <img src="/assets/images/Group 1000002843.png" alt="Extend Rental Period">
                         </div>
                         <div class="how-it-works-content">
                             <p class="how-it-works-step-number">Scenario 1</p>
@@ -445,7 +445,7 @@
 
                     <div class="how-it-works-row animate-on-scroll delay-300">
                         <div class="how-it-works-image-box">
-                            <img src="https://placehold.co/300x200/e0e7ff/34a853?text=Swap+Unit+Sizes" alt="Swap Unit Sizes">
+                            <img src="/assets/images/Group 1000002842.png" alt="Swap Unit Sizes">
                         </div>
                         <div class="how-it-works-content">
                             <p class="how-it-works-step-number">Scenario 2</p>
@@ -457,7 +457,7 @@
 
                     <div class="how-it-works-row animate-on-scroll delay-500">
                         <div class="how-it-works-image-box">
-                            <img src="https://placehold.co/300x200/e0e7ff/1a73e8?text=Relocate+On-Site" alt="Relocate Unit On-Site">
+                            <img src="/assets/images/Group 1000002844.png" alt="Relocate Unit On-Site">
                         </div>
                         <div class="how-it-works-content">
                             <p class="how-it-works-step-number">Scenario 3</p>
@@ -475,27 +475,27 @@
                 <h2 class="text-4xl md:text-5xl font-bold text-center text-gray-800 mb-20 animate-on-scroll">When Catdump's Flexibility Becomes Your Advantage</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
                     <div class="scenario-card animate-on-scroll delay-100">
-                        <div class="icon-large">⏰</div>
+                        <div class="icon-large" style="display:flex; justify-content:center;"><img src="/assets/images/Group 1000002918.png" height="80" width="80"></div>
                         <h3>Project Runs Longer</h3>
                         <p>Unexpected delays happen. Seamlessly extend your rental period for days, weeks, or months directly from your dashboard to match your revised timeline.</p>
                     </div>
                     <div class="scenario-card animate-on-scroll delay-200">
-                        <div class="icon-large">🔄</div>
+                        <div class="icon-large" style="display:flex; justify-content:center;"><img src="/assets/images/Group 1000002922.png" height="80" width="80"></div>
                         <h3>Need a Different Size</h3>
                         <p>Whether you underestimated or overestimated, easily swap your current unit for a larger or smaller one to perfectly fit the evolving demands of your project.</p>
                     </div>
                     <div class="scenario-card animate-on-scroll delay-300">
-                        <div class="icon-large">📍</div>
+                        <div class="icon-large" style="display:flex; justify-content:center;"><img src="/assets/images/Group 1000002921.png" height="80" width="80"></div>
                         <h3>Changing Site Layout</h3>
                         <p>As work progresses, your equipment might need to move. Request on-site relocation of dumpsters or containers to maintain optimal accessibility and workflow.</p>
                     </div>
                     <div class="scenario-card animate-on-scroll delay-400">
-                        <div class="icon-large">📈</div>
+                        <div class="icon-large" style="display:flex; justify-content:center;"><img src="/assets/images/Group 1000002919.png" height="80" width="80"></div>
                         <h3>Unexpected Volume/Waste</h3>
                         <p>When debris volume exceeds initial estimates, a quick swap to a larger dumpster ensures you can continue work without interruption or overflow issues.</p>
                     </div>
                     <div class="scenario-card animate-on-scroll delay-500">
-                        <div class="icon-large">🛠️</div>
+                        <div class="icon-large" style="display:flex; justify-content:center;"><img src="/assets/images/Group 1000002920.png" height="80" width="80"></div>
                         <h3>Equipment Issues/Replacement</h3>
                         <p>In the rare event of an issue, quickly arrange for a swap or replacement unit to minimize downtime and keep your project moving forward without a hitch.</p>
                     </div>

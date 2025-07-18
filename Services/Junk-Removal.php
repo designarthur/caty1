@@ -377,7 +377,7 @@
                 <p class="text-xl md:text-2xl lg:text-3xl text-gray-700 mb-12 max-w-5xl mx-auto animate-on-scroll delay-300">
                     Say goodbye to unwanted clutter with our convenient, AI-powered junk removal service. Get instant quotes by simply showing us your junk!
                 </p>
-                <a href="#" onclick="showAIChat('junk-removal-service'); return false;" class="btn-primary inline-block animate-on-scroll delay-600">Get Your Instant Quote!</a>
+                <a href="../request_quote.php" class="btn-primary inline-block animate-on-scroll delay-600">Get Your Instant Quote!</a>
             </div>
         </section>
 
@@ -492,7 +492,7 @@
                         <p>Old sofas, chairs, tables, beds, mattresses, refrigerators, washing machines, dryers, and more. We handle single items or full house clear-outs.</p>
                     </div>
                     <div class="junk-item-category animate-on-scroll delay-200">
-                        <div class="icon-large" style="display:flex; justify-content:center;"><img src="/assets/images/Group 1000002893.png" width="80" height="80"></div>
+                        <div class="icon-large" style="display:flex; justify-content:center;"><img src="/assets/images/Group 1000002928.png" width="80" height="80"></div>
                         <h3>Construction & Demolition Debris</h3>
                         <p>Wood, drywall, concrete, bricks, tiles, roofing materials, scrap metal, and other debris from renovation or construction projects.</p>
                     </div>
@@ -599,7 +599,7 @@
                 <p class="text-xl text-gray-700 mb-12 max-w-3xl mx-auto animate-on-scroll delay-100">
                     Experience the easiest way to get rid of unwanted items. Get your instant quote and schedule a pickup today with Catdump.
                 </p>
-                <a href="#" onclick="showAIChat('junk-removal-service'); return false;" class="btn-primary inline-block shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition duration-300 animate-on-scroll delay-200">Start Your Free Junk Removal Quote!</a>
+                <a href="../request_quote.php" class="btn-primary inline-block shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition duration-300 animate-on-scroll delay-200">Start Your Free Junk Removal Quote!</a>
             </div>
         </section>
     </main>

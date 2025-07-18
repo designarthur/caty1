@@ -374,7 +374,7 @@
                 <p class="text-xl md:text-2xl lg:text-3xl text-gray-700 mb-12 max-w-5xl mx-auto animate-on-scroll delay-300">
                     Protect your valuables on-site with our robust, weatherproof storage containers. Perfect for construction, renovations, or extra commercial space.
                 </p>
-                <a href="#" onclick="showAIChat('create-booking'); return false;" class="btn-primary inline-block animate-on-scroll delay-600">Get Your Storage Container Quote!</a>
+                <a href="../request_quote.php"  class="btn-primary inline-block animate-on-scroll delay-600">Get Your Storage Container Quote!</a>
             </div>
         </section>
 
@@ -581,7 +581,7 @@
                 <p class="text-xl text-gray-700 mb-12 max-w-3xl mx-auto animate-on-scroll delay-100">
                     Get durable, weatherproof storage containers delivered directly to your location. Protect your equipment and materials with Catdump's reliable rental solutions.
                 </p>
-                <a href="#" onclick="showAIChat('create-booking'); return false;" class="btn-primary inline-block shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition duration-300 animate-on-scroll delay-200">Get Your Free Storage Container Quote Today!</a>
+                <a href="../request_quote.php"  class="btn-primary inline-block shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition duration-300 animate-on-scroll delay-200">Get Your Free Storage Container Quote Today!</a>
             </div>
         </section>
     </main>

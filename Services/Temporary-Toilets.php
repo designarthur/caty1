@@ -376,7 +376,7 @@
                 <p class="text-xl md:text-2xl lg:text-3xl text-gray-700 mb-12 max-w-5xl mx-auto animate-on-scroll delay-300">
                     Ensure comfort and sanitation with our wide range of portable toilets, perfectly suited for construction sites, outdoor events, and emergency needs.
                 </p>
-                <a href="#" onclick="showAIChat('create-booking'); return false;" class="btn-primary inline-block animate-on-scroll delay-600">Get Your Portable Toilet Quote!</a>
+                <a href="../request_quote.php" class="btn-primary inline-block animate-on-scroll delay-600">Get Your Portable Toilet Quote!</a>
             </div>
         </section>
 
@@ -443,27 +443,27 @@
                 <h2 class="text-4xl md:text-5xl font-bold text-center text-gray-800 mb-20 animate-on-scroll">Our Range of Portable Toilet Solutions</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
                     <div class="unit-type-card animate-on-scroll delay-100">
-                        <img src="/assets/images/Group 1000002834.png" alt="Standard Portable Toilet">
+                        <img src="/assets/images/Standard Portable Toilets.jpg" alt="Standard Portable Toilet" style="margin: auto;">
                         <h3>Standard Portable Toilets</h3>
                         <p>The most common and versatile option, perfect for construction sites, festivals, or any event needing basic, reliable sanitation facilities.</p>
                     </div>
                     <div class="unit-type-card animate-on-scroll delay-200">
-                        <img src="/assets/images/Group 1000002834.png" alt="ADA Compliant Portable Toilet">
+                        <img src="/assets/images/ADA Compliant Units.jpg" alt="ADA Compliant Portable Toilet" style="margin: auto;">
                         <h3>ADA Compliant Units</h3>
                         <p>Spacious, wheelchair-accessible portable toilets designed to meet ADA requirements, ensuring comfort and accessibility for all guests and workers.</p>
                     </div>
                     <div class="unit-type-card animate-on-scroll delay-300">
-                        <img src="/assets/images/Group 1000002834.png" alt="Flushing Portable Toilet">
+                        <img src="/assets/images/Flushing Portable Toilets.jpg" alt="Flushing Portable Toilet" style="margin: auto;">
                         <h3>Flushing Portable Toilets</h3>
                         <p>Offer a more upscale experience with a foot-pump flushing system, ideal for weddings, corporate events, or longer-term projects requiring enhanced comfort.</p>
                     </div>
                     <div class="unit-type-card animate-on-scroll delay-400">
-                        <img src="/assets/images/Group 1000002834.png" alt="Handwashing Station">
+                        <img src="/assets/images/Portable Handwashing Stations.jpg" alt="Handwashing Station" style="margin: auto;">
                         <h3>Portable Handwashing Stations</h3>
                         <p>Essential for hygiene, these standalone units provide fresh water, soap dispensers, and paper towel dispensers, perfect for pairing with any portable toilet setup.</p>
                     </div>
                     <div class="unit-type-card animate-on-scroll delay-500">
-                        <img src="/assets/images/Group.png" alt="Restroom Trailer">
+                        <img src="/assets/images/Luxury Restroom Trailers.jpg" alt="Restroom Trailer" style="margin: auto;">
                         <h3>Luxury Restroom Trailers</h3>
                         <p>For high-end events, these trailers feature multiple stalls, sinks with running water, air conditioning, and enhanced interiors for a premium experience.</p>
                     </div>
@@ -593,7 +593,7 @@
                 <p class="text-xl text-gray-700 mb-12 max-w-3xl mx-auto animate-on-scroll delay-100">
                     Get clean, reliable portable toilets quickly and affordably. Catdump makes sanitation simple, so your event or project can focus on success.
                 </p>
-                <a href="#" onclick="showAIChat('create-booking'); return false;" class="btn-primary inline-block shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition duration-300 animate-on-scroll delay-200">Get Your Free Portable Toilet Quote Today!</a>
+                <a href="../request_quote.php" class="btn-primary inline-block shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition duration-300 animate-on-scroll delay-200">Get Your Free Portable Toilet Quote Today!</a>
             </div>
         </section>
     </main>

@@ -220,7 +220,7 @@ if (!$companyName) {
                 <p class="text-xl md:text-2xl lg:text-3xl text-gray-700 mb-12 max-w-5xl mx-auto">
                     Discover our simple, efficient process for renting equipment. From initial inquiry to final pick-up, we make securing your essential rentals effortless and transparent.
                 </p>
-                <a href="#" onclick="showAIChat('general'); return false;" class="btn-primary">Get Started Now!</a>
+                <a href="./customer/register.php" onclick="showAIChat('general'); return false;" class="btn-primary">Get Started Now!</a>
             </div>
         </section>
 
@@ -285,7 +285,7 @@ if (!$companyName) {
                 <p class="text-xl text-gray-700 mb-12 max-w-3xl mx-auto">
                     Simplify your equipment rental process today. Our intuitive platform and powerful AI are designed to save you time, money, and hassle.
                 </p>
-                <a href="#" onclick="showAIChat('general'); return false;" class="btn-primary inline-block">Start Your Rental Journey!</a>
+                <a href="./customer/register.php" onclick="showAIChat('general'); return false;" class="btn-primary inline-block">Start Your Rental Journey!</a>
             </div>
         </section>
 
