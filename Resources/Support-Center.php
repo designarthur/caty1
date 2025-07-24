@@ -1,15 +1,16 @@
 <?php
-// Resources/Support-Center.php
+// Services/Dumpster-Rentals.php
 
 // Include necessary files
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/functions.php';
-
+require_once __DIR__ . '/../includes/session.php';
 // Fetch company name from system settings
 $companyName = getSystemSetting('company_name');
 if (!$companyName) {
     $companyName = 'Catdump'; // Fallback if not set in DB
 }
+
 
 // Fetch admin email from system settings for support email
 $supportEmail = getSystemSetting('admin_email');
@@ -19,7 +20,7 @@ if (!$supportEmail) {
 
 // Placeholder for a phone number as it's not in system settings currently.
 // In a real application, you might add this to system settings or another config.
-$supportPhone = '+1 (555) 123-4567';
+$supportPhone = '+1 (833) 935-8800';
 
 ?>
 <!DOCTYPE html>

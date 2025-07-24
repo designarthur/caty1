@@ -2,6 +2,7 @@
 // includes/public_header.php
 // Ensure functions.php is loaded for getSystemSetting() and other utilities
 require_once __DIR__ . '/functions.php'; // Corrected to ensure functions.php is loaded
+require_once __DIR__ . '/session.php'; // Ensure session.php is loaded for is_logged_in()
 
 // Determine the current page to set active navigation link
 $currentPage = basename($_SERVER['PHP_SELF']);
@@ -24,6 +25,12 @@ function isActive($pageName, $currentPage) {
 global $companyName; // Declare global to access if set in a parent scope
 if (!$companyName) {
     $companyName = getSystemSetting('company_name') ?? 'Catdump'; // Fallback if not set
+}
+
+$isLoggedIn = is_logged_in();
+$userName = '';
+if ($isLoggedIn) {
+    $userName = $_SESSION['user_first_name'] ?? 'User';
 }
 ?>
 <!DOCTYPE html>
@@ -112,6 +119,71 @@ if (!$companyName) {
             color: #155bb5;
             border-color: #e2e8f0; /* Subtle border on hover */
             background-color: #f8f9fa;
+        }
+
+        /* Styles for logged-in user display */
+        .user-profile-menu {
+            position: relative;
+            cursor: pointer;
+        }
+        .user-profile-button {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            background-color: #eef2f6;
+            transition: background-color 0.2s ease;
+        }
+        .user-profile-button:hover {
+            background-color: #e2e8f0;
+        }
+        .user-profile-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: #1a73e8;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.875rem;
+            margin-right: 0.5rem;
+        }
+        .user-profile-name {
+            font-weight: 600;
+            color: #2d3748;
+            margin-right: 0.5rem;
+        }
+        .user-profile-dropdown {
+            position: absolute;
+            right: 0;
+            top: calc(100% + 10px);
+            background-color: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+            min-width: 150px;
+            z-index: 10;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(10px);
+            transition: all 0.2s ease-out;
+        }
+        .user-profile-dropdown.active {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+        .user-profile-dropdown a {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: #2d3748;
+            text-decoration: none;
+            font-size: 0.9375rem;
+        }
+        .user-profile-dropdown a:hover {
+            background-color: #f8f9fa;
+            color: #1a73e8;
         }
     </style>
 </head>
@@ -230,8 +302,26 @@ if (!$companyName) {
                 <a href="/Resources/Contact.php" class="<?php echo isActive('Resources/Contact.php', $currentPage); ?> text-base/7 font-semibold transition duration-300">Contact</a>
             </div>
             <div class="hidden lg:flex lg:flex-1 lg:justify-end lg:gap-x-4">
-                <a href="/customer/login.php" class="btn-header-secondary">Log in</a>
-                <a href="/customer/register.php" class="btn-header-primary">Sign up</a>
+                <?php if ($isLoggedIn): ?>
+                    <div class="user-profile-menu">
+                        <button class="user-profile-button" id="user-profile-button">
+                            <div class="user-profile-avatar">
+                                <?php echo htmlspecialchars(substr($userName, 0, 1)); ?>
+                            </div>
+                            <span class="user-profile-name"><?php echo htmlspecialchars($userName); ?></span>
+                            <svg class="size-5 flex-none text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" data-slot="icon">
+                                <path fill-rule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                        <div class="user-profile-dropdown" id="user-profile-dropdown">
+                            <a href="/customer/dashboard.php">Dashboard</a>
+                            <a href="/customer/logout.php">Logout</a>
+                        </div>
+                    </div>
+                <?php else: ?>
+                    <a href="/customer/login.php" class="btn-header-secondary">Log in</a>
+                    <a href="/customer/register.php" class="btn-header-primary">Sign up</a>
+                <?php endif; ?>
             </div>
         </nav>
         <div class="mobile-menu-drawer fixed inset-0 z-50 bg-black bg-opacity-50 backdrop-blur-md hidden" role="dialog" aria-modal="true" id="mobile-menu-drawer">
@@ -298,8 +388,13 @@ if (!$companyName) {
                             <a href="/Resources/Contact.php" class="-mx-3 block rounded-lg px-3 py-2 text-base/7 font-semibold text-gray-900 hover:bg-gray-50 <?php echo isActive('Resources/Contact.php', $currentPage); ?>">Contact</a>
                         </div>
                         <div class="py-6">
-                            <a href="/customer/login.php" class="-mx-3 block rounded-lg px-3 py-2.5 text-base/7 font-semibold text-gray-900 hover:bg-gray-50">Log in</a>
-                            <a href="/customer/register.php"  class="-mx-3 block rounded-lg px-3 py-2.5 text-base/7 font-semibold text-gray-900 hover:bg-gray-50">Sign up</a>
+                            <?php if ($isLoggedIn): ?>
+                                <a href="/customer/dashboard.php" class="-mx-3 block rounded-lg px-3 py-2.5 text-base/7 font-semibold text-gray-900 hover:bg-gray-50">Dashboard</a>
+                                <a href="/customer/logout.php" class="-mx-3 block rounded-lg px-3 py-2.5 text-base/7 font-semibold text-gray-900 hover:bg-gray-50">Logout</a>
+                            <?php else: ?>
+                                <a href="/customer/login.php" class="-mx-3 block rounded-lg px-3 py-2.5 text-base/7 font-semibold text-gray-900 hover:bg-gray-50">Log in</a>
+                                <a href="/customer/register.php"  class="-mx-3 block rounded-lg px-3 py-2.5 text-base/7 font-semibold text-gray-900 hover:bg-gray-50">Sign up</a>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -327,6 +422,22 @@ if (!$companyName) {
             const resourcesDropdownButton = document.getElementById('resources-dropdown-button');
             const resourcesFlyoutMenu = document.getElementById('resources-flyout-menu');
             const mainHeader = document.getElementById('main-header');
+
+            // User profile dropdown for desktop (logged in state)
+            const userProfileButton = document.getElementById('user-profile-button');
+            const userProfileDropdown = document.getElementById('user-profile-dropdown');
+            if (userProfileButton && userProfileDropdown) {
+                userProfileButton.addEventListener('click', function(event) {
+                    event.stopPropagation(); // Prevent document click from closing immediately
+                    userProfileDropdown.classList.toggle('active');
+                });
+                document.addEventListener('click', function(event) {
+                    if (!userProfileButton.contains(event.target) && !userProfileDropdown.contains(event.target)) {
+                        userProfileDropdown.classList.remove('active');
+                    }
+                });
+            }
+
 
             let servicesTimeout, companyTimeout, resourcesTimeout;
             const hoverDelay = 100;

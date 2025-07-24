@@ -1,6 +1,6 @@
 <?php
 // How-it-works.php
-
+require_once __DIR__ . '/includes/session.php'; 
 // Include necessary files
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/functions.php';

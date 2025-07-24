@@ -1,5 +1,5 @@
 <?php
-// api/customer/invoices.php - Handles Stripe payment processing and booking creation/updates
+// api/customer/invoices.php - Handles Stripe payment processing and invoice actions
 
 // --- Production-Ready Error Handling ---
 // Temporarily enable display_errors for debugging. REMEMBER TO SET TO 0 IN PRODUCTION.
@@ -81,8 +81,8 @@ try {
             handlePaymentProcessing($conn, $user_id, $invoiceNumber, $amountToPay, $paymentMethodId, $saveCard, $originalPaymentMethodId);
             break;
 
-        case 'delete_bulk':
-            handleDeleteBulk($conn, $user_id);
+        case 'bulk_delete_invoices': // Added new case for bulk deletion
+            handleBulkDeleteInvoices($conn, $user_id);
             break;
 
         default:
@@ -93,7 +93,11 @@ try {
 
 } catch (Exception $e) {
     // Catch any exceptions thrown from handler functions
-    $conn->rollback(); // Attempt to rollback any active transaction.
+    // Check if a transaction is active before attempting rollback
+    if ($conn->autocommit(false)) { // Check if autocommit is off (meaning transaction is active)
+        $conn->rollback(); // Attempt to rollback any active transaction.
+        $conn->autocommit(true); // Re-enable autocommit
+    }
     http_response_code(400); // Bad Request for most client-side errors
     error_log("Customer Invoices API Error: " . $e->getMessage());
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
@@ -314,22 +318,38 @@ function handlePaymentProcessing($conn, $user_id, $invoiceNumber, $amountToPay, 
 
 /**
  * Handles bulk deletion of invoices.
+ * Ensures that only invoices belonging to the current user are deleted.
+ * Also deletes associated bookings.
  */
-function handleDeleteBulk($conn, $user_id) {
+function handleBulkDeleteInvoices($conn, $user_id) {
     $invoice_ids = $_POST['invoice_ids'] ?? [];
+
+    // Validate input: ensure it's an array and not empty
     if (empty($invoice_ids) || !is_array($invoice_ids)) {
         throw new Exception("No invoice IDs provided for bulk deletion.");
     }
 
-    $conn->begin_transaction();
+    // Sanitize invoice IDs to prevent SQL injection
+    $invoice_ids = array_map('intval', $invoice_ids);
+    // Filter out any non-positive or invalid IDs after intval
+    $invoice_ids = array_filter($invoice_ids, function($id) { return $id > 0; });
+
+    if (empty($invoice_ids)) {
+        throw new Exception("No valid invoice IDs provided for bulk deletion after sanitization.");
+    }
+
+    $conn->begin_transaction(); // Start a transaction for atomicity
 
     try {
+        // Create placeholders for the IN clause in SQL query
         $placeholders = implode(',', array_fill(0, count($invoice_ids), '?'));
-        $types = str_repeat('i', count($invoice_ids));
+        $types = str_repeat('i', count($invoice_ids)); // 'i' for integer type
 
-        // 1. Get booking IDs associated with these invoices
+        // 1. Get booking IDs associated with these invoices AND belonging to the current user
+        // This ensures we only attempt to delete bookings linked to invoices the user owns.
         $stmt_fetch_bookings = $conn->prepare("SELECT id FROM bookings WHERE invoice_id IN ($placeholders) AND user_id = ?");
-        $stmt_fetch_bookings->bind_param($types . 'i', ...array_merge($invoice_ids, [$user_id])); // Add user_id to filter for ownership
+        // Bind parameters: first the invoice IDs, then the user ID
+        $stmt_fetch_bookings->bind_param($types . 'i', ...array_merge($invoice_ids, [$user_id]));
         $stmt_fetch_bookings->execute();
         $result_bookings = $stmt_fetch_bookings->get_result();
         $booking_ids_to_delete = [];
@@ -343,6 +363,15 @@ function handleDeleteBulk($conn, $user_id) {
             $booking_placeholders = implode(',', array_fill(0, count($booking_ids_to_delete), '?'));
             $booking_types = str_repeat('i', count($booking_ids_to_delete));
 
+            // Delete from booking_status_history first due to foreign key constraints
+            $stmt_delete_booking_history = $conn->prepare("DELETE FROM booking_status_history WHERE booking_id IN ($booking_placeholders)");
+            $stmt_delete_booking_history->bind_param($booking_types, ...$booking_ids_to_delete);
+            if (!$stmt_delete_booking_history->execute()) {
+                throw new Exception("Failed to delete associated booking history: " . $stmt_delete_booking_history->error);
+            }
+            $stmt_delete_booking_history->close();
+
+            // Then delete from bookings table
             $stmt_delete_bookings = $conn->prepare("DELETE FROM bookings WHERE id IN ($booking_placeholders)");
             $stmt_delete_bookings->bind_param($booking_types, ...$booking_ids_to_delete);
             if (!$stmt_delete_bookings->execute()) {
@@ -351,20 +380,30 @@ function handleDeleteBulk($conn, $user_id) {
             $stmt_delete_bookings->close();
         }
 
-        // 3. Delete the invoices, ensuring they belong to the user
+        // 3. Delete the invoice_items associated with the invoices
+        $stmt_delete_invoice_items = $conn->prepare("DELETE FROM invoice_items WHERE invoice_id IN ($placeholders)");
+        $stmt_delete_invoice_items->bind_param($types, ...$invoice_ids);
+        if (!$stmt_delete_invoice_items->execute()) {
+            throw new Exception("Failed to delete associated invoice items: " . $stmt_delete_invoice_items->error);
+        }
+        $stmt_delete_invoice_items->close();
+
+        // 4. Delete the invoices themselves, ensuring they belong to the user
         $stmt_delete_invoices = $conn->prepare("DELETE FROM invoices WHERE id IN ($placeholders) AND user_id = ?");
-        $stmt_delete_invoices->bind_param($types . 'i', ...array_merge($invoice_ids, [$user_id])); // Add user_id to filter for ownership
+        // Bind parameters: first the invoice IDs, then the user ID
+        $stmt_delete_invoices->bind_param($types . 'i', ...array_merge($invoice_ids, [$user_id]));
         if (!$stmt_delete_invoices->execute()) {
             throw new Exception("Failed to delete invoices: " . $stmt_delete_invoices->error);
         }
+        $deleted_invoice_count = $stmt_delete_invoices->affected_rows;
         $stmt_delete_invoices->close();
 
-        $conn->commit();
-        echo json_encode(['success' => true, 'message' => 'Selected invoices and their associated bookings have been deleted.']);
+        $conn->commit(); // Commit the transaction if all operations were successful
+        echo json_encode(['success' => true, 'message' => $deleted_invoice_count . ' invoice(s) and their associated data have been deleted.']);
 
     } catch (Exception $e) {
-        $conn->rollback();
-        error_log("Bulk delete error: " . $e->getMessage());
-        throw $e;
+        $conn->rollback(); // Rollback the transaction on any error
+        error_log("Bulk invoice deletion failed for user $user_id. Error: " . $e->getMessage());
+        throw $e; // Re-throw the exception to be caught by the main try-catch block
     }
 }

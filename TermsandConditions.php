@@ -1,9 +1,30 @@
+<?php
+// TermsandConditions.php - Terms and Conditions Page
+
+// Ensure session is started and other PHP includes are at the very top
+// No whitespace or HTML should precede this block.
+require_once __DIR__ . '/includes/db.php';
+require_once __DIR__ . '/includes/functions.php';
+require_once __DIR__ . '/includes/session.php'; // This file contains session_start()
+
+// Set page title for the header
+$pageTitle = "Catdump - Terms and Conditions";
+
+// Fetch company name from system settings if needed in the body
+$companyName = getSystemSetting('company_name');
+if (!$companyName) {
+    $companyName = 'Catdump'; // Fallback if not set in DB
+}
+
+// Now include the public header, which can safely use session variables
+include 'includes/public_header.php';
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Catdump - Terms and Conditions</title>
+    <title><?php echo htmlspecialchars($pageTitle); ?></title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -282,7 +303,6 @@
     </style>
 </head>
 <body class="antialiased">
-    <?php include 'includes/public_header.php'; ?>
     <main>
         <section class="container-box py-20 md:py-32">
             <div class="section-box">
@@ -495,7 +515,7 @@
                 <div class="contact-grid">
                     <div class="contact-info-box">
                         <div class="flex items-center mb-6">
-                            <img src="https://placehold.co/40x40/ffffff/1a73e8?text=CD" alt="Catdump Icon" class="h-10 w-10 mr-3 rounded-full">
+                            <img src="/assets/images/logocatdump.png" alt="Catdump Icon" class="h-10 w-10 mr-3 rounded-full">
                             <span class="text-xl font-semibold">Catdump Support</span>
                         </div>
                         <h2 class="text-white">Request a call with our <br> Equipment Experts</h2>

@@ -97,10 +97,10 @@ if (!$companyName) {
             box-shadow: 0 8px 20px rgba(26, 115, 232, 0.2);
         }
         .icon-box {
-            background-color: #34a853;
+            /*background-color: #34a853;*/
             color: white;
             border-radius: 50%;
-            padding: 1.8rem;
+            /*padding: 1.8rem;*/
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -600,6 +600,38 @@ if (!$companyName) {
             height: 32px;
         }
 
+        /* ADDED: CSS to prevent layout shift for typing animation */
+        #autotyping-text {
+            display: inline-block; /* Essential for min-width to work on inline element */
+            min-width: 350px; /* Adjust this value based on the longest phrase in 'phrases' array */
+            /* You might need to test different values. "Your AI Rental Assistant." is quite long. */
+            /* For very small screens, you might consider a media query to reduce this if it causes overflow */
+        }
+        /* Optional: If the H1 itself is collapsing, ensure it has a min-height */
+        .hero-section h1 {
+            min-height: 1.5em; /* Adjust based on your font-size and line-height */
+        }
+        
+        
+    #autotyping-text {
+    display: inline; /* Allow text to wrap naturally */
+    /* min-width and white-space: nowrap are removed to allow wrapping */
+    /* vertical-align is also removed as it's less critical with natural wrapping */
+}
+
+.hero-section-title-container {
+    display: block; /* Ensure it behaves as a block element for fixed height */
+    height: 8rem; /* Fixed height for 2 lines of text-5xl */
+    overflow: hidden; /* Hide any overflow if text temporarily exceeds height */
+}
+
+/* Adjust fixed height for larger screens (md breakpoint) */
+@media (min-width: 768px) {
+    .hero-section-title-container {
+        height: 16rem;
+    }
+}
+
     </style>
 </head>
 <body class="antialiased">
@@ -609,7 +641,7 @@ if (!$companyName) {
             <div class="container-box">
                 <div class="grid lg:grid-cols-2 gap-16 items-center">
                     <div class="text-center lg:text-left animate-on-scroll">
-                         <h1 class="text-5xl md:text-6xl font-extrabold leading-tight mb-6 text-gray-800">
+                         <h1 class="text-5xl md:text-6xl font-extrabold leading-tight mb-6 text-gray-800 hero-section-title-container">
                             Best Price Quotes in 60 Mins.
                             <span class="text-blue-custom" id="autotyping-text">Your AI Rental Assistant.</span>
                         </h1>
@@ -744,7 +776,7 @@ if (!$companyName) {
                         <a href="./request_quote.php" class="text-blue-custom hover:underline font-medium flex items-center justify-center">Learn More & Get Quote <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg></a>
                     </div>
                     <div class="p-10 rounded-2xl shadow-xl flex flex-col items-center text-center card-hover-effect animate-on-scroll delay-200">
-                        <img src="/assets/images/Group 1000002929.png" alt="Temporary Toilets" class="rounded-lg mb-6 shadow-md border border-gray-300">
+                        <img src="/assets/images/Group 10000029291.png" alt="Temporary Toilets" class="rounded-lg mb-6 shadow-md border border-gray-300">
                         <h3 class="text-2xl font-semibold text-gray-800 mb-4">Temporary Toilets</h3>
                         <p class="text-gray-600 leading-relaxed mb-6">Ensure comfort and sanitation with our clean, reliable, and regularly serviced portable toilets, ideal for events, busy job sites, and emergency situations requiring immediate facilities on demand.</p>
                         <a href="./request_quote.php" class="text-blue-custom hover:underline font-medium flex items-center justify-center">Learn More & Get Quote <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg></a>
@@ -785,29 +817,29 @@ if (!$companyName) {
                 <h2 class="text-4xl md:text-5xl font-bold text-center text-gray-800 mb-20 animate-on-scroll">Our Impact in Numbers</h2>
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12">
                     <div class="animate-on-scroll delay-100">
-                        <div class="icon-box mx-auto mb-6 bg-green-custom text-white">
-                            <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <div class="icon-box mx-auto mb-6 text-white">
+                            <img src="/assets/images/Group 10000029231.png" width="80" height="80">
                         </div>
                         <p class="text-5xl font-extrabold text-blue-custom mb-3" data-target="10000">0</p>
                         <p class="text-xl text-gray-700">Rentals Completed</p>
                     </div>
                     <div class="animate-on-scroll delay-200">
                         <div class="icon-box mx-auto mb-6 bg-blue-custom text-white">
-                            <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2-1.343-2-3-2z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.105A9.763 9.763 0 0112 4c4.97 0 9 3.582 9 8z"></path></svg>
+                            <img src="/assets/images/Group 10000029241.png" width="80" height="80">
                         </div>
                         <p class="text-5xl font-extrabold text-green-custom mb-3" data-target="500">0</p>
                         <p class="text-xl text-gray-700">Verified Suppliers</p>
                     </div>
                     <div class="animate-on-scroll delay-300">
                         <div class="icon-box mx-auto mb-6 bg-green-custom text-white">
-                            <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                            <img src="/assets/images/Group 10000029251.png" width="80" height="80">
                         </div>
                         <p class="text-5xl font-extrabold text-blue-custom mb-3" data-target="150">0</p>
                         <p class="text-xl text-gray-700">Cities Served</p>
                     </div>
                     <div class="animate-on-scroll delay-400">
                         <div class="icon-box mx-auto mb-6 bg-blue-custom text-white">
-                            <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 100 4m-4 12a2 2 0 100-4m14-4a2 2 0 100-4m-4 4a2 2 0 100 4m-6-4a2 2 0 100 4m-2 2a2 2 0 100 4m0-12a2 2 0 100 4"></path></svg>
+                            <img src="/assets/images/Group 10000029261.png" width="80" height="80">
                         </div>
                         <p class="text-5xl font-extrabold text-green-custom mb-3" data-target="98">0%</p>
                         <p class="text-xl text-gray-700">Customer Satisfaction</p>
@@ -829,7 +861,7 @@ if (!$companyName) {
                         <li class="flex items-center"><svg class="w-6 h-6 mr-3 text-green-custom" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>View complete rental history and reorder with ease.</li>
                     </ul>
                     <!--<a href="/customer/login.php" class="btn-primary inline-block">Login to Dashboard</a>-->
-                    <div class="flex flex-col sm:flex-row gap-5 mt-6 md:mt-0">
+                    <div class="flex flex-col sm:flex-row gap-5 mt-6 md:mt-0" style="align-items:center;">
                         <a href="https://apps.apple.com/us/app/cat-dump-customer/id6740006148 " class="inline-block transform hover:scale-105 transition duration-300">
                             <img src="https://placehold.co/150x50/000000/FFFFFF?text=App+Store" alt="Download on App Store" class="rounded-lg shadow-md">
                         </a>
@@ -838,8 +870,8 @@ if (!$companyName) {
                         </a>
                     </div>
                 </div>
-                <div class="lg:w-1/2 flex justify-center items-center relative animate-on-scroll delay-300">
-                    <img src="/assets/images/Group 1000002797.png" alt="Mobile App Screen 1" class="w-1/2 md:w-1/3 lg:w-auto max-w-xs rounded-xl shadow-2xl transform rotate-3 translate-x-8 z-10 border-4 border-gray-300">
+                <div class="lg:w-1/2 flex justify-center items-center relative animate-on-scroll delay-300" style="margin-right:50px;">
+                    <img src="/assets/images/Mobile-app-section.png" alt="Mobile App Screen 1" class="w-1/2 md:w-1/2 lg:w-auto max-w-xs rounded-xl transform  translate-x-8 z-10" style="min-width: 120%;">
                     <!--<img src="/assets/images/mobile_app_screen_2.png" alt="Mobile App Screen 2" class="w-1/2 md:w-1/3 lg:w-auto max-w-xs rounded-xl shadow-2xl transform -rotate-3 -translate-x-8 z-20 border-4 border-gray-300">-->
                 </div>
             </div>
@@ -1125,11 +1157,12 @@ if (!$companyName) {
 
                 function typeWriter() {
                     const currentPhrase = phrases[phraseIndex];
+                    // Update text content
+                    autotypingTextElement.textContent = currentPhrase.substring(0, charIndex + (isDeleting ? 0 : 1));
+
                     if (isDeleting) {
-                        autotypingTextElement.textContent = currentPhrase.substring(0, charIndex - 1);
                         charIndex--;
                     } else {
-                        autotypingTextElement.textContent = currentPhrase.substring(0, charIndex + 1);
                         charIndex++;
                     }
 

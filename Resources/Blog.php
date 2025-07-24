@@ -1,10 +1,10 @@
 <?php
-// Resources/Blog.php
+// Services/Dumpster-Rentals.php
 
 // Include necessary files
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/functions.php';
-
+require_once __DIR__ . '/../includes/session.php';
 // Fetch company name from system settings
 $companyName = getSystemSetting('company_name');
 if (!$companyName) {

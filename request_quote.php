@@ -19,7 +19,6 @@ if ($user_id) {
     $stmt_user->execute();
     $user_profile_data = $stmt_user->get_result()->fetch_assoc();
     $stmt_user->close();
-    $conn->close();
 }
 
 // Function to format pre-filled value, avoiding 'Undefined array key' warnings

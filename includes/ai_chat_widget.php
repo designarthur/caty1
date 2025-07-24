@@ -67,289 +67,310 @@ $isUserLoggedIn = isset($_SESSION['user_id']);
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const chatWidget = document.getElementById('aiChatWidget');
-        const closeChatButton = document.getElementById('closeChat');
-        const chatMessages = document.getElementById('chatMessages');
-        const chatInput = document.getElementById('chatInput');
-        const sendMessageButton = document.getElementById('sendMessage');
-        const typingIndicator = document.getElementById('typingIndicator');
-        const mediaFileInput = document.getElementById('mediaFileInput');
-        const fileUploadPreview = document.getElementById('fileUploadPreview');
-        const previewFileName = document.getElementById('previewFileName');
-        const removeFileButton = document.getElementById('removeFileButton');
-        const quickReplyButtonsContainer = document.getElementById('quickReplyButtons');
+   document.addEventListener('DOMContentLoaded', function() {
+    const chatWidget = document.getElementById('aiChatWidget');
+    const closeChatButton = document.getElementById('closeChat');
+    const chatMessages = document.getElementById('chatMessages');
+    const chatInput = document.getElementById('chatInput');
+    const sendMessageButton = document.getElementById('sendMessage');
+    const typingIndicator = document.getElementById('typingIndicator');
+    const mediaFileInput = document.getElementById('mediaFileInput');
+    const fileUploadPreview = document.getElementById('fileUploadPreview');
+    const previewFileName = document.getElementById('previewFileName');
+    const removeFileButton = document.getElementById('removeFileButton');
+    const quickReplyButtonsContainer = document.getElementById('quickReplyButtons');
 
-        let isChatOpen = false;
-        let selectedFile = null;
-        let currentConversationId = null;
+    let isChatOpen = false;
+    let selectedFile = null;
+    let currentConversationId = null;
 
-        const isUserLoggedIn = <?php echo json_encode($isUserLoggedIn); ?>;
+    const isUserLoggedIn = <?php echo json_encode($isUserLoggedIn); ?>;
 
-        if (!isUserLoggedIn) {
+    if (!isUserLoggedIn) {
+        sessionStorage.removeItem('conversation_id');
+    } else {
+        const storedId = sessionStorage.getItem('conversation_id');
+        if (storedId) {
+            currentConversationId = storedId;
+        }
+    }
+
+    window.showAIChat = function(initialServiceType = 'general') {
+        chatWidget.classList.remove('translate-y-full', 'md:translate-x-full');
+        chatWidget.style.transform = 'translateY(0) translateX(0)';
+
+        isChatOpen = true;
+        document.body.style.overflow = 'hidden';
+        chatInput.focus();
+
+        const storedConversationId = sessionStorage.getItem('conversation_id');
+        if (!storedConversationId || initialServiceType === 'general') {
             sessionStorage.removeItem('conversation_id');
-        } else {
-            const storedId = sessionStorage.getItem('conversation_id');
-            if (storedId) {
-                currentConversationId = storedId;
-            }
-        }
-
-        window.showAIChat = function(initialServiceType = 'general') {
-            chatWidget.classList.remove('translate-y-full', 'md:translate-x-full');
-            chatWidget.style.transform = 'translateY(0) translateX(0)';
-
-            isChatOpen = true;
-            document.body.style.overflow = 'hidden';
-            chatInput.focus();
-
-            const storedConversationId = sessionStorage.getItem('conversation_id');
-            if (!storedConversationId || initialServiceType === 'general') {
-                sessionStorage.removeItem('conversation_id');
-                currentConversationId = null;
-                chatMessages.innerHTML = `
-                    <div class="flex justify-start mb-2">
-                        <div class="bg-blue-200 text-blue-800 rounded-lg p-3 max-w-[80%]">
-                            Hi! I'm your AI assistant from <?php echo htmlspecialchars($companyName); ?>. How can I help you with your project today? You can tell me what you need, or even upload a photo of your project or junk.
-                        </div>
+            currentConversationId = null;
+            chatMessages.innerHTML = `
+                <div class="flex justify-start mb-2">
+                    <div class="bg-blue-200 text-blue-800 rounded-lg p-3 max-w-[80%]">
+                        Hi! I'm your AI assistant from <?php echo htmlspecialchars($companyName); ?>. How can I help you with your project today? You can tell me what you need, or even upload a photo of your project or junk.
                     </div>
-                `;
-                sendUserMessageToAI('', initialServiceType);
-            } else {
-                currentConversationId = storedConversationId;
-            }
-        };
+                </div>
+            `;
+            // Immediately send an empty message to trigger the AI's first turn based on initialServiceType
+            sendUserMessageToAI('', initialServiceType);
+        } else {
+            currentConversationId = storedConversationId;
+            // When reopening an existing conversation, try to fetch its history to display.
+            // This part is not fully implemented in the provided code, but for a better UX,
+            // you'd typically fetch previous messages here. For now, it just opens the chat.
+        }
+    };
 
-        closeChatButton.addEventListener('click', function() {
-            chatWidget.classList.add('translate-y-full', 'md:translate-x-full');
-            chatWidget.style.transform = '';
-            isChatOpen = false;
-            document.body.style.overflow = '';
+    closeChatButton.addEventListener('click', function() {
+        chatWidget.classList.add('translate-y-full', 'md:translate-x-full');
+        chatWidget.style.transform = '';
+        isChatOpen = false;
+        document.body.style.overflow = '';
+        quickReplyButtonsContainer.classList.add('hidden');
+        quickReplyButtonsContainer.innerHTML = '';
+    });
+
+    function addMessage(sender, message, isHtml = false, suggestedReplies = []) {
+        const messageElement = document.createElement('div');
+        messageElement.classList.add('flex', 'mb-2', sender === 'user' ? 'justify-end' : 'justify-start');
+        
+        const contentElement = document.createElement('div');
+        contentElement.classList.add('rounded-lg', 'p-3', 'max-w-[80%]');
+        if (sender === 'user') {
+            contentElement.classList.add('bg-blue-500', 'text-white');
+        } else {
+            contentElement.classList.add('bg-gray-200', 'text-gray-800');
+        }
+
+        if (isHtml) {
+            contentElement.innerHTML = message;
+        } else {
+            // Use marked.parse for markdown rendering for AI messages
+            contentElement.innerHTML = sender === 'assistant' ? marked.parse(message) : message;
+        }
+        
+        messageElement.appendChild(contentElement);
+        chatMessages.appendChild(messageElement);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        // Display suggested replies if provided for assistant messages
+        if (sender === 'assistant' && suggestedReplies.length > 0) {
+            displayQuickReplyButtons(suggestedReplies);
+        } else {
+            // Hide quick replies if it's a user message or no replies from AI
             quickReplyButtonsContainer.classList.add('hidden');
             quickReplyButtonsContainer.innerHTML = '';
-        });
-
-        function addMessage(sender, message, isHtml = false) {
-            const messageElement = document.createElement('div');
-            messageElement.classList.add('flex', 'mb-2', sender === 'user' ? 'justify-end' : 'justify-start');
-            
-            const contentElement = document.createElement('div');
-            contentElement.classList.add('rounded-lg', 'p-3', 'max-w-[80%]');
-            if (sender === 'user') {
-                contentElement.classList.add('bg-blue-500', 'text-white');
-            } else {
-                contentElement.classList.add('bg-gray-200', 'text-gray-800');
-            }
-
-            if (isHtml) {
-                contentElement.innerHTML = message;
-            } else {
-                contentElement.innerHTML = sender === 'assistant' ? marked.parse(message) : message;
-            }
-            
-            messageElement.appendChild(contentElement);
-            chatMessages.appendChild(messageElement);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
         }
+    }
 
-        function displayQuickReplyButtons(buttons) {
+    function displayQuickReplyButtons(buttons) {
+        quickReplyButtonsContainer.innerHTML = '';
+        if (buttons && buttons.length > 0) {
+            quickReplyButtonsContainer.classList.remove('hidden');
+            buttons.forEach(buttonData => {
+                const button = document.createElement('button');
+                button.classList.add('px-4', 'py-2', 'bg-gray-200', 'text-gray-800', 'rounded-full', 'hover:bg-gray-300', 'focus:outline-none', 'focus:ring-2', 'focus:ring-gray-400', 'text-sm');
+                button.textContent = buttonData.text;
+                button.onclick = () => {
+                    // When a quick reply is clicked, send its value as a user message
+                    sendUserMessageToAI(buttonData.value);
+                };
+                quickReplyButtonsContainer.appendChild(button);
+            });
+        } else {
+            quickReplyButtonsContainer.classList.add('hidden');
             quickReplyButtonsContainer.innerHTML = '';
-            if (buttons && buttons.length > 0) {
-                quickReplyButtonsContainer.classList.remove('hidden');
-                buttons.forEach(buttonData => {
-                    const button = document.createElement('button');
-                    button.classList.add('px-4', 'py-2', 'bg-gray-200', 'text-gray-800', 'rounded-full', 'hover:bg-gray-300', 'focus:outline-none', 'focus:ring-2', 'focus:ring-gray-400', 'text-sm');
-                    button.textContent = buttonData.text;
-                    button.onclick = () => {
-                        chatInput.value = buttonData.value;
-                        sendMessageButton.click();
-                    };
-                    quickReplyButtonsContainer.appendChild(button);
-                });
-            } else {
-                quickReplyButtonsContainer.classList.add('hidden');
-            }
         }
+    }
 
-        async function sendUserMessageToAI(message, initialServiceType = null) {
+    async function sendUserMessageToAI(message, initialServiceType = null) {
+        if (message.trim() !== '' || initialServiceType !== null) { // Only add user message if it's not an initial AI trigger with empty message
+            // Add user message to chat display before sending to API
             if (message.trim() !== '') {
-                addMessage('user', message);
+                 addMessage('user', message);
             }
-            chatInput.value = '';
-            typingIndicator.classList.remove('hidden'); // Show typing indicator
-            quickReplyButtonsContainer.classList.add('hidden');
-            quickReplyButtonsContainer.innerHTML = '';
+        }
+        
+        chatInput.value = '';
+        typingIndicator.classList.remove('hidden'); // Show typing indicator
+        quickReplyButtonsContainer.classList.add('hidden'); // Hide replies immediately
+        quickReplyButtonsContainer.innerHTML = '';
 
-            const formData = new FormData();
-            formData.append('message', message);
-            if (initialServiceType) {
-                formData.append('initial_service_type', initialServiceType);
+        const formData = new FormData();
+        formData.append('message', message);
+        if (initialServiceType) {
+            formData.append('initial_service_type', initialServiceType);
+        }
+        
+        const filesToSend = mediaFileInput && mediaFileInput.processedFiles ? mediaFileInput.processedFiles : [];
+
+        if (filesToSend.length > 0) {
+            for (const file of filesToSend) {
+                formData.append('media_files[]', file);
             }
-            
-            // Use processed files from aiChatFileInput.processedFiles if available
-            const filesToSend = mediaFileInput && mediaFileInput.processedFiles ? mediaFileInput.processedFiles : [];
+            mediaFileInput.processedFiles = []; // Clear processed files after appending
+            fileUploadPreview.classList.add('hidden');
+            previewFileName.textContent = '';
+        }
 
-            if (filesToSend.length > 0) {
-                for (const file of filesToSend) {
-                    formData.append('media_files[]', file);
+        if (currentConversationId) {
+            formData.append('conversation_id', currentConversationId);
+        }
+
+        try {
+            const response = await fetch('/api/openai_chat.php', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            typingIndicator.classList.add('hidden'); // Hide typing indicator
+
+            if (data.success) {
+                let aiResponseText = data.ai_response;
+                let suggestedReplies = data.suggested_replies || [];
+
+                // Render AI message and suggested replies
+                addMessage('assistant', aiResponseText, false, suggestedReplies);
+
+                if (data.conversation_id) {
+                    sessionStorage.setItem('conversation_id', data.conversation_id);
+                    currentConversationId = data.conversation_id;
+                } else if (data.conversation_id === null) {
+                    sessionStorage.removeItem('conversation_id');
+                    currentConversationId = null;
                 }
-                // Clear the processed files array after appending them to FormData
-                mediaFileInput.processedFiles = [];
-                fileUploadPreview.classList.add('hidden');
-                previewFileName.textContent = '';
-            }
 
-
-            if (currentConversationId) {
-                formData.append('conversation_id', currentConversationId);
-            }
-
-            try {
-                const response = await fetch('/api/openai_chat.php', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const data = await response.json();
-
-                typingIndicator.classList.add('hidden'); // Hide typing indicator
-
-                if (data.success) {
-                    addMessage('assistant', data.ai_response);
-                    if (data.conversation_id) {
-                        sessionStorage.setItem('conversation_id', data.conversation_id);
-                        currentConversationId = data.conversation_id;
-                    } else if (data.conversation_id === null) {
-                        sessionStorage.removeItem('conversation_id');
-                        currentConversationId = null;
-                    }
-
-                    if (data.suggested_replies && data.suggested_replies.length > 0) {
-                        displayQuickReplyButtons(data.suggested_replies);
-                    }
-
-                    if (data.redirect_url) {
-                        setTimeout(() => {
-                            window.location.href = data.redirect_url;
-                        }, 1000);
-                    }
-                } else {
-                    addMessage('assistant', 'Error: ' + (data.message || 'Something went wrong.'));
-                    displayQuickReplyButtons([
-                        {text: "Try again", value: "Please try that again."},
-                        {text: "Start over", value: "I'd like to start a new project."}
-                    ]);
+                if (data.redirect_url) {
+                    showToast('Redirecting...', 'info');
+                    setTimeout(() => {
+                        window.location.href = data.redirect_url;
+                    }, 1000);
                 }
-            } catch (error) {
-                console.error('API Error:', error);
-                typingIndicator.classList.add('hidden');
-                addMessage('assistant', 'Sorry, I\'m having trouble connecting right now. Please try again in a moment.');
-                 displayQuickReplyButtons([
+            } else {
+                addMessage('assistant', 'Error: ' + (data.message || 'Something went wrong.'));
+                displayQuickReplyButtons([
                     {text: "Try again", value: "Please try that again."},
                     {text: "Start over", value: "I'd like to start a new project."}
                 ]);
             }
+        } catch (error) {
+            console.error('API Error:', error);
+            typingIndicator.classList.add('hidden');
+            addMessage('assistant', 'Sorry, I\'m having trouble connecting right now. Please try again in a moment.');
+            displayQuickReplyButtons([
+                {text: "Try again", value: "Please try that again."},
+                {text: "Start over", value: "I'd like to start a new project."}
+            ]);
         }
+    }
 
-        sendMessageButton.addEventListener('click', function() {
-            sendUserMessageToAI(chatInput.value);
-        });
+    sendMessageButton.addEventListener('click', function() {
+        sendUserMessageToAI(chatInput.value);
+    });
 
-        chatInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                sendUserMessageToAI(chatInput.value);
-            }
-        });
-
-        mediaFileInput.addEventListener('change', async function(e) {
-            if (e.target.files.length > 0) {
-                const files = Array.from(e.target.files);
-                let fileNames = files.map(f => f.name).join(', ');
-                previewFileName.textContent = `Selected: ${fileNames}`;
-                fileUploadPreview.classList.remove('hidden');
-
-                const processedFiles = [];
-                for (const file of files) {
-                    if (file.type.startsWith('video/')) {
-                        window.showToast(`Processing video: ${file.name}...`, 'info');
-                        try {
-                            // Extract 10 frames from the video
-                            const frames = await window.extractFramesFromVideo(file, 10);
-                            frames.forEach((frame, index) => {
-                                const blob = window.dataURLtoBlob(frame);
-                                processedFiles.push(new File([blob], `frame_${file.name}_${index}.jpeg`, { type: 'image/jpeg' }));
-                            });
-                            window.showToast(`Extracted ${frames.length} frames from ${file.name}.`, 'success');
-                        } catch (error) {
-                            console.error('Error extracting frames:', error);
-                            window.showToast(`Failed to extract frames from ${file.name}. Sending original video.`, 'error');
-                            processedFiles.push(file); // Fallback to sending original video if frame extraction fails
-                        }
-                    } else {
-                        processedFiles.push(file); // For images, just push the original file
-                    }
-                }
-                mediaFileInput.processedFiles = processedFiles; // Store processed files
-            } else {
-                mediaFileInput.processedFiles = [];
-                previewFileName.textContent = '';
-                fileUploadPreview.classList.add('hidden');
-            }
-        });
-
-        removeFileButton.addEventListener('click', function() {
-            mediaFileInput.value = ''; // Clear file input
-            mediaFileInput.processedFiles = []; // Clear processed files
-            previewFileName.textContent = '';
-            fileUploadPreview.classList.add('hidden');
-        });
-
-        if (window.innerWidth >= 768) {
-            const chatHeader = chatWidget.querySelector('.p-4:first-child');
-            let isDragging = false;
-            let currentX;
-            let currentY;
-            let initialX;
-            let initialY;
-            let xOffset = 0;
-            let yOffset = 0;
-
-            chatHeader.addEventListener("mousedown", dragStart);
-            chatWidget.addEventListener("mouseup", dragEnd);
-            chatWidget.addEventListener("mousemove", drag);
-
-            function dragStart(e) {
-                initialX = e.clientX - xOffset;
-                initialY = e.clientY - yOffset;
-
-                if (e.target.closest('#aiChatWidget > div:first-child') === chatHeader) {
-                    isDragging = true;
-                }
-            }
-
-            function dragEnd(e) {
-                initialX = currentX;
-                initialY = currentY;
-                isDragging = false;
-            }
-
-            function drag(e) {
-                if (isDragging) {
-                    e.preventDefault();
-                    currentX = e.clientX - initialX;
-                    currentY = e.clientY - initialY;
-
-                    xOffset = currentX;
-                    yOffset = currentY;
-
-                    setTranslate(currentX, currentY, chatWidget);
-                }
-            }
-
-            function setTranslate(xPos, yPos, el) {
-                el.style.transform = "translate3d(" + xPos + "px, " + yPos + "px, 0)";
-            }
+    chatInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) { // Allow Shift+Enter for new line
+            e.preventDefault();
+            sendMessageButton.click();
         }
     });
+
+    mediaFileInput.addEventListener('change', async function(e) {
+        if (e.target.files.length > 0) {
+            const files = Array.from(e.target.files);
+            let fileNames = files.map(f => f.name).join(', ');
+            previewFileName.textContent = `Selected: ${fileNames}`;
+            fileUploadPreview.classList.remove('hidden');
+
+            const processedFiles = [];
+            for (const file of files) {
+                if (file.type.startsWith('video/')) {
+                    window.showToast(`Processing video: ${file.name}...`, 'info');
+                    try {
+                        const frames = await window.extractFramesFromVideo(file, 10);
+                        frames.forEach((frame, index) => {
+                            const blob = window.dataURLtoBlob(frame);
+                            processedFiles.push(new File([blob], `frame_${file.name}_${index}.jpeg`, { type: 'image/jpeg' }));
+                        });
+                        window.showToast(`Extracted ${frames.length} frames from ${file.name}.`, 'success');
+                    } catch (error) {
+                        console.error('Error extracting frames:', error);
+                        window.showToast(`Failed to extract frames from ${file.name}. Sending original video.`, 'error');
+                        processedFiles.push(file);
+                    }
+                } else {
+                    processedFiles.push(file);
+                }
+            }
+            mediaFileInput.processedFiles = processedFiles;
+        } else {
+            mediaFileInput.processedFiles = [];
+            previewFileName.textContent = '';
+            fileUploadPreview.classList.add('hidden');
+        }
+    });
+
+    removeFileButton.addEventListener('click', function() {
+        mediaFileInput.value = '';
+        mediaFileInput.processedFiles = [];
+        previewFileName.textContent = '';
+        fileUploadPreview.classList.add('hidden');
+    });
+
+    // Drag functionality for desktop modal
+    if (window.innerWidth >= 768) {
+        const chatHeader = chatWidget.querySelector('div:first-child'); // Selects the header by its tag
+        let isDragging = false;
+        let currentX;
+        let currentY;
+        let initialX;
+        let initialY;
+        let xOffset = 0;
+        let yOffset = 0;
+
+        chatHeader.addEventListener("mousedown", dragStart);
+        chatWidget.addEventListener("mouseup", dragEnd);
+        chatWidget.addEventListener("mousemove", drag);
+
+        function dragStart(e) {
+            initialX = e.clientX - xOffset;
+            initialY = e.clientY - yOffset;
+
+            // Check if the mousedown event occurred directly on the header or its immediate children
+            // to prevent dragging from within input fields or buttons inside the header.
+            if (e.target === chatHeader || chatHeader.contains(e.target) && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT') {
+                isDragging = true;
+            }
+        }
+
+        function dragEnd(e) {
+            initialX = currentX;
+            initialY = currentY;
+            isDragging = false;
+        }
+
+        function drag(e) {
+            if (isDragging) {
+                e.preventDefault();
+                currentX = e.clientX - initialX;
+                currentY = e.clientY - initialY;
+
+                xOffset = currentX;
+                yOffset = currentY;
+
+                setTranslate(currentX, currentY, chatWidget);
+            }
+        }
+
+        function setTranslate(xPos, yPos, el) {
+            // Apply translation directly to the modal for dragging
+            el.style.transform = "translate3d(" + xPos + "px, " + yPos + "px, 0)";
+        }
+    }
+});
 </script>

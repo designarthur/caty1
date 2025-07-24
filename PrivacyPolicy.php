@@ -1,9 +1,30 @@
+<?php
+// PrivacyPolicy.php - Privacy Policy Page
+
+// Ensure session is started and other PHP includes are at the very top
+// No whitespace or HTML should precede this block.
+require_once __DIR__ . '/includes/db.php';
+require_once __DIR__ . '/includes/functions.php';
+require_once __DIR__ . '/includes/session.php'; // This file contains session_start()
+
+// Set page title for the header
+$pageTitle = "Catdump - Privacy Policy";
+
+// Fetch company name from system settings if needed in the body
+$companyName = getSystemSetting('company_name');
+if (!$companyName) {
+    $companyName = 'Catdump'; // Fallback if not set in DB
+}
+
+// Now include the public header, which can safely use session variables
+include 'includes/public_header.php';
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Privacy Policy - Catdump</title>
+    <title><?php echo htmlspecialchars($pageTitle); ?></title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -157,64 +178,6 @@
     </style>
 </head>
 <body class="antialiased">
-    <?php include 'includes/public_header.php'; ?>
-
-    <!-- Mobile Navigation Overlay -->
-    <div id="mobile-nav-overlay" class="mobile-nav-overlay">
-        <div class="mobile-nav-content">
-            <button id="close-mobile-menu" class="absolute top-6 right-6 p-3 rounded-md text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-custom">
-                <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-            </button>
-            <nav class="flex flex-col space-y-6">
-                <a href="Homepage.html" class="text-gray-700 hover:text-blue-custom">How It Works</a>
-                
-                <div class="relative">
-                    <a href="#" class="text-gray-700 hover:text-blue-custom flex items-center justify-center" data-dropdown-toggle="mobile-services-dropdown">
-                        Services
-                        <svg class="w-6 h-6 ml-2 transform transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" data-dropdown-arrow="mobile-services-dropdown"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                    </a>
-                    <div id="mobile-services-dropdown" class="mobile-dropdown-content flex flex-col items-center">
-                        <a href="#">Dumpster Rentals</a>
-                        <a href="#">Temporary Toilets</a>
-                        <a href="#">Storage Containers</a>
-                        <a href="#">Junk Removal</a>
-                        <a href="#">Relocation & Swap</a>
-                    </div>
-                </div>
-
-                <div class="relative">
-                    <a href="#" class="text-gray-700 hover:text-blue-custom flex items-center justify-center" data-dropdown-toggle="mobile-company-dropdown">
-                        Company
-                        <svg class="w-6 h-6 ml-2 transform transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" data-dropdown-arrow="mobile-company-dropdown"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                    </a>
-                    <div id="mobile-company-dropdown" class="mobile-dropdown-content flex flex-col items-center">
-                        <a href="#">About Us</a>
-                        <a href="#">Careers</a>
-                        <a href="#">Press/Media</a>
-                        <a href="#">Sustainability</a>
-                        <a href="#">Testimonials</a>
-                    </div>
-                </div>
-
-                <div class="relative">
-                    <a href="#" class="text-gray-700 hover:text-blue-custom flex items-center justify-center" data-dropdown-toggle="mobile-resources-dropdown">
-                        Resources
-                        <svg class="w-6 h-6 ml-2 transform transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" data-dropdown-arrow="mobile-resources-dropdown"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                    </a>
-                    <div id="mobile-resources-dropdown" class="mobile-dropdown-content flex flex-col items-center">
-                        <a href="#">Pricing & Finance</a>
-                        <a href="#">Customer Resources</a>
-                        <a href="#">Blog/News</a>
-                        <a href="#">FAQs</a>
-                        <a href="#">Support Center</a>
-                        <a href="#">Contact</a>
-                    </div>
-                </div>
-                <a href="#" class="btn-primary py-2.5 px-5 text-base shadow-md hover:shadow-lg transition duration-300">Customer Portal</a>
-            </nav>
-        </div>
-    </div>
-
     <main class="py-20 md:py-32">
         <section class="container-box">
             <div class="section-box">

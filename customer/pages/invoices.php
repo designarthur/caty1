@@ -415,7 +415,7 @@ function getStatusBadgeClass($status) {
                 <p class="text-gray-600"><span class="font-medium">Status:</span> <span id="detail-invoice-status" class="font-semibold <?php echo getStatusBadgeClass($invoice_detail['status']); ?>"><?php echo htmlspecialchars(strtoupper(str_replace('_', ' ', (string)($invoice_detail['status'] ?? '')))); ?></span></p>
                 <p class="text-gray-600"><span class="font-medium">Transaction ID:</span> <?php echo htmlspecialchars($invoice_detail['transaction_id'] ?? 'N/A'); ?></p>
                 <p class="text-gray-600"><span class="font-medium">Payment Method:</span> <?php echo htmlspecialchars($invoice_detail['payment_method'] ?? 'N/A'); ?></p>
-                <?php if (!empty($invoice_detail['booking_start_date'])): ?>
+                <?php if (!empty($invoice_detail['booking_id'])): ?>
                     <p class="text-gray-600"><span class="font-medium">Rental Start Date:</span> <?php echo (new DateTime($invoice_detail['booking_start_date']))->format('Y-m-d'); ?></p>
                 <?php endif; ?>
                 <?php if (!empty($invoice_detail['booking_end_date'])): ?>
@@ -521,6 +521,18 @@ function getStatusBadgeClass($status) {
     </form>
 </div>
 
+<!-- Custom Confirmation Modal HTML Structure -->
+<div id="confirmation-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white p-8 rounded-lg shadow-xl max-w-sm w-full mx-4">
+        <h3 class="text-xl font-bold text-gray-800 mb-4" id="confirmation-modal-title">Confirm Action</h3>
+        <p class="text-gray-700 mb-6" id="confirmation-modal-message">Are you sure you want to proceed with this action?</p>
+        <div class="flex justify-end space-x-4">
+            <button id="cancel-confirm-btn" class="px-5 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition-colors duration-200">Cancel</button>
+            <button id="confirm-action-btn" class="px-5 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200">Confirm</button>
+        </div>
+    </div>
+</div>
+
 <script>
 (function() {
     window.loadCustomerInvoices = function(params = {}) {
@@ -575,10 +587,10 @@ function getStatusBadgeClass($status) {
             const response = await fetch('/api/customer/invoices.php', { method: 'POST', body: formData });
             const result = await response.json();
             if (result.success) {
-                window.showToast('Payment successful!', 'success');
+                window.showToast(result.message || 'Payment successful!', 'success');
                 window.loadCustomerInvoices({ invoice_id: formData.get('invoice_id') });
             } else {
-                window.showToast(result.message, 'error');
+                window.showToast(result.message || 'Failed to process payment.', 'error');
             }
         } catch (error) {
             window.showToast('Payment error. Please try again.', 'error');
@@ -618,6 +630,179 @@ function getStatusBadgeClass($status) {
     const paymentForm = document.getElementById('payment-form');
     if (paymentForm) {
         paymentForm.addEventListener('submit', handlePaymentFormSubmit);
+    }
+
+    // --- Custom Confirmation Modal Logic (NEW) ---
+    const confirmationModal = document.getElementById('confirmation-modal');
+    const confirmActionBtn = document.getElementById('confirm-action-btn');
+    const cancelConfirmBtn = document.getElementById('cancel-confirm-btn');
+    const confirmationModalTitle = document.getElementById('confirmation-modal-title');
+    const confirmationModalMessage = document.getElementById('confirmation-modal-message');
+
+    let resolveConfirmationPromise;
+
+    /**
+     * Shows a custom confirmation modal.
+     * @param {string} message The message to display in the modal.
+     * @param {string} [title='Confirm Action'] The title of the modal.
+     * @returns {Promise<boolean>} A promise that resolves to true if confirmed, false otherwise.
+     */
+    window.showConfirmationModal = function(message, title = 'Confirm Action') {
+        confirmationModalTitle.textContent = title;
+        confirmationModalMessage.textContent = message;
+        confirmationModal.classList.remove('hidden');
+
+        return new Promise(resolve => {
+            resolveConfirmationPromise = resolve;
+        });
+    };
+
+    // Event listener for the Confirm button in the modal
+    if (confirmActionBtn) {
+        confirmActionBtn.addEventListener('click', () => {
+            confirmationModal.classList.add('hidden');
+            if (resolveConfirmationPromise) {
+                resolveConfirmationPromise(true);
+            }
+        });
+    }
+
+    // Event listener for the Cancel button in the modal
+    if (cancelConfirmBtn) {
+        cancelConfirmBtn.addEventListener('click', () => {
+            confirmationModal.classList.add('hidden');
+            if (resolveConfirmationPromise) {
+                resolveConfirmationPromise(false);
+            }
+        });
+    }
+
+    // Close modal if clicking outside (optional, but good UX)
+    if (confirmationModal) {
+        confirmationModal.addEventListener('click', (event) => {
+            if (event.target === confirmationModal) {
+                confirmationModal.classList.add('hidden');
+                if (resolveConfirmationPromise) {
+                    resolveConfirmationPromise(false); // Treat outside click as cancel
+                }
+            }
+        });
+    }
+
+    // --- Bulk Delete Invoices Logic (UPDATED to use custom modal) ---
+    const selectAllInvoicesCheckbox = document.getElementById('select-all-invoices');
+    const bulkDeleteButton = document.getElementById('bulk-delete-invoices-btn');
+    const invoiceCheckboxes = document.querySelectorAll('.invoice-checkbox'); // Get all checkboxes
+
+    // Handle 'Select All' checkbox functionality
+    if (selectAllInvoicesCheckbox) {
+        selectAllInvoicesCheckbox.addEventListener('change', function() {
+            invoiceCheckboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+            // Also update the visibility of the bulk delete button
+            const anyChecked = Array.from(invoiceCheckboxes).some(checkbox => checkbox.checked);
+            if (bulkDeleteButton) {
+                if (anyChecked) {
+                    bulkDeleteButton.classList.remove('hidden');
+                } else {
+                    bulkDeleteButton.classList.add('hidden');
+                }
+            }
+        });
+    }
+
+    // Handle 'Delete Selected' button click
+    if (bulkDeleteButton) {
+        bulkDeleteButton.addEventListener('click', async function() {
+            // Get all selected invoice IDs
+            const selectedInvoiceIds = Array.from(invoiceCheckboxes)
+                                          .filter(checkbox => checkbox.checked)
+                                          .map(checkbox => checkbox.value);
+
+            // Check if any invoices are selected
+            if (selectedInvoiceIds.length === 0) {
+                window.showToast('Please select at least one invoice to delete.', 'warning');
+                return;
+            }
+
+            // Use the custom confirmation modal instead of browser's confirm()
+            const confirmed = await window.showConfirmationModal(
+                `Are you sure you want to delete ${selectedInvoiceIds.length} selected invoice(s)? This action cannot be undone.`,
+                'Confirm Deletion'
+            );
+
+            if (!confirmed) {
+                window.showToast('Deletion cancelled.', 'info');
+                return; // User cancelled the deletion
+            }
+
+            window.showToast('Deleting invoices...', 'info');
+
+            // Prepare form data for the AJAX request
+            const formData = new FormData();
+            formData.append('action', 'bulk_delete_invoices'); // Action for the backend API
+            selectedInvoiceIds.forEach(id => {
+                formData.append('invoice_ids[]', id); // Append each selected ID
+            });
+
+            // Get CSRF token from the hidden input field
+            const csrfTokenInput = document.querySelector('input[name="csrf_token"]');
+            if (csrfTokenInput && csrfTokenInput.value) {
+                formData.append('csrf_token', csrfTokenInput.value);
+            } else {
+                window.showToast('CSRF token missing. Cannot proceed with deletion.', 'error');
+                return;
+            }
+
+            try {
+                // Send AJAX request to the invoices API endpoint
+                const response = await fetch('/api/customer/invoices.php', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json(); // Parse the JSON response from the server
+
+                if (result.success) {
+                    window.showToast(result.message || 'Selected invoices deleted successfully!', 'success');
+                    // Reload the invoice list to reflect the changes after successful deletion
+                    // This will also uncheck all checkboxes and hide the bulk delete button if no items are left
+                    window.loadCustomerInvoices({});
+                } else {
+                    window.showToast(result.message || 'Failed to delete selected invoices.', 'error');
+                }
+            } catch (error) {
+                console.error('Error during bulk invoice deletion:', error);
+                window.showToast('An unexpected error occurred during deletion. Please try again.', 'error');
+            }
+        });
+    }
+
+    // Add event listener to individual checkboxes to show/hide the bulk delete button
+    document.body.addEventListener('change', function(event) {
+        if (event.target.classList.contains('invoice-checkbox')) {
+            const anyChecked = Array.from(invoiceCheckboxes).some(checkbox => checkbox.checked);
+            if (bulkDeleteButton) {
+                if (anyChecked) {
+                    bulkDeleteButton.classList.remove('hidden');
+                } else {
+                    bulkDeleteButton.classList.add('hidden');
+                }
+            }
+        }
+    });
+
+    // Initial check on page load to see if any checkboxes are already checked (e.g., after a partial load)
+    // This is useful if the dashboard is loaded via AJAX and some checkboxes might retain state.
+    // For a full page load, this might not be strictly necessary, but good for robustness.
+    const anyCheckedOnLoad = Array.from(invoiceCheckboxes).some(checkbox => checkbox.checked);
+    if (bulkDeleteButton) {
+        if (anyCheckedOnLoad) {
+            bulkDeleteButton.classList.remove('hidden');
+        } else {
+            bulkDeleteButton.classList.add('hidden');
+        }
     }
 })();
 </script>

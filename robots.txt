@@ -1,0 +1,41 @@
+#
+# robots.txt for catdump.com
+#
+# This file tells search engine crawlers which pages or files the crawler
+# can or can't request from your site.
+#
+
+User-agent: *
+# This applies to all web crawlers (e.g., Googlebot, Bingbot).
+
+# --- Allow Full Access ---
+# We want search engines to crawl and index the public-facing pages,
+# so we start by allowing everything. Specific disallow rules below
+# will override this for sensitive areas.
+Allow: /
+
+# --- Disallow Sensitive Directories ---
+# This prevents search engines from crawling and indexing backend,
+# customer-specific, or non-public directories.
+Disallow: /admin/
+Disallow: /customer/
+Disallow: /includes/
+Disallow: /api/
+Disallow: /vendor/
+Disallow: /uploads/
+Disallow: /logs/
+
+# --- Disallow Specific Sensitive Files ---
+# This adds an extra layer of protection for specific files
+# that should not appear in search results.
+Disallow: /composer.json
+Disallow: /php.ini
+Disallow: /.user.ini
+Disallow: /test_smtp.php
+Disallow: /test.php
+
+# --- Sitemap ---
+# Providing the location of your sitemap helps search engines
+# discover all the important pages on your site more efficiently.
+# Replace with the actual URL of your sitemap once it's generated.
+Sitemap: https://catdump.com/sitemap.xml

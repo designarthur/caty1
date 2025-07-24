@@ -1,4 +1,16 @@
-<!DOCTYPE html>
+<?php
+// Services/Dumpster-Rentals.php
+
+// Include necessary files
+require_once __DIR__ . '/../includes/db.php';
+require_once __DIR__ . '/../includes/functions.php';
+require_once __DIR__ . '/../includes/session.php';
+// Fetch company name from system settings
+$companyName = getSystemSetting('company_name');
+if (!$companyName) {
+    $companyName = 'Catdump'; // Fallback if not set in DB
+}
+?>
 <html lang="en">
 <head>
     <meta charset="UTF-8">

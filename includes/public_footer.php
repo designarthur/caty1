@@ -69,9 +69,9 @@ $supportPhone = '+1 (555) 123-4567';
                         <input type="email" id="newsletter-email" name="email" placeholder="Your email address" aria-label="Email for newsletter" required class="p-3 rounded-lg border border-gray-700 bg-gray-800 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-custom">
                         <button type="submit" class="btn-primary py-2.5 px-5 text-base shadow-md hover:shadow-lg transition duration-300">Subscribe</button>
                     </form>
-                    <p class="text-gray-400 text-sm mt-6 mb-2"><i class="fas fa-map-marker-alt mr-2"></i> 123 Main St, Anytown, USA 12345</p>
-                    <p class="text-gray-400 text-sm mb-2"><i class="fas fa-phone mr-2"></i> <?php echo htmlspecialchars($supportPhone); ?></p>
-                    <p class="text-gray-400 text-sm mb-2"><i class="fas fa-envelope mr-2"></i> <?php echo htmlspecialchars($supportEmail); ?></p>
+                    <p class="text-gray-400 text-sm mt-6 mb-2"><i class="fas fa-map-marker-alt mr-2"></i> 9330 LBJ Freeway Suite 900 Dallas TX 75243</p>
+                    <p class="text-gray-400 text-sm mb-2"><i class="fas fa-phone mr-2"></i> +1 (833) 935-8800</p>
+                    <p class="text-gray-400 text-sm mb-2"><i class="fas fa-envelope mr-2"></i> support@catdump.com</p>
                 </div>
             </div>
             <div class="border-t border-gray-700 mt-8 pt-8 text-center text-gray-500 text-sm">

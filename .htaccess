@@ -1,0 +1,82 @@
+#
+# Cat-Dump Project .htaccess
+#
+# This file provides a robust set of security and URL rewriting rules
+# tailored to your project structure. It is designed to be placed in
+# your project's root directory.
+#
+
+# --- Turn on the Rewrite Engine ---
+# This is the core of the URL rewriting functionality.
+RewriteEngine On
+
+# --- Prevent Subdomain Interference ---
+# These rules ensure that the following directives only apply to your main domain
+# and not to any subdomains like "blog.catdump.com" or "api.catdump.com".
+RewriteCond %{HTTP_HOST} ^catdump\.com$ [NC]
+
+# --- Security: Deny Access to Sensitive Files ---
+# This section blocks web access to critical and sensitive files.
+# Unauthorized access to these files could expose your application's
+# configuration, source code, or credentials.
+<FilesMatch "^\.ht|composer\.json|php\.ini|\.user\.ini|/vendor/|/includes/|/logs/">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# --- Security: Disable Directory Listing ---
+# Prevents the server from displaying the contents of a directory if no
+# index file (like index.php or index.html) is present. This helps to
+# hide your project's file structure.
+Options -Indexes
+
+# --- Security: Protect Against Common Web Attacks ---
+# These headers instruct the browser to enable security features that help
+# prevent common attacks like Cross-Site Scripting (XSS), clickjacking,
+# and content sniffing.
+<IfModule mod_headers.c>
+    Header set X-XSS-Protection "1; mode=block"
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set Content-Security-Policy "frame-ancestors 'self'"
+</IfModule>
+
+# --- Enforce HTTPS ---
+# This rule redirects all HTTP traffic to the more secure HTTPS protocol.
+# This ensures that all data transmitted between the client and server is encrypted.
+RewriteCond %{HTTPS} off
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# --- URL Rewriting: Front Controller ---
+# This is a standard practice in modern web applications. It routes all
+# requests for non-existent files and directories to your main index.php file.
+# This allows you to handle all routing from a single point, creating clean
+# and user-friendly URLs.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . /index.php [L]
+
+# --- PHP Security Flags ---
+# These flags add an extra layer of security to your PHP configuration.
+# They help to mitigate risks associated with session handling and other
+# common PHP vulnerabilities.
+<IfModule mod_php.c>
+    php_flag session.use_trans_sid off
+    php_flag session.use_only_cookies on
+    php_flag session.cookie_httponly on
+    php_flag session.cookie_secure on
+</IfModule>
+
+# --- Error Handling ---
+# You can customize your error pages for a more professional look.
+# Create these files in your root directory.
+ErrorDocument 403 /error/403.html
+ErrorDocument 404 /error/404.html
+ErrorDocument 500 /error/500.html
+
+# php -- BEGIN cPanel-generated handler, do not edit
+# Set the “ea-php82” package as the default “PHP” programming language.
+<IfModule mime_module>
+  AddHandler application/x-httpd-ea-php82 .php .php8 .phtml
+</IfModule>
+# php -- END cPanel-generated handler, do not edit
